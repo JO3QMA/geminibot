@@ -30,7 +30,7 @@ type Config struct {
 // DefaultConfig は、デフォルトの設定を返します
 func DefaultConfig() *Config {
 	return &Config{
-		ModelName:   "gemini-1.5-flash",
+		ModelName:   "gemini-pro",
 		MaxTokens:   1000,
 		Temperature: 0.7,
 		TopP:        0.9,
