@@ -55,6 +55,8 @@ cp env.example .env
 # VS Codeで Devcontainer: Reopen in Container を実行
 ```
 
+**注意**: Devcontainer内では`.env`ファイルが自動的に読み込まれます。アプリケーション起動時に環境変数が正しく設定されているか確認してください。
+
 ### 3. 認証情報の取得
 
 #### Discord Bot Token
@@ -100,13 +102,29 @@ geminibot/
 
 ## 🔧 設定
 
+### 環境変数の設定
+
+アプリケーションは`.env`ファイルから環境変数を自動的に読み込みます。開発時は`env.example`をコピーして`.env`ファイルを作成し、必要な認証情報を設定してください。
+
+```bash
+cp env.example .env
+# .envファイルを編集して認証情報を設定
+```
+
+### 環境変数一覧
+
 | 環境変数 | 説明 | デフォルト値 |
 |---------|------|-------------|
 | `DISCORD_BOT_TOKEN` | Discord Bot Token | - |
 | `GEMINI_API_KEY` | Gemini API Key | - |
-| `BOT_PREFIX` | Botのメンション接頭辞 | `@` |
+| `GEMINI_MODEL_NAME` | Geminiモデル名 | `gemini-pro` |
+| `GEMINI_MAX_TOKENS` | 最大トークン数 | `1000` |
+| `GEMINI_TEMPERATURE` | 生成の温度パラメータ | `0.7` |
+| `GEMINI_TOP_P` | Top-Pサンプリング | `0.9` |
+| `GEMINI_TOP_K` | Top-Kサンプリング | `40` |
 | `MAX_HISTORY_MESSAGES` | 取得する履歴メッセージ数 | `10` |
 | `REQUEST_TIMEOUT` | APIリクエストタイムアウト | `30s` |
+| `SYSTEM_PROMPT` | システムプロンプト | デフォルトのアシスタントプロンプト |
 
 ## 📝 ライセンス
 

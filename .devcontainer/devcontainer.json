@@ -1,12 +1,10 @@
 {
 	"name": "Discord-Gemini Bot Development",
-	"image": "mcr.microsoft.com/devcontainers/go:1.21",
-	
+	"image": "mcr.microsoft.com/devcontainers/go",
 	"features": {
 		"ghcr.io/devcontainers/features/git:1": {},
 		"ghcr.io/devcontainers/features/github-cli:1": {}
 	},
-
 	"customizations": {
 		"vscode": {
 			"extensions": [
@@ -14,29 +12,47 @@
 				"ms-vscode.go",
 				"ms-vscode.vscode-json",
 				"redhat.vscode-yaml",
-				"ms-vscode.vscode-docker"
+				"ms-vscode.vscode-docker",
+				"ms-vscode.vscode-github",
+				"eamodio.gitlens",
+				"ms-vscode.vscode-todo-highlight"
 			],
 			"settings": {
 				"go.toolsManagement.checkForUpdates": "local",
 				"go.useLanguageServer": true,
 				"go.gopath": "/go",
-				"go.goroot": "/usr/local/go"
+				"go.goroot": "/usr/local/go",
+				"go.formatTool": "goimports",
+				"go.lintTool": "golangci-lint",
+				"editor.formatOnSave": true,
+				"editor.codeActionsOnSave": {
+					"source.organizeImports": "explicit"
+				},
+				"go.languageServerFlags": [
+					"-rpc.trace"
+				],
+				"go.languageServerExperimentalFeatures": {
+					"diagnostics": true,
+					"documentLink": true
+				}
 			}
 		}
 	},
-
-	"postCreateCommand": "go mod download && go mod tidy",
-	
+	"postCreateCommand": "if [ -f .env ]; then echo '.envファイルが見つかりました。環境変数を設定します...'; export $(cat .env | grep -v '^#' | xargs); fi && go clean -modcache && go mod download && go mod tidy && go install golang.org/x/tools/cmd/goimports@latest && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && go install golang.org/x/tools/gopls@latest",
 	"remoteUser": "vscode",
-	
 	"mounts": [
-		"source=${localWorkspaceFolder}/.devcontainer/cache,target=/go/pkg/mod,type=bind,consistency=cached"
+		"source=${localWorkspaceFolder}/.devcontainer/cache,target=/go/pkg,type=bind,consistency=cached",
+		"source=${localWorkspaceFolder}/.env,target=/workspaces/geminibot/.env,type=bind,consistency=cached"
 	],
-
 	"env": {
 		"DISCORD_BOT_TOKEN": "",
 		"GEMINI_API_KEY": "",
 		"GO111MODULE": "on",
-		"GOPRIVATE": "*"
+		"GOPRIVATE": "*",
+		"GOPATH": "/go",
+		"GOROOT": "/usr/local/go",
+		"CGO_ENABLED": "1",
+		"GOMODCACHE": "/go/pkg/mod",
+		"GOSUMDB": "sum.golang.org"
 	}
 }

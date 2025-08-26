@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"geminibot/internal/domain"
 
@@ -39,11 +38,7 @@ func (r *DiscordConversationRepository) GetRecentMessages(ctx context.Context, c
 			continue
 		}
 
-		timestamp, err := msg.Timestamp.Parse()
-		if err != nil {
-			log.Printf("メッセージのタイムスタンプ解析に失敗: %s, %v", msg.ID, err)
-			timestamp = time.Now()
-		}
+		timestamp := msg.Timestamp
 
 		domainMessage := domain.NewMessage(
 			msg.ID,
@@ -85,11 +80,7 @@ func (r *DiscordConversationRepository) GetMessagesBefore(ctx context.Context, c
 			continue
 		}
 
-		timestamp, err := msg.Timestamp.Parse()
-		if err != nil {
-			log.Printf("メッセージのタイムスタンプ解析に失敗: %s, %v", msg.ID, err)
-			timestamp = time.Now()
-		}
+		timestamp := msg.Timestamp
 
 		domainMessage := domain.NewMessage(
 			msg.ID,

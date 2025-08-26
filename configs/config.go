@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 // Config は、アプリケーション全体の設定を定義します
@@ -38,6 +40,12 @@ type BotConfig struct {
 
 // LoadConfig は、環境変数から設定を読み込みます
 func LoadConfig() (*Config, error) {
+	// .envファイルを読み込み（ファイルが存在しない場合は無視）
+	if err := godotenv.Load(); err != nil {
+		// .envファイルが存在しない場合は警告のみ出力（エラーにはしない）
+		fmt.Printf("警告: .envファイルの読み込みに失敗しました: %v\n", err)
+	}
+
 	config := &Config{
 		Discord: DiscordConfig{
 			BotToken: getEnvOrDefault("DISCORD_BOT_TOKEN", ""),

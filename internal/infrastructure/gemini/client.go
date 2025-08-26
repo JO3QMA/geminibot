@@ -45,7 +45,11 @@ func NewGeminiAPIClient(apiKey string, config *Config) (*GeminiAPIClient, error)
 	}
 
 	ctx := context.Background()
-	client, err := genai.NewClient(ctx, genai.WithAPIKey(apiKey))
+	clientConfig := &genai.ClientConfig{
+		APIKey: apiKey,
+	}
+
+	client, err := genai.NewClient(ctx, clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("Gemini APIクライアントの作成に失敗: %w", err)
 	}
@@ -61,15 +65,16 @@ func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt
 	log.Printf("Gemini APIにテキスト生成をリクエスト中: %d文字", len(prompt.Content()))
 
 	// 新しいGemini APIライブラリの仕様に合わせて実装
-	model := g.client.GenerativeModel(g.config.ModelName)
-	
-	// 生成設定を適用
-	model.SetMaxOutputTokens(g.config.MaxTokens)
-	model.SetTemperature(g.config.Temperature)
-	model.SetTopP(g.config.TopP)
-	model.SetTopK(g.config.TopK)
+	contents := genai.Text(prompt.Content())
 
-	resp, err := model.GenerateContent(ctx, genai.Text(prompt.Content()))
+	// 生成設定を作成
+	config := &genai.GenerateContentConfig{
+		MaxOutputTokens: g.config.MaxTokens,
+		Temperature:     &g.config.Temperature,
+		TopP:            &g.config.TopP,
+	}
+
+	resp, err := g.client.Models.GenerateContent(ctx, g.config.ModelName, contents, config)
 	if err != nil {
 		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
 	}
@@ -86,8 +91,8 @@ func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt
 	// テキスト部分を抽出
 	var result string
 	for _, part := range candidate.Content.Parts {
-		if text, ok := part.(genai.Text); ok {
-			result += string(text)
+		if part.Text != "" {
+			result += part.Text
 		}
 	}
 
@@ -100,31 +105,32 @@ func (g *GeminiAPIClient) GenerateTextWithOptions(ctx context.Context, prompt do
 	log.Printf("Gemini APIにオプション付きテキスト生成をリクエスト中: %d文字", len(prompt.Content()))
 
 	// 新しいGemini APIライブラリの仕様に合わせて実装
-	model := g.client.GenerativeModel(g.config.ModelName)
-	
+	contents := genai.Text(prompt.Content())
+
 	// オプションを適用
+	maxTokens := g.config.MaxTokens
 	if options.MaxTokens > 0 {
-		model.SetMaxOutputTokens(int32(options.MaxTokens))
-	} else {
-		model.SetMaxOutputTokens(g.config.MaxTokens)
-	}
-	if options.Temperature > 0 {
-		model.SetTemperature(float32(options.Temperature))
-	} else {
-		model.SetTemperature(g.config.Temperature)
-	}
-	if options.TopP > 0 {
-		model.SetTopP(float32(options.TopP))
-	} else {
-		model.SetTopP(g.config.TopP)
-	}
-	if options.TopK > 0 {
-		model.SetTopK(int32(options.TopK))
-	} else {
-		model.SetTopK(g.config.TopK)
+		maxTokens = int32(options.MaxTokens)
 	}
 
-	resp, err := model.GenerateContent(ctx, genai.Text(prompt.Content()))
+	temperature := g.config.Temperature
+	if options.Temperature > 0 {
+		temperature = float32(options.Temperature)
+	}
+
+	topP := g.config.TopP
+	if options.TopP > 0 {
+		topP = float32(options.TopP)
+	}
+
+	// 生成設定を作成
+	config := &genai.GenerateContentConfig{
+		MaxOutputTokens: maxTokens,
+		Temperature:     &temperature,
+		TopP:            &topP,
+	}
+
+	resp, err := g.client.Models.GenerateContent(ctx, g.config.ModelName, contents, config)
 	if err != nil {
 		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
 	}
@@ -141,8 +147,8 @@ func (g *GeminiAPIClient) GenerateTextWithOptions(ctx context.Context, prompt do
 	// テキスト部分を抽出
 	var result string
 	for _, part := range candidate.Content.Parts {
-		if text, ok := part.(genai.Text); ok {
-			result += string(text)
+		if part.Text != "" {
+			result += part.Text
 		}
 	}
 
