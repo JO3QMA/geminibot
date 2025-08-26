@@ -1,4 +1,6 @@
-# Build stage
+# ========================================
+# 🏗️  BUILD STAGE - アプリケーションのビルド
+# ========================================
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
@@ -18,7 +20,9 @@ COPY . .
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
-# Final stage
+# ========================================
+# 🚀 FINAL STAGE - 実行用イメージ
+# ========================================
 FROM alpine:latest
 
 RUN apk --no-cache add ca-certificates

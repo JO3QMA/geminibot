@@ -38,7 +38,7 @@
 			}
 		}
 	},
-	"postCreateCommand": "if [ -f .env ]; then echo '.envファイルが見つかりました。環境変数を設定します...'; export $(cat .env | grep -v '^#' | xargs); fi && go clean -modcache && go mod download && go mod tidy && go install golang.org/x/tools/cmd/goimports@latest && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && go install golang.org/x/tools/gopls@latest",
+	"postCreateCommand": "go clean -modcache && go mod download && go mod tidy && go install golang.org/x/tools/cmd/goimports@latest && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && go install golang.org/x/tools/gopls@latest",
 	"remoteUser": "vscode",
 	"mounts": [
 		"source=${localWorkspaceFolder}/.devcontainer/cache,target=/go/pkg,type=bind,consistency=cached",
