@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  geminibot:
+    build: .
+    container_name: geminibot
+    environment:
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - geminibot-network
+
+networks:
+  geminibot-network:
+    driver: bridge
