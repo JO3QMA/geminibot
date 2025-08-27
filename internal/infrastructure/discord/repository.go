@@ -66,12 +66,9 @@ func (r *DiscordConversationRepository) GetRecentMessages(ctx context.Context, c
 func (r *DiscordConversationRepository) GetThreadMessages(ctx context.Context, threadID domain.ChannelID) (domain.ConversationHistory, error) {
 	log.Printf("Discordからスレッドの全メッセージを取得中: %s", threadID)
 
-	// Discord APIでは、スレッドのメッセージを取得する際に特別な処理が必要
-	// 実際の実装では、スレッドの特性に応じて適切に実装する必要があります
-
-	// 仮の実装：通常のチャンネルメッセージ取得と同じ処理
-	// 実際には、スレッドの場合は異なるAPIエンドポイントを使用する必要があります
-	return r.GetRecentMessages(ctx, threadID, 100) // スレッドの場合はより多くのメッセージを取得
+	// スレッドの場合は十分な数のメッセージを取得（コンテキスト長制限で調整される）
+	const threadMessageLimit = 200
+	return r.GetRecentMessages(ctx, threadID, threadMessageLimit)
 }
 
 // GetMessagesBefore は、指定されたメッセージIDより前のメッセージを取得します

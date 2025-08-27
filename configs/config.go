@@ -33,7 +33,8 @@ type GeminiConfig struct {
 
 // BotConfig は、Bot関連の設定を定義します
 type BotConfig struct {
-	MaxHistoryMessages   int
+	MaxContextLength     int // 最大コンテキスト長（文字数）
+	MaxHistoryLength     int // 最大履歴長（文字数）
 	RequestTimeout       time.Duration
 	SystemPrompt         string
 	UseStructuredContext bool // 構造化コンテキストを使用するかどうか
@@ -60,7 +61,8 @@ func LoadConfig() (*Config, error) {
 			TopK:        int32(getEnvAsIntOrDefault("GEMINI_TOP_K", 40)),
 		},
 		Bot: BotConfig{
-			MaxHistoryMessages:   getEnvAsIntOrDefault("MAX_HISTORY_MESSAGES", 10),
+			MaxContextLength:     getEnvAsIntOrDefault("MAX_CONTEXT_LENGTH", 8000),
+			MaxHistoryLength:     getEnvAsIntOrDefault("MAX_HISTORY_LENGTH", 4000),
 			RequestTimeout:       getEnvAsDurationOrDefault("REQUEST_TIMEOUT", 30*time.Second),
 			SystemPrompt:         getEnvOrDefault("SYSTEM_PROMPT", "あなたは親切で役立つAIアシスタントです。ユーザーのチャット内容に対して、安全で適切な回答を提供してください。有害な内容や不適切な内容については、適切に断るか、代替案を提案してください。"),
 			UseStructuredContext: getEnvAsBoolOrDefault("USE_STRUCTURED_CONTEXT", true),
@@ -85,8 +87,16 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("GEMINI_API_KEY が設定されていません")
 	}
 
-	if c.Bot.MaxHistoryMessages <= 0 {
-		return fmt.Errorf("MAX_HISTORY_MESSAGES は正の整数である必要があります")
+	if c.Bot.MaxContextLength <= 0 {
+		return fmt.Errorf("MAX_CONTEXT_LENGTH は正の整数である必要があります")
+	}
+
+	if c.Bot.MaxHistoryLength <= 0 {
+		return fmt.Errorf("MAX_HISTORY_LENGTH は正の整数である必要があります")
+	}
+
+	if c.Bot.MaxHistoryLength > c.Bot.MaxContextLength {
+		return fmt.Errorf("MAX_HISTORY_LENGTH は MAX_CONTEXT_LENGTH 以下である必要があります")
 	}
 
 	if c.Bot.RequestTimeout <= 0 {
