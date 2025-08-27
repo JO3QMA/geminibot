@@ -119,7 +119,63 @@ func (h *DiscordHandler) extractUserContent(m *discordgo.MessageCreate) string {
 
 // processMentionAsync は、メンションを非同期で処理します
 func (h *DiscordHandler) processMentionAsync(s *discordgo.Session, m *discordgo.MessageCreate, mention domain.BotMention) {
-	// 処理中メッセージをスレッド返信として送信
+	// メッセージからスレッドを作成
+	thread, err := s.MessageThreadStart(m.ChannelID, m.ID, "Bot応答", 60) // 60分後にアーカイブ
+	if err != nil {
+		log.Printf("スレッド作成に失敗: %v", err)
+		// スレッド作成に失敗した場合は通常のリプライとして送信
+		h.sendNormalReply(s, m, mention)
+		return
+	}
+
+	// 処理中メッセージをスレッド内に送信
+	thinkingMsg, err := s.ChannelMessageSend(thread.ID, "🤔 考え中...")
+	if err != nil {
+		log.Printf("処理中メッセージの送信に失敗: %v", err)
+		return
+	}
+
+	// メンションを処理
+	ctx := context.Background()
+	response, err := h.mentionService.HandleMention(ctx, mention)
+
+	// 処理中メッセージを削除
+	s.ChannelMessageDelete(thread.ID, thinkingMsg.ID)
+
+	if err != nil {
+		log.Printf("メンション処理に失敗: %v", err)
+
+		// 荒らし対策エラーの場合は特別なメッセージを送信
+		errorMsg := h.formatAntiSpamError(err)
+		s.ChannelMessageSend(thread.ID, errorMsg)
+		return
+	}
+
+	// 応答をスレッド内に送信
+	h.sendThreadResponse(s, thread.ID, response)
+}
+
+// formatAntiSpamError は、荒らし対策エラーを適切なメッセージにフォーマットします
+func (h *DiscordHandler) formatAntiSpamError(err error) string {
+	switch err.Error() {
+	case "レート制限を超過しました":
+		return "⚠️ **レート制限を超過しました**\nしばらく待ってから再度お試しください。"
+	case "スパムが検出されました":
+		return "🚫 **スパムが検出されました**\n短時間での大量メッセージは禁止されています。"
+	case "不適切なコンテンツが検出されました":
+		return "🚫 **不適切なコンテンツが検出されました**\n禁止ワードが含まれています。"
+	case "メッセージが長すぎます":
+		return "📏 **メッセージが長すぎます**\n2000文字以内でお願いします。"
+	case "重複メッセージが検出されました":
+		return "🔄 **重複メッセージが検出されました**\n同じ内容のメッセージを連続で送信しないでください。"
+	default:
+		return fmt.Sprintf("❌ **エラーが発生しました**\n%s", err.Error())
+	}
+}
+
+// sendNormalReply は、スレッド作成に失敗した場合の通常のリプライ送信を行います
+func (h *DiscordHandler) sendNormalReply(s *discordgo.Session, m *discordgo.MessageCreate, mention domain.BotMention) {
+	// 処理中メッセージを送信
 	thinkingMsg, err := s.ChannelMessageSendReply(m.ChannelID, "🤔 考え中...", &discordgo.MessageReference{
 		MessageID: m.ID,
 		ChannelID: m.ChannelID,
@@ -154,22 +210,48 @@ func (h *DiscordHandler) processMentionAsync(s *discordgo.Session, m *discordgo.
 	h.sendSplitResponse(s, m, response)
 }
 
-// formatAntiSpamError は、荒らし対策エラーを適切なメッセージにフォーマットします
-func (h *DiscordHandler) formatAntiSpamError(err error) string {
-	switch err.Error() {
-	case "レート制限を超過しました":
-		return "⚠️ **レート制限を超過しました**\nしばらく待ってから再度お試しください。"
-	case "スパムが検出されました":
-		return "🚫 **スパムが検出されました**\n短時間での大量メッセージは禁止されています。"
-	case "不適切なコンテンツが検出されました":
-		return "🚫 **不適切なコンテンツが検出されました**\n禁止ワードが含まれています。"
-	case "メッセージが長すぎます":
-		return "📏 **メッセージが長すぎます**\n2000文字以内でお願いします。"
-	case "重複メッセージが検出されました":
-		return "🔄 **重複メッセージが検出されました**\n同じ内容のメッセージを連続で送信しないでください。"
-	default:
-		return fmt.Sprintf("❌ **エラーが発生しました**\n%s", err.Error())
+// sendThreadResponse は、スレッド内に応答を送信します
+func (h *DiscordHandler) sendThreadResponse(s *discordgo.Session, threadID string, response string) {
+	// 応答をDiscord用にフォーマット
+	formattedResponse := h.formatForDiscord(response)
+
+	// 応答が非常に長い場合はファイルとして送信
+	if len(formattedResponse) > DiscordMessageLimit*5 {
+		h.sendAsFileToThread(s, threadID, formattedResponse, "response.txt")
+		return
 	}
+
+	// 応答をDiscordの制限に合わせて分割
+	chunks := h.splitMessage(formattedResponse)
+
+	// すべてのチャンクをスレッド内に送信
+	for i, chunk := range chunks {
+		_, err := s.ChannelMessageSend(threadID, chunk)
+		if err != nil {
+			log.Printf("スレッド内メッセージの送信に失敗 (チャンク %d): %v", i+1, err)
+			break
+		}
+	}
+}
+
+// sendAsFileToThread は、長い応答をファイルとしてスレッド内に送信します
+func (h *DiscordHandler) sendAsFileToThread(s *discordgo.Session, threadID string, content, filename string) {
+	// ファイルデータを作成
+	fileData := strings.NewReader(content)
+
+	// ファイルを添付してメッセージを送信
+	_, err := s.ChannelFileSend(threadID, filename, fileData)
+
+	if err != nil {
+		log.Printf("ファイル送信に失敗: %v", err)
+		// ファイル送信に失敗した場合は通常の分割送信にフォールバック
+		h.sendThreadResponse(s, threadID, content)
+		return
+	}
+
+	// ファイル送信成功のメッセージを送信
+	fileMsg := fmt.Sprintf("📄 **応答が長いため、ファイルとして送信しました**\nファイル名: `%s`", filename)
+	s.ChannelMessageSend(threadID, fileMsg)
 }
 
 // sendSplitResponse は、長い応答を複数のメッセージに分割して送信します
