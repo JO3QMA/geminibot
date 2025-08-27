@@ -13,7 +13,7 @@ type PromptGenerator struct {
 // NewPromptGenerator は新しいPromptGeneratorインスタンスを作成します
 func NewPromptGenerator(systemPrompt string) *PromptGenerator {
 	if systemPrompt == "" {
-		systemPrompt = "あなたは優秀なアシスタントです。与えられた会話履歴を参考に、ユーザーの質問に適切に回答してください。"
+		systemPrompt = "あなたは優秀なアシスタントです。与えられた会話履歴を参考に、ユーザーのチャット内容に適切に回答してください。"
 	}
 
 	return &PromptGenerator{
@@ -21,7 +21,7 @@ func NewPromptGenerator(systemPrompt string) *PromptGenerator {
 	}
 }
 
-// GeneratePrompt は、会話履歴とユーザーの質問からプロンプトを生成します
+// GeneratePrompt は、会話履歴とユーザーのチャット内容からプロンプトを生成します
 func (pg *PromptGenerator) GeneratePrompt(history ConversationHistory, userQuestion string) Prompt {
 	return pg.GeneratePromptWithMention(history, userQuestion, "", "")
 }
@@ -51,8 +51,8 @@ func (pg *PromptGenerator) GeneratePromptWithMention(history ConversationHistory
 		builder.WriteString("\n")
 	}
 
-	// ユーザーの質問を追加
-	builder.WriteString("## ユーザーの質問\n")
+	// ユーザーのチャット内容を追加
+	builder.WriteString("## ユーザーのチャット内容\n")
 	builder.WriteString(userQuestion)
 
 	return NewPrompt(builder.String())
@@ -95,8 +95,8 @@ func (pg *PromptGenerator) GeneratePromptWithContextAndMention(history Conversat
 		builder.WriteString("\n")
 	}
 
-	// ユーザーの質問を追加
-	builder.WriteString("## ユーザーの質問\n")
+	// ユーザーのチャット内容を追加
+	builder.WriteString("## ユーザーのチャット内容\n")
 	builder.WriteString(userQuestion)
 
 	return NewPrompt(builder.String())

@@ -61,7 +61,7 @@ func LoadConfig() (*Config, error) {
 		Bot: BotConfig{
 			MaxHistoryMessages: getEnvAsIntOrDefault("MAX_HISTORY_MESSAGES", 10),
 			RequestTimeout:     getEnvAsDurationOrDefault("REQUEST_TIMEOUT", 30*time.Second),
-			SystemPrompt:       getEnvOrDefault("SYSTEM_PROMPT", "あなたは親切で役立つAIアシスタントです。ユーザーの質問に対して、安全で適切な回答を提供してください。有害な内容や不適切な内容については、適切に断るか、代替案を提案してください。"),
+			SystemPrompt:       getEnvOrDefault("SYSTEM_PROMPT", "あなたは親切で役立つAIアシスタントです。ユーザーのチャット内容に対して、安全で適切な回答を提供してください。有害な内容や不適切な内容については、適切に断るか、代替案を提案してください。"),
 		},
 	}
 

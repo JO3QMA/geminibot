@@ -38,22 +38,22 @@ func (u UserID) String() string {
 
 // User は、Discordのユーザー情報を表現する値オブジェクトです
 type User struct {
-	ID          UserID
-	Username    string
-	DisplayName string
-	Avatar      string
-	IsBot       bool
+	ID            UserID
+	Username      string
+	DisplayName   string
+	Avatar        string
+	IsBot         bool
 	Discriminator string
 }
 
 // NewUser は新しいUserインスタンスを作成します
 func NewUser(id UserID, username, displayName, avatar, discriminator string, isBot bool) User {
 	return User{
-		ID:          id,
-		Username:    username,
-		DisplayName: displayName,
-		Avatar:      avatar,
-		IsBot:       isBot,
+		ID:            id,
+		Username:      username,
+		DisplayName:   displayName,
+		Avatar:        avatar,
+		IsBot:         isBot,
 		Discriminator: discriminator,
 	}
 }

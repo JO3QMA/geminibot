@@ -17,7 +17,7 @@ func TestNewPromptGenerator(t *testing.T) {
 
 	// 空のシステムプロンプトを指定した場合
 	emptyGenerator := NewPromptGenerator("")
-	expectedDefault := "あなたは優秀なアシスタントです。与えられた会話履歴を参考に、ユーザーの質問に適切に回答してください。"
+	expectedDefault := "あなたは優秀なアシスタントです。与えられた会話履歴を参考に、ユーザーのチャット内容に適切に回答してください。"
 
 	if emptyGenerator.systemPrompt != expectedDefault {
 		t.Errorf("期待されるデフォルトシステムプロンプト: %s, 実際のシステムプロンプト: %s", expectedDefault, emptyGenerator.systemPrompt)
@@ -42,18 +42,18 @@ func TestPromptGenerator_GeneratePrompt_EmptyHistory(t *testing.T) {
 		t.Error("空の履歴なのに会話履歴セクションが含まれています")
 	}
 
-	// ユーザーの質問が含まれているかチェック
-	if !strings.Contains(content, "## ユーザーの質問") {
-		t.Error("生成されたプロンプトにユーザーの質問セクションが含まれていません")
+	// ユーザーのチャット内容が含まれているかチェック
+	if !strings.Contains(content, "## ユーザーのチャット内容") {
+		t.Error("生成されたプロンプトにユーザーのチャット内容セクションが含まれていません")
 	}
 	if !strings.Contains(content, userQuestion) {
-		t.Error("生成されたプロンプトにユーザーの質問が含まれていません")
+		t.Error("生成されたプロンプトにユーザーのチャット内容が含まれていません")
 	}
 }
 
 func TestPromptGenerator_GeneratePrompt_WithHistory(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
-	
+
 	messages := []Message{
 		NewMessage("msg1", NewUserID("user1"), "こんにちは", time.Now()),
 		NewMessage("msg2", NewUserID("user2"), "こんばんは", time.Now()),
@@ -82,12 +82,12 @@ func TestPromptGenerator_GeneratePrompt_WithHistory(t *testing.T) {
 		t.Error("生成されたプロンプトに2番目の履歴メッセージが含まれていません")
 	}
 
-	// ユーザーの質問が含まれているかチェック
-	if !strings.Contains(content, "## ユーザーの質問") {
-		t.Error("生成されたプロンプトにユーザーの質問セクションが含まれていません")
+	// ユーザーのチャット内容が含まれているかチェック
+	if !strings.Contains(content, "## ユーザーのチャット内容") {
+		t.Error("生成されたプロンプトにユーザーのチャット内容セクションが含まれていません")
 	}
 	if !strings.Contains(content, userQuestion) {
-		t.Error("生成されたプロンプトにユーザーの質問が含まれていません")
+		t.Error("生成されたプロンプトにユーザーのチャット内容が含まれていません")
 	}
 }
 
@@ -118,18 +118,18 @@ func TestPromptGenerator_GeneratePromptWithContext_EmptyHistory(t *testing.T) {
 		t.Error("空の履歴なのに会話履歴セクションが含まれています")
 	}
 
-	// ユーザーの質問が含まれているかチェック
-	if !strings.Contains(content, "## ユーザーの質問") {
-		t.Error("生成されたプロンプトにユーザーの質問セクションが含まれていません")
+	// ユーザーのチャット内容が含まれているかチェック
+	if !strings.Contains(content, "## ユーザーのチャット内容") {
+		t.Error("生成されたプロンプトにユーザーのチャット内容セクションが含まれていません")
 	}
 	if !strings.Contains(content, userQuestion) {
-		t.Error("生成されたプロンプトにユーザーの質問が含まれていません")
+		t.Error("生成されたプロンプトにユーザーのチャット内容が含まれていません")
 	}
 }
 
 func TestPromptGenerator_GeneratePromptWithContext_WithHistory(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
-	
+
 	messages := []Message{
 		NewMessage("msg1", NewUserID("user1"), "こんにちは", time.Now()),
 		NewMessage("msg2", NewUserID("user2"), "こんばんは", time.Now()),
@@ -167,12 +167,12 @@ func TestPromptGenerator_GeneratePromptWithContext_WithHistory(t *testing.T) {
 		t.Error("生成されたプロンプトに2番目の履歴メッセージが含まれていません")
 	}
 
-	// ユーザーの質問が含まれているかチェック
-	if !strings.Contains(content, "## ユーザーの質問") {
-		t.Error("生成されたプロンプトにユーザーの質問セクションが含まれていません")
+	// ユーザーのチャット内容が含まれているかチェック
+	if !strings.Contains(content, "## ユーザーのチャット内容") {
+		t.Error("生成されたプロンプトにユーザーのチャット内容セクションが含まれていません")
 	}
 	if !strings.Contains(content, userQuestion) {
-		t.Error("生成されたプロンプトにユーザーの質問が含まれていません")
+		t.Error("生成されたプロンプトにユーザーのチャット内容が含まれていません")
 	}
 }
 
@@ -190,12 +190,12 @@ func TestPromptGenerator_GeneratePromptWithContext_EmptyContext(t *testing.T) {
 		t.Error("空のコンテキストなのに追加コンテキストセクションが含まれています")
 	}
 
-	// ユーザーの質問が含まれているかチェック
-	if !strings.Contains(content, "## ユーザーの質問") {
-		t.Error("生成されたプロンプトにユーザーの質問セクションが含まれていません")
+	// ユーザーのチャット内容が含まれているかチェック
+	if !strings.Contains(content, "## ユーザーのチャット内容") {
+		t.Error("生成されたプロンプトにユーザーのチャット内容セクションが含まれていません")
 	}
 	if !strings.Contains(content, userQuestion) {
-		t.Error("生成されたプロンプトにユーザーの質問が含まれていません")
+		t.Error("生成されたプロンプトにユーザーのチャット内容が含まれていません")
 	}
 }
 
@@ -207,9 +207,9 @@ func TestPromptGenerator_GeneratePrompt_Order(t *testing.T) {
 	prompt := generator.GeneratePrompt(history, userQuestion)
 	content := prompt.Content()
 
-	// 順序をチェック: システムプロンプト -> 会話履歴 -> ユーザーの質問
+	// 順序をチェック: システムプロンプト -> 会話履歴 -> ユーザーのチャット内容
 	parts := strings.Split(content, "\n\n")
-	
+
 	if len(parts) < 2 {
 		t.Error("プロンプトの構造が正しくありません")
 	}
@@ -219,9 +219,9 @@ func TestPromptGenerator_GeneratePrompt_Order(t *testing.T) {
 		t.Error("最初の部分にシステムプロンプトが含まれていません")
 	}
 
-	// 最後の部分にユーザーの質問が含まれているか
+	// 最後の部分にユーザーのチャット内容が含まれているか
 	lastPart := parts[len(parts)-1]
-	if !strings.Contains(lastPart, "## ユーザーの質問") {
-		t.Error("最後の部分にユーザーの質問セクションが含まれていません")
+	if !strings.Contains(lastPart, "## ユーザーのチャット内容") {
+		t.Error("最後の部分にユーザーのチャット内容セクションが含まれていません")
 	}
 }
