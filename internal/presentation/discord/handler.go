@@ -135,7 +135,9 @@ func (h *DiscordHandler) processMentionAsync(s *discordgo.Session, m *discordgo.
 
 	if err != nil {
 		log.Printf("メンション処理に失敗: %v", err)
-		errorMsg := fmt.Sprintf("❌ エラーが発生しました: %s", err.Error())
+
+		// 荒らし対策エラーの場合は特別なメッセージを送信
+		errorMsg := h.formatAntiSpamError(err)
 		s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
 			MessageID: m.ID,
 			ChannelID: m.ChannelID,
@@ -148,10 +150,34 @@ func (h *DiscordHandler) processMentionAsync(s *discordgo.Session, m *discordgo.
 	h.sendSplitResponse(s, m, response)
 }
 
+// formatAntiSpamError は、荒らし対策エラーを適切なメッセージにフォーマットします
+func (h *DiscordHandler) formatAntiSpamError(err error) string {
+	switch err.Error() {
+	case "レート制限を超過しました":
+		return "⚠️ **レート制限を超過しました**\nしばらく待ってから再度お試しください。"
+	case "スパムが検出されました":
+		return "🚫 **スパムが検出されました**\n短時間での大量メッセージは禁止されています。"
+	case "不適切なコンテンツが検出されました":
+		return "🚫 **不適切なコンテンツが検出されました**\n禁止ワードが含まれています。"
+	case "メッセージが長すぎます":
+		return "📏 **メッセージが長すぎます**\n2000文字以内でお願いします。"
+	case "重複メッセージが検出されました":
+		return "🔄 **重複メッセージが検出されました**\n同じ内容のメッセージを連続で送信しないでください。"
+	default:
+		return fmt.Sprintf("❌ **エラーが発生しました**\n%s", err.Error())
+	}
+}
+
 // sendSplitResponse は、長い応答を複数のメッセージに分割して送信します
 func (h *DiscordHandler) sendSplitResponse(s *discordgo.Session, m *discordgo.MessageCreate, response string) {
 	// 応答をDiscord用にフォーマット
 	formattedResponse := h.formatForDiscord(response)
+
+	// 応答が非常に長い場合はファイルとして送信
+	if len(formattedResponse) > DiscordMessageLimit*5 {
+		h.sendAsFile(s, m, formattedResponse, "response.txt")
+		return
+	}
 
 	// 応答をDiscordの制限に合わせて分割
 	chunks := h.splitMessage(formattedResponse)
@@ -169,26 +195,47 @@ func (h *DiscordHandler) sendSplitResponse(s *discordgo.Session, m *discordgo.Me
 		return
 	}
 
-	// 複数メッセージの場合
+	// 複数メッセージの場合 - すべてスレッド返信として送信
 	for i, chunk := range chunks {
-		var err error
-		if i == 0 {
-			// 最初のメッセージはリプライとして送信
-			_, err = s.ChannelMessageSendReply(m.ChannelID, chunk, &discordgo.MessageReference{
-				MessageID: m.ID,
-				ChannelID: m.ChannelID,
-				GuildID:   m.GuildID,
-			})
-		} else {
-			// 2番目以降は通常のメッセージとして送信
-			_, err = s.ChannelMessageSend(m.ChannelID, chunk)
-		}
+		_, err := s.ChannelMessageSendReply(m.ChannelID, chunk, &discordgo.MessageReference{
+			MessageID: m.ID,
+			ChannelID: m.ChannelID,
+			GuildID:   m.GuildID,
+		})
 
 		if err != nil {
 			log.Printf("応答メッセージの送信に失敗 (チャンク %d): %v", i+1, err)
 			break
 		}
 	}
+}
+
+// sendAsFile は、長い応答をファイルとして送信します
+func (h *DiscordHandler) sendAsFile(s *discordgo.Session, m *discordgo.MessageCreate, content, filename string) {
+	// ファイルデータを作成
+	fileData := strings.NewReader(content)
+
+	// ファイルを添付してメッセージを送信
+	_, err := s.ChannelFileSend(
+		m.ChannelID,
+		filename,
+		fileData,
+	)
+
+	if err != nil {
+		log.Printf("ファイル送信に失敗: %v", err)
+		// ファイル送信に失敗した場合は通常の分割送信にフォールバック
+		h.sendSplitResponse(s, m, content)
+		return
+	}
+
+	// ファイル送信成功のメッセージを送信
+	fileMsg := fmt.Sprintf("📄 **応答が長いため、ファイルとして送信しました**\nファイル名: `%s`", filename)
+	s.ChannelMessageSendReply(m.ChannelID, fileMsg, &discordgo.MessageReference{
+		MessageID: m.ID,
+		ChannelID: m.ChannelID,
+		GuildID:   m.GuildID,
+	})
 }
 
 // formatForDiscord は、Geminiからの応答をDiscord用にフォーマットします

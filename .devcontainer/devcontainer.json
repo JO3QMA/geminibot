@@ -53,6 +53,7 @@
 		"GOROOT": "/usr/local/go",
 		"CGO_ENABLED": "1",
 		"GOMODCACHE": "/go/pkg/mod",
-		"GOSUMDB": "sum.golang.org"
+		"GOSUMDB": "sum.golang.org",
+		"GIT_TERMINAL_PROMPT": "0"
 	}
 }
