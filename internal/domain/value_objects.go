@@ -7,19 +7,21 @@ import (
 
 // Message は、Discordのメッセージを表現する値オブジェクトです
 type Message struct {
-	ID        string
-	UserID    UserID
-	Content   string
-	Timestamp time.Time
+	ID          string
+	UserID      UserID
+	DisplayName string
+	Content     string
+	Timestamp   time.Time
 }
 
 // NewMessage は新しいMessageインスタンスを作成します
-func NewMessage(id string, userID UserID, content string, timestamp time.Time) Message {
+func NewMessage(id string, userID UserID, displayName, content string, timestamp time.Time) Message {
 	return Message{
-		ID:        id,
-		UserID:    userID,
-		Content:   content,
-		Timestamp: timestamp,
+		ID:          id,
+		UserID:      userID,
+		DisplayName: displayName,
+		Content:     content,
+		Timestamp:   timestamp,
 	}
 }
 

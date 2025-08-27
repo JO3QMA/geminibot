@@ -33,7 +33,11 @@ func (pg *PromptGenerator) GeneratePrompt(history ConversationHistory, userQuest
 	if !history.IsEmpty() {
 		builder.WriteString("## 会話履歴\n")
 		for _, msg := range history.Messages() {
-			builder.WriteString(fmt.Sprintf("ユーザー%s: %s\n", msg.UserID, msg.Content))
+			displayName := msg.DisplayName
+			if displayName == "" {
+				displayName = "ユーザー" + string(msg.UserID)
+			}
+			builder.WriteString(fmt.Sprintf("%s: %s\n", displayName, msg.Content))
 		}
 		builder.WriteString("\n")
 	}
@@ -64,7 +68,11 @@ func (pg *PromptGenerator) GeneratePromptWithContext(history ConversationHistory
 	if !history.IsEmpty() {
 		builder.WriteString("## 会話履歴\n")
 		for _, msg := range history.Messages() {
-			builder.WriteString(fmt.Sprintf("ユーザー%s: %s\n", msg.UserID, msg.Content))
+			displayName := msg.DisplayName
+			if displayName == "" {
+				displayName = "ユーザー" + string(msg.UserID)
+			}
+			builder.WriteString(fmt.Sprintf("%s: %s\n", displayName, msg.Content))
 		}
 		builder.WriteString("\n")
 	}
