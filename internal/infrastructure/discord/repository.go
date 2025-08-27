@@ -108,7 +108,7 @@ func (r *DiscordConversationRepository) getDisplayName(msg *discordgo.Message) s
 	if msg.Member != nil && msg.Member.Nick != "" {
 		return msg.Member.Nick
 	}
-	
+
 	// メンバー情報がない場合は、Discord APIからメンバー情報を取得を試行
 	if msg.GuildID != "" {
 		member, err := r.session.GuildMember(msg.GuildID, msg.Author.ID)
@@ -116,7 +116,7 @@ func (r *DiscordConversationRepository) getDisplayName(msg *discordgo.Message) s
 			return member.Nick
 		}
 	}
-	
+
 	// ニックネームがない場合はユーザー名を使用
 	return msg.Author.Username
 }

@@ -23,11 +23,23 @@ func NewPromptGenerator(systemPrompt string) *PromptGenerator {
 
 // GeneratePrompt は、会話履歴とユーザーの質問からプロンプトを生成します
 func (pg *PromptGenerator) GeneratePrompt(history ConversationHistory, userQuestion string) Prompt {
+	return pg.GeneratePromptWithMention(history, userQuestion, "", "")
+}
+
+// GeneratePromptWithMention は、メンション情報を含めてプロンプトを生成します
+func (pg *PromptGenerator) GeneratePromptWithMention(history ConversationHistory, userQuestion string, mentionerName string, mentionerID string) Prompt {
 	var builder strings.Builder
 
 	// システムプロンプトを追加
 	builder.WriteString(pg.systemPrompt)
 	builder.WriteString("\n\n")
+
+	// メンション情報がある場合は追加
+	if mentionerName != "" {
+		builder.WriteString("## メンション情報\n")
+		builder.WriteString(fmt.Sprintf("メンションした人: %s (ID: %s)\n", mentionerName, mentionerID))
+		builder.WriteString("\n")
+	}
 
 	// 会話履歴を追加
 	if !history.IsEmpty() {
@@ -51,6 +63,11 @@ func (pg *PromptGenerator) GeneratePrompt(history ConversationHistory, userQuest
 
 // GeneratePromptWithContext は、追加のコンテキスト情報を含めてプロンプトを生成します
 func (pg *PromptGenerator) GeneratePromptWithContext(history ConversationHistory, userQuestion string, additionalContext string) Prompt {
+	return pg.GeneratePromptWithContextAndMention(history, userQuestion, additionalContext, "", "")
+}
+
+// GeneratePromptWithContextAndMention は、追加のコンテキスト情報とメンション情報を含めてプロンプトを生成します
+func (pg *PromptGenerator) GeneratePromptWithContextAndMention(history ConversationHistory, userQuestion string, additionalContext string, mentionerName string, mentionerID string) Prompt {
 	var builder strings.Builder
 
 	// システムプロンプトを追加
@@ -62,6 +79,13 @@ func (pg *PromptGenerator) GeneratePromptWithContext(history ConversationHistory
 		builder.WriteString("## 追加コンテキスト\n")
 		builder.WriteString(additionalContext)
 		builder.WriteString("\n\n")
+	}
+
+	// メンション情報がある場合は追加
+	if mentionerName != "" {
+		builder.WriteString("## メンション情報\n")
+		builder.WriteString(fmt.Sprintf("メンションした人: %s (ID: %s)\n", mentionerName, mentionerID))
+		builder.WriteString("\n")
 	}
 
 	// 会話履歴を追加

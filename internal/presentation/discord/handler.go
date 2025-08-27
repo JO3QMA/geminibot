@@ -93,9 +93,13 @@ func (h *DiscordHandler) createBotMention(m *discordgo.MessageCreate) domain.Bot
 	// メンション部分を除去したコンテンツを取得
 	content := h.extractUserContent(m)
 
+	// 表示名を取得
+	displayName := h.getDisplayName(m)
+
 	return domain.NewBotMention(
 		domain.NewChannelID(m.ChannelID),
 		domain.NewUserID(m.Author.ID),
+		displayName,
 		content,
 		m.ID,
 	)
@@ -115,6 +119,25 @@ func (h *DiscordHandler) extractUserContent(m *discordgo.MessageCreate) string {
 	content = strings.TrimSpace(content)
 
 	return content
+}
+
+// getDisplayName は、Discordメッセージから表示名を取得します
+func (h *DiscordHandler) getDisplayName(m *discordgo.MessageCreate) string {
+	// メンバー情報がある場合はニックネームを優先
+	if m.Member != nil && m.Member.Nick != "" {
+		return m.Member.Nick
+	}
+	
+	// メンバー情報がない場合は、Discord APIからメンバー情報を取得を試行
+	if m.GuildID != "" {
+		member, err := h.session.GuildMember(m.GuildID, m.Author.ID)
+		if err == nil && member.Nick != "" {
+			return member.Nick
+		}
+	}
+	
+	// ニックネームがない場合はユーザー名を使用
+	return m.Author.Username
 }
 
 // processMentionAsync は、メンションを非同期で処理します
