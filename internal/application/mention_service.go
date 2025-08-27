@@ -20,17 +20,19 @@ type MentionApplicationService struct {
 
 // Config は、アプリケーションサービスの設定を定義します
 type Config struct {
-	MaxHistoryMessages int
-	RequestTimeout     time.Duration
-	SystemPrompt       string
+	MaxHistoryMessages   int
+	RequestTimeout       time.Duration
+	SystemPrompt         string
+	UseStructuredContext bool // 構造化コンテキストを使用するかどうか
 }
 
 // DefaultConfig は、デフォルトの設定を返します
 func DefaultConfig() *Config {
 	return &Config{
-		MaxHistoryMessages: 10,
-		RequestTimeout:     30 * time.Second,
-		SystemPrompt:       "あなたは優秀なアシスタントです。与えられた会話履歴を参考に、ユーザーのチャット内容に適切に回答してください。",
+		MaxHistoryMessages:   10,
+		RequestTimeout:       30 * time.Second,
+		SystemPrompt:         "あなたは優秀なアシスタントです。与えられた会話履歴を参考に、ユーザーのチャット内容に適切に回答してください。",
+		UseStructuredContext: true, // デフォルトで構造化コンテキストを使用
 	}
 }
 
@@ -54,7 +56,12 @@ func NewMentionApplicationService(
 
 // HandleMention は、Botへのメンションを処理します
 func (s *MentionApplicationService) HandleMention(ctx context.Context, mention domain.BotMention) (string, error) {
-	log.Printf("メンションを処理中: %s", mention.String())
+	// 設定に基づいて構造化コンテキストを使用するかどうかを決定
+	if s.config.UseStructuredContext {
+		return s.HandleMentionWithStructuredContext(ctx, mention)
+	}
+
+	log.Printf("従来の方法でメンションを処理中: %s", mention.String())
 
 	// コンテキストにタイムアウトを設定
 	ctx, cancel := context.WithTimeout(ctx, s.config.RequestTimeout)
@@ -76,6 +83,35 @@ func (s *MentionApplicationService) HandleMention(ctx context.Context, mention d
 	}
 
 	log.Printf("Gemini APIからの応答を取得: %d文字", len(response))
+	return response, nil
+}
+
+// HandleMentionWithStructuredContext は、構造化されたコンテキストを使用してメンションを処理します
+func (s *MentionApplicationService) HandleMentionWithStructuredContext(ctx context.Context, mention domain.BotMention) (string, error) {
+	log.Printf("構造化コンテキストでメンションを処理中: %s", mention.String())
+
+	// コンテキストにタイムアウトを設定
+	ctx, cancel := context.WithTimeout(ctx, s.config.RequestTimeout)
+	defer cancel()
+
+	// 1. チャット履歴を取得
+	history, err := s.getConversationHistory(ctx, mention)
+	if err != nil {
+		return "", fmt.Errorf("チャット履歴の取得に失敗: %w", err)
+	}
+
+	// 2. 構造化コンテキストを使用してGemini APIにリクエストを送信
+	response, err := s.geminiClient.GenerateTextWithStructuredContext(
+		ctx,
+		s.config.SystemPrompt,
+		history.Messages(),
+		mention.Content,
+	)
+	if err != nil {
+		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
+	}
+
+	log.Printf("構造化コンテキストでGemini APIからの応答を取得: %d文字", len(response))
 	return response, nil
 }
 

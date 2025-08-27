@@ -60,9 +60,10 @@ func main() {
 
 	// アプリケーションサービスの設定を作成
 	appConfig := &application.Config{
-		MaxHistoryMessages: config.Bot.MaxHistoryMessages,
-		RequestTimeout:     config.Bot.RequestTimeout,
-		SystemPrompt:       config.Bot.SystemPrompt,
+		MaxHistoryMessages:   config.Bot.MaxHistoryMessages,
+		RequestTimeout:       config.Bot.RequestTimeout,
+		SystemPrompt:         config.Bot.SystemPrompt,
+		UseStructuredContext: config.Bot.UseStructuredContext,
 	}
 
 	// アプリケーションサービスを作成
