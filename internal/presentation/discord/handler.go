@@ -174,8 +174,8 @@ func (h *DiscordHandler) processMentionAsync(s *discordgo.Session, m *discordgo.
 	if err != nil {
 		log.Printf("メンション処理に失敗: %v", err)
 
-		// 荒らし対策エラーの場合は特別なメッセージを送信
-		errorMsg := h.formatAntiSpamError(err)
+		// エラーを適切なメッセージにフォーマット
+		errorMsg := h.formatError(err)
 		s.ChannelMessageSend(thread.ID, errorMsg)
 		return
 	}
@@ -184,8 +184,48 @@ func (h *DiscordHandler) processMentionAsync(s *discordgo.Session, m *discordgo.
 	h.sendThreadResponse(s, thread.ID, response)
 }
 
-// formatAntiSpamError は、荒らし対策エラーを適切なメッセージにフォーマットします
-func (h *DiscordHandler) formatAntiSpamError(err error) string {
+// isTimeoutError は、エラーがタイムアウトエラーかどうかを判定します
+func (h *DiscordHandler) isTimeoutError(err error) bool {
+	if err == nil {
+		return false
+	}
+	
+	// context.DeadlineExceeded エラーの検出
+	if err.Error() == "context deadline exceeded" {
+		return true
+	}
+	
+	// タイムアウト関連のエラーメッセージを検出
+	errorMsg := err.Error()
+	timeoutKeywords := []string{
+		"timeout",
+		"タイムアウト",
+		"deadline exceeded",
+		"context deadline",
+		"request timeout",
+	}
+	
+	for _, keyword := range timeoutKeywords {
+		if strings.Contains(strings.ToLower(errorMsg), strings.ToLower(keyword)) {
+			return true
+		}
+	}
+	
+	return false
+}
+
+// formatError は、エラーを適切なメッセージにフォーマットします
+func (h *DiscordHandler) formatError(err error) string {
+	// タイムアウトエラーの場合
+	if h.isTimeoutError(err) {
+		return "⏰ **タイムアウトしました**\n\n処理に時間がかかりすぎました。以下の対処法をお試しください：\n\n" +
+			"• 質問を短くしてみる\n" +
+			"• 複雑な質問を分割する\n" +
+			"• しばらく待ってから再度お試しください\n\n" +
+			"ご不便をおかけして申し訳ございません。"
+	}
+	
+	// 荒らし対策エラーの場合
 	switch err.Error() {
 	case "レート制限を超過しました":
 		return "⚠️ **レート制限を超過しました**\nしばらく待ってから再度お試しください。"
@@ -225,8 +265,8 @@ func (h *DiscordHandler) sendNormalReply(s *discordgo.Session, m *discordgo.Mess
 	if err != nil {
 		log.Printf("メンション処理に失敗: %v", err)
 
-		// 荒らし対策エラーの場合は特別なメッセージを送信
-		errorMsg := h.formatAntiSpamError(err)
+		// エラーを適切なメッセージにフォーマット
+		errorMsg := h.formatError(err)
 		s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
 			MessageID: m.ID,
 			ChannelID: m.ChannelID,
