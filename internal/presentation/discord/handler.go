@@ -119,8 +119,12 @@ func (h *DiscordHandler) extractUserContent(m *discordgo.MessageCreate) string {
 
 // processMentionAsync は、メンションを非同期で処理します
 func (h *DiscordHandler) processMentionAsync(s *discordgo.Session, m *discordgo.MessageCreate, mention domain.BotMention) {
-	// 処理中メッセージを送信
-	thinkingMsg, err := s.ChannelMessageSend(m.ChannelID, "🤔 考え中...")
+	// 処理中メッセージをスレッド返信として送信
+	thinkingMsg, err := s.ChannelMessageSendReply(m.ChannelID, "🤔 考え中...", &discordgo.MessageReference{
+		MessageID: m.ID,
+		ChannelID: m.ChannelID,
+		GuildID:   m.GuildID,
+	})
 	if err != nil {
 		log.Printf("処理中メッセージの送信に失敗: %v", err)
 		return
@@ -229,7 +233,7 @@ func (h *DiscordHandler) sendAsFile(s *discordgo.Session, m *discordgo.MessageCr
 		return
 	}
 
-	// ファイル送信成功のメッセージを送信
+	// ファイル送信成功のメッセージをスレッド返信として送信
 	fileMsg := fmt.Sprintf("📄 **応答が長いため、ファイルとして送信しました**\nファイル名: `%s`", filename)
 	s.ChannelMessageSendReply(m.ChannelID, fileMsg, &discordgo.MessageReference{
 		MessageID: m.ID,
