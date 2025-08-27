@@ -40,9 +40,19 @@ func (r *DiscordConversationRepository) GetRecentMessages(ctx context.Context, c
 
 		timestamp := msg.Timestamp
 
+		// ユーザー情報を作成
+		user := domain.NewUser(
+			domain.NewUserID(msg.Author.ID),
+			msg.Author.Username,
+			r.getDisplayName(msg),
+			msg.Author.Avatar,
+			msg.Author.Discriminator,
+			msg.Author.Bot,
+		)
+
 		domainMessage := domain.NewMessage(
 			msg.ID,
-			domain.NewUserID(msg.Author.ID),
+			user,
 			msg.Content,
 			timestamp,
 		)
@@ -82,9 +92,19 @@ func (r *DiscordConversationRepository) GetMessagesBefore(ctx context.Context, c
 
 		timestamp := msg.Timestamp
 
+		// ユーザー情報を作成
+		user := domain.NewUser(
+			domain.NewUserID(msg.Author.ID),
+			msg.Author.Username,
+			r.getDisplayName(msg),
+			msg.Author.Avatar,
+			msg.Author.Discriminator,
+			msg.Author.Bot,
+		)
+
 		domainMessage := domain.NewMessage(
 			msg.ID,
-			domain.NewUserID(msg.Author.ID),
+			user,
 			msg.Content,
 			timestamp,
 		)
@@ -92,4 +112,23 @@ func (r *DiscordConversationRepository) GetMessagesBefore(ctx context.Context, c
 	}
 
 	return domain.NewConversationHistory(domainMessages), nil
+}
+
+// getDisplayName は、Discordメッセージから表示名を取得します
+func (r *DiscordConversationRepository) getDisplayName(msg *discordgo.Message) string {
+	// メンバー情報がある場合はニックネームを優先
+	if msg.Member != nil && msg.Member.Nick != "" {
+		return msg.Member.Nick
+	}
+
+	// メンバー情報がない場合は、Discord APIからメンバー情報を取得を試行
+	if msg.GuildID != "" {
+		member, err := r.session.GuildMember(msg.GuildID, msg.Author.ID)
+		if err == nil && member.Nick != "" {
+			return member.Nick
+		}
+	}
+
+	// ニックネームがない場合はユーザー名を使用
+	return msg.Author.Username
 }

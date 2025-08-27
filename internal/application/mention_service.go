@@ -30,7 +30,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		MaxHistoryMessages: 10,
 		RequestTimeout:     30 * time.Second,
-		SystemPrompt:       "あなたは優秀なアシスタントです。与えられた会話履歴を参考に、ユーザーの質問に適切に回答してください。",
+		SystemPrompt:       "あなたは優秀なアシスタントです。与えられた会話履歴を参考に、ユーザーのチャット内容に適切に回答してください。",
 	}
 }
 
@@ -67,7 +67,7 @@ func (s *MentionApplicationService) HandleMention(ctx context.Context, mention d
 	}
 
 	// 2. プロンプトを生成
-	prompt := s.promptGenerator.GeneratePrompt(history, mention.Content)
+	prompt := s.promptGenerator.GeneratePromptWithMention(history, mention.Content, mention.User.GetDisplayName(), mention.User.ID.String())
 
 	// 3. Gemini APIにリクエストを送信
 	response, err := s.geminiClient.GenerateText(ctx, prompt)
@@ -92,7 +92,7 @@ func (s *MentionApplicationService) getConversationHistory(ctx context.Context, 
 	}
 }
 
-// ExtractUserQuestion は、メンションからユーザーの質問部分を抽出します
+// ExtractUserQuestion は、メンションからユーザーのチャット内容部分を抽出します
 func (s *MentionApplicationService) ExtractUserQuestion(mention domain.BotMention) string {
 	content := strings.TrimSpace(mention.Content)
 
