@@ -28,6 +28,9 @@ func (r *DiscordConversationRepository) GetRecentMessages(ctx context.Context, c
 
 	messages, err := r.session.ChannelMessages(channelID.String(), limit, "", "", "")
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return domain.ConversationHistory{}, fmt.Errorf("Discord APIからのメッセージ取得がタイムアウトしました: %w", err)
+		}
 		return domain.ConversationHistory{}, fmt.Errorf("Discord APIからメッセージ取得に失敗: %w", err)
 	}
 
@@ -77,6 +80,9 @@ func (r *DiscordConversationRepository) GetMessagesBefore(ctx context.Context, c
 
 	messages, err := r.session.ChannelMessages(channelID.String(), limit, messageID, "", "")
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return domain.ConversationHistory{}, fmt.Errorf("Discord APIからのメッセージ取得がタイムアウトしました: %w", err)
+		}
 		return domain.ConversationHistory{}, fmt.Errorf("Discord APIからメッセージ取得に失敗: %w", err)
 	}
 

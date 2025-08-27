@@ -102,6 +102,9 @@ func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt
 
 	resp, err := g.client.Models.GenerateContent(ctx, g.config.ModelName, contents, config)
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return "", fmt.Errorf("Gemini APIへのリクエストがタイムアウトしました: %w", err)
+		}
 		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
 	}
 
@@ -182,6 +185,9 @@ func (g *GeminiAPIClient) GenerateTextWithStructuredContext(
 
 	resp, err := g.client.Models.GenerateContent(ctx, g.config.ModelName, allContents, config)
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return "", fmt.Errorf("Gemini APIへのリクエストがタイムアウトしました: %w", err)
+		}
 		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
 	}
 

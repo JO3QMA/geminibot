@@ -74,6 +74,9 @@ func (s *MentionApplicationService) HandleMention(ctx context.Context, mention d
 	// 1. チャット履歴を取得
 	history, err := s.getConversationHistory(ctx, mention)
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return "", fmt.Errorf("チャット履歴の取得がタイムアウトしました: %w", err)
+		}
 		return "", fmt.Errorf("チャット履歴の取得に失敗: %w", err)
 	}
 
@@ -83,6 +86,9 @@ func (s *MentionApplicationService) HandleMention(ctx context.Context, mention d
 	// 3. Gemini APIにリクエストを送信
 	response, err := s.geminiClient.GenerateText(ctx, prompt)
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return "", fmt.Errorf("Gemini APIからの応答取得がタイムアウトしました: %w", err)
+		}
 		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
 	}
 
@@ -101,6 +107,9 @@ func (s *MentionApplicationService) HandleMentionWithStructuredContext(ctx conte
 	// 1. チャット履歴を取得
 	history, err := s.getConversationHistory(ctx, mention)
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return "", fmt.Errorf("チャット履歴の取得がタイムアウトしました: %w", err)
+		}
 		return "", fmt.Errorf("チャット履歴の取得に失敗: %w", err)
 	}
 
@@ -121,6 +130,9 @@ func (s *MentionApplicationService) HandleMentionWithStructuredContext(ctx conte
 		truncatedQuestion,
 	)
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return "", fmt.Errorf("Gemini APIからの応答取得がタイムアウトしました: %w", err)
+		}
 		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
 	}
 
