@@ -63,6 +63,7 @@ func NewGeminiAPIClient(apiKey string, config *Config) (*GeminiAPIClient, error)
 // GenerateText は、プロンプトを受け取ってGemini APIからテキストを生成します
 func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt) (string, error) {
 	log.Printf("Gemini APIにテキスト生成をリクエスト中: %d文字", len(prompt.Content()))
+	log.Printf("プロンプト内容: %s", prompt.Content())
 
 	// 新しいGemini APIライブラリの仕様に合わせて実装
 	contents := genai.Text(prompt.Content())
@@ -72,6 +73,25 @@ func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt
 		MaxOutputTokens: g.config.MaxTokens,
 		Temperature:     &g.config.Temperature,
 		TopP:            &g.config.TopP,
+		// 安全フィルターの設定を調整（中程度の制限）
+		SafetySettings: []*genai.SafetySetting{
+			{
+				Category:  genai.HarmCategoryHarassment,
+				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+			},
+			{
+				Category:  genai.HarmCategoryHateSpeech,
+				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+			},
+			{
+				Category:  genai.HarmCategorySexuallyExplicit,
+				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+			},
+			{
+				Category:  genai.HarmCategoryDangerousContent,
+				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+			},
+		},
 	}
 
 	resp, err := g.client.Models.GenerateContent(ctx, g.config.ModelName, contents, config)
@@ -79,11 +99,35 @@ func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt
 		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
 	}
 
+	// デバッグ用：レスポンスの詳細をログ出力
+	log.Printf("Gemini APIレスポンス: Candidates数=%d", len(resp.Candidates))
+	if len(resp.Candidates) > 0 {
+		candidate := resp.Candidates[0]
+		log.Printf("Candidate詳細: FinishReason=%s, Parts数=%d", candidate.FinishReason, len(candidate.Content.Parts))
+
+		// SafetyRatingsがある場合はログ出力
+		if len(candidate.SafetyRatings) > 0 {
+			for i, rating := range candidate.SafetyRatings {
+				log.Printf("SafetyRating[%d]: Category=%s, Probability=%s", i, rating.Category, rating.Probability)
+			}
+		}
+	}
+
 	if len(resp.Candidates) == 0 {
 		return "", fmt.Errorf("Gemini APIから有効な応答が得られませんでした")
 	}
 
 	candidate := resp.Candidates[0]
+
+	// FinishReasonをチェックして安全フィルターによるブロックを検出
+	if candidate.FinishReason == "SAFETY" {
+		return "", fmt.Errorf("Gemini APIの安全フィルターによって応答がブロックされました")
+	}
+
+	if candidate.FinishReason == "RECITATION" {
+		return "", fmt.Errorf("Gemini APIが著作権保護された内容を検出しました")
+	}
+
 	if len(candidate.Content.Parts) == 0 {
 		return "", fmt.Errorf("Gemini APIの応答にコンテンツが含まれていません")
 	}
@@ -103,6 +147,7 @@ func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt
 // GenerateTextWithOptions は、オプション付きでテキストを生成します
 func (g *GeminiAPIClient) GenerateTextWithOptions(ctx context.Context, prompt domain.Prompt, options application.TextGenerationOptions) (string, error) {
 	log.Printf("Gemini APIにオプション付きテキスト生成をリクエスト中: %d文字", len(prompt.Content()))
+	log.Printf("プロンプト内容: %s", prompt.Content())
 
 	// 新しいGemini APIライブラリの仕様に合わせて実装
 	contents := genai.Text(prompt.Content())
@@ -128,6 +173,25 @@ func (g *GeminiAPIClient) GenerateTextWithOptions(ctx context.Context, prompt do
 		MaxOutputTokens: maxTokens,
 		Temperature:     &temperature,
 		TopP:            &topP,
+		// 安全フィルターの設定を調整（中程度の制限）
+		SafetySettings: []*genai.SafetySetting{
+			{
+				Category:  genai.HarmCategoryHarassment,
+				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+			},
+			{
+				Category:  genai.HarmCategoryHateSpeech,
+				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+			},
+			{
+				Category:  genai.HarmCategorySexuallyExplicit,
+				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+			},
+			{
+				Category:  genai.HarmCategoryDangerousContent,
+				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+			},
+		},
 	}
 
 	resp, err := g.client.Models.GenerateContent(ctx, g.config.ModelName, contents, config)
@@ -135,11 +199,35 @@ func (g *GeminiAPIClient) GenerateTextWithOptions(ctx context.Context, prompt do
 		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
 	}
 
+	// デバッグ用：レスポンスの詳細をログ出力
+	log.Printf("Gemini APIレスポンス: Candidates数=%d", len(resp.Candidates))
+	if len(resp.Candidates) > 0 {
+		candidate := resp.Candidates[0]
+		log.Printf("Candidate詳細: FinishReason=%s, Parts数=%d", candidate.FinishReason, len(candidate.Content.Parts))
+
+		// SafetyRatingsがある場合はログ出力
+		if len(candidate.SafetyRatings) > 0 {
+			for i, rating := range candidate.SafetyRatings {
+				log.Printf("SafetyRating[%d]: Category=%s, Probability=%s", i, rating.Category, rating.Probability)
+			}
+		}
+	}
+
 	if len(resp.Candidates) == 0 {
 		return "", fmt.Errorf("Gemini APIから有効な応答が得られませんでした")
 	}
 
 	candidate := resp.Candidates[0]
+
+	// FinishReasonをチェックして安全フィルターによるブロックを検出
+	if candidate.FinishReason == "SAFETY" {
+		return "", fmt.Errorf("Gemini APIの安全フィルターによって応答がブロックされました")
+	}
+
+	if candidate.FinishReason == "RECITATION" {
+		return "", fmt.Errorf("Gemini APIが著作権保護された内容を検出しました")
+	}
+
 	if len(candidate.Content.Parts) == 0 {
 		return "", fmt.Errorf("Gemini APIの応答にコンテンツが含まれていません")
 	}
