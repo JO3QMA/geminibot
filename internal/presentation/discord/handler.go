@@ -152,10 +152,10 @@ func (h *DiscordHandler) processMentionAsync(s *discordgo.Session, m *discordgo.
 func (h *DiscordHandler) sendSplitResponse(s *discordgo.Session, m *discordgo.MessageCreate, response string) {
 	// 応答をDiscord用にフォーマット
 	formattedResponse := h.formatForDiscord(response)
-	
+
 	// 応答をDiscordの制限に合わせて分割
 	chunks := h.splitMessage(formattedResponse)
-	
+
 	if len(chunks) == 1 {
 		// 単一メッセージの場合
 		_, err := s.ChannelMessageSendReply(m.ChannelID, chunks[0], &discordgo.MessageReference{
@@ -183,7 +183,7 @@ func (h *DiscordHandler) sendSplitResponse(s *discordgo.Session, m *discordgo.Me
 			// 2番目以降は通常のメッセージとして送信
 			_, err = s.ChannelMessageSend(m.ChannelID, chunk)
 		}
-		
+
 		if err != nil {
 			log.Printf("応答メッセージの送信に失敗 (チャンク %d): %v", i+1, err)
 			break
@@ -195,19 +195,19 @@ func (h *DiscordHandler) sendSplitResponse(s *discordgo.Session, m *discordgo.Me
 func (h *DiscordHandler) formatForDiscord(response string) string {
 	// markdownのコードブロックをDiscord用に変換
 	formatted := h.convertCodeBlocks(response)
-	
+
 	// markdownのインラインコードをDiscord用に変換
 	formatted = h.convertInlineCode(formatted)
-	
+
 	// markdownの太字をDiscord用に変換
 	formatted = h.convertBold(formatted)
-	
+
 	// markdownの斜体をDiscord用に変換
 	formatted = h.convertItalic(formatted)
-	
+
 	// markdownのリストをDiscord用に変換
 	formatted = h.convertLists(formatted)
-	
+
 	return formatted
 }
 
@@ -219,7 +219,7 @@ func (h *DiscordHandler) convertCodeBlocks(text string) string {
 	var result []string
 	inCodeBlock := false
 	codeBlockContent := []string{}
-	
+
 	for _, line := range lines {
 		if strings.HasPrefix(line, "```") && !inCodeBlock {
 			// コードブロック開始
@@ -241,7 +241,7 @@ func (h *DiscordHandler) convertCodeBlocks(text string) string {
 			result = append(result, line)
 		}
 	}
-	
+
 	return strings.Join(result, "\n")
 }
 
@@ -251,7 +251,7 @@ func (h *DiscordHandler) convertInlineCode(text string) string {
 	// ただし、コードブロック内は除外
 	lines := strings.Split(text, "\n")
 	var result []string
-	
+
 	for _, line := range lines {
 		if strings.HasPrefix(line, "```") {
 			// コードブロックの境界はそのまま
@@ -262,7 +262,7 @@ func (h *DiscordHandler) convertInlineCode(text string) string {
 			result = append(result, converted)
 		}
 	}
-	
+
 	return strings.Join(result, "\n")
 }
 
@@ -273,7 +273,7 @@ func (h *DiscordHandler) convertInlineCodeInLine(line string) string {
 	var result strings.Builder
 	inInlineCode := false
 	codeContent := strings.Builder{}
-	
+
 	for i := 0; i < len(line); i++ {
 		if line[i] == '`' && !inInlineCode {
 			// インラインコード開始
@@ -293,7 +293,7 @@ func (h *DiscordHandler) convertInlineCodeInLine(line string) string {
 			result.WriteByte(line[i])
 		}
 	}
-	
+
 	return result.String()
 }
 
@@ -303,7 +303,7 @@ func (h *DiscordHandler) convertBold(text string) string {
 	// ただし、コードブロック内は除外
 	lines := strings.Split(text, "\n")
 	var result []string
-	
+
 	for _, line := range lines {
 		if strings.HasPrefix(line, "```") {
 			// コードブロックの境界はそのまま
@@ -314,7 +314,7 @@ func (h *DiscordHandler) convertBold(text string) string {
 			result = append(result, converted)
 		}
 	}
-	
+
 	return strings.Join(result, "\n")
 }
 
@@ -326,7 +326,7 @@ func (h *DiscordHandler) convertBoldInLine(line string) string {
 	inInlineCode := false
 	inBold := false
 	boldContent := strings.Builder{}
-	
+
 	for i := 0; i < len(line); i++ {
 		if line[i] == '`' {
 			// インラインコードの境界
@@ -363,14 +363,14 @@ func (h *DiscordHandler) convertBoldInLine(line string) string {
 			result.WriteByte(line[i])
 		}
 	}
-	
+
 	// 未終了の太字があれば終了
 	if inBold {
 		result.WriteString("**")
 		result.WriteString(boldContent.String())
 		result.WriteString("**")
 	}
-	
+
 	return result.String()
 }
 
@@ -380,7 +380,7 @@ func (h *DiscordHandler) convertItalic(text string) string {
 	// ただし、コードブロック内は除外
 	lines := strings.Split(text, "\n")
 	var result []string
-	
+
 	for _, line := range lines {
 		if strings.HasPrefix(line, "```") {
 			// コードブロックの境界はそのまま
@@ -391,7 +391,7 @@ func (h *DiscordHandler) convertItalic(text string) string {
 			result = append(result, converted)
 		}
 	}
-	
+
 	return strings.Join(result, "\n")
 }
 
@@ -403,7 +403,7 @@ func (h *DiscordHandler) convertItalicInLine(line string) string {
 	inInlineCode := false
 	inItalic := false
 	italicContent := strings.Builder{}
-	
+
 	for i := 0; i < len(line); i++ {
 		if line[i] == '`' {
 			// インラインコードの境界
@@ -443,14 +443,14 @@ func (h *DiscordHandler) convertItalicInLine(line string) string {
 			result.WriteByte(line[i])
 		}
 	}
-	
+
 	// 未終了の斜体があれば終了
 	if inItalic {
 		result.WriteString("*")
 		result.WriteString(italicContent.String())
 		result.WriteString("*")
 	}
-	
+
 	return result.String()
 }
 
@@ -461,7 +461,7 @@ func (h *DiscordHandler) convertLists(text string) string {
 	// 主に番号付きリストの形式を調整
 	lines := strings.Split(text, "\n")
 	var result []string
-	
+
 	for _, line := range lines {
 		if strings.HasPrefix(line, "```") {
 			// コードブロックの境界はそのまま
@@ -472,7 +472,7 @@ func (h *DiscordHandler) convertLists(text string) string {
 			result = append(result, converted)
 		}
 	}
-	
+
 	return strings.Join(result, "\n")
 }
 
@@ -488,7 +488,7 @@ func (h *DiscordHandler) convertListInLine(line string) string {
 			return strings.Replace(line, ". ", ") ", 1)
 		}
 	}
-	
+
 	return line
 }
 
