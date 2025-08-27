@@ -7,21 +7,19 @@ import (
 
 // Message は、Discordのメッセージを表現する値オブジェクトです
 type Message struct {
-	ID          string
-	UserID      UserID
-	DisplayName string
-	Content     string
-	Timestamp   time.Time
+	ID        string
+	User      User
+	Content   string
+	Timestamp time.Time
 }
 
 // NewMessage は新しいMessageインスタンスを作成します
-func NewMessage(id string, userID UserID, displayName, content string, timestamp time.Time) Message {
+func NewMessage(id string, user User, content string, timestamp time.Time) Message {
 	return Message{
-		ID:          id,
-		UserID:      userID,
-		DisplayName: displayName,
-		Content:     content,
-		Timestamp:   timestamp,
+		ID:        id,
+		User:      user,
+		Content:   content,
+		Timestamp: timestamp,
 	}
 }
 
@@ -36,6 +34,41 @@ func NewUserID(id string) UserID {
 // String はUserIDを文字列として返します
 func (u UserID) String() string {
 	return string(u)
+}
+
+// User は、Discordのユーザー情報を表現する値オブジェクトです
+type User struct {
+	ID          UserID
+	Username    string
+	DisplayName string
+	Avatar      string
+	IsBot       bool
+	Discriminator string
+}
+
+// NewUser は新しいUserインスタンスを作成します
+func NewUser(id UserID, username, displayName, avatar, discriminator string, isBot bool) User {
+	return User{
+		ID:          id,
+		Username:    username,
+		DisplayName: displayName,
+		Avatar:      avatar,
+		IsBot:       isBot,
+		Discriminator: discriminator,
+	}
+}
+
+// GetDisplayName は、表示名を取得します（ニックネームがない場合はユーザー名を返します）
+func (u User) GetDisplayName() string {
+	if u.DisplayName != "" {
+		return u.DisplayName
+	}
+	return u.Username
+}
+
+// String はUserの文字列表現を返します
+func (u User) String() string {
+	return fmt.Sprintf("User{ID: %s, Username: %s, DisplayName: %s}", u.ID, u.Username, u.GetDisplayName())
 }
 
 // ChannelID は、DiscordのチャンネルIDを表現する値オブジェクトです
@@ -102,21 +135,19 @@ func (p Prompt) String() string {
 
 // BotMention は、Botへのメンション情報を表現する値オブジェクトです
 type BotMention struct {
-	ChannelID   ChannelID
-	UserID      UserID
-	DisplayName string
-	Content     string
-	MessageID   string
+	ChannelID ChannelID
+	User      User
+	Content   string
+	MessageID string
 }
 
 // NewBotMention は新しいBotMentionインスタンスを作成します
-func NewBotMention(channelID ChannelID, userID UserID, displayName, content, messageID string) BotMention {
+func NewBotMention(channelID ChannelID, user User, content, messageID string) BotMention {
 	return BotMention{
-		ChannelID:   channelID,
-		UserID:      userID,
-		DisplayName: displayName,
-		Content:     content,
-		MessageID:   messageID,
+		ChannelID: channelID,
+		User:      user,
+		Content:   content,
+		MessageID: messageID,
 	}
 }
 
@@ -130,6 +161,6 @@ func (bm BotMention) IsThread() bool {
 
 // String はBotMentionの文字列表現を返します
 func (bm BotMention) String() string {
-	return fmt.Sprintf("BotMention{ChannelID: %s, UserID: %s, Content: %s, MessageID: %s}",
-		bm.ChannelID, bm.UserID, bm.Content, bm.MessageID)
+	return fmt.Sprintf("BotMention{ChannelID: %s, User: %s, Content: %s, MessageID: %s}",
+		bm.ChannelID, bm.User, bm.Content, bm.MessageID)
 }

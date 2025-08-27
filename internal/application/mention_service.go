@@ -67,7 +67,7 @@ func (s *MentionApplicationService) HandleMention(ctx context.Context, mention d
 	}
 
 	// 2. プロンプトを生成
-	prompt := s.promptGenerator.GeneratePromptWithMention(history, mention.Content, mention.DisplayName, mention.UserID.String())
+	prompt := s.promptGenerator.GeneratePromptWithMention(history, mention.Content, mention.User.GetDisplayName(), mention.User.ID.String())
 
 	// 3. Gemini APIにリクエストを送信
 	response, err := s.geminiClient.GenerateText(ctx, prompt)

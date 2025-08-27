@@ -93,13 +93,19 @@ func (h *DiscordHandler) createBotMention(m *discordgo.MessageCreate) domain.Bot
 	// メンション部分を除去したコンテンツを取得
 	content := h.extractUserContent(m)
 
-	// 表示名を取得
-	displayName := h.getDisplayName(m)
+	// ユーザー情報を作成
+	user := domain.NewUser(
+		domain.NewUserID(m.Author.ID),
+		m.Author.Username,
+		h.getDisplayName(m),
+		m.Author.Avatar,
+		m.Author.Discriminator,
+		m.Author.Bot,
+	)
 
 	return domain.NewBotMention(
 		domain.NewChannelID(m.ChannelID),
-		domain.NewUserID(m.Author.ID),
-		displayName,
+		user,
 		content,
 		m.ID,
 	)
@@ -127,7 +133,7 @@ func (h *DiscordHandler) getDisplayName(m *discordgo.MessageCreate) string {
 	if m.Member != nil && m.Member.Nick != "" {
 		return m.Member.Nick
 	}
-	
+
 	// メンバー情報がない場合は、Discord APIからメンバー情報を取得を試行
 	if m.GuildID != "" {
 		member, err := h.session.GuildMember(m.GuildID, m.Author.ID)
@@ -135,7 +141,7 @@ func (h *DiscordHandler) getDisplayName(m *discordgo.MessageCreate) string {
 			return member.Nick
 		}
 	}
-	
+
 	// ニックネームがない場合はユーザー名を使用
 	return m.Author.Username
 }

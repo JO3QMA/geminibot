@@ -40,13 +40,19 @@ func (r *DiscordConversationRepository) GetRecentMessages(ctx context.Context, c
 
 		timestamp := msg.Timestamp
 
-		// 表示名を取得（ニックネームがある場合はニックネーム、ない場合はユーザー名）
-		displayName := r.getDisplayName(msg)
+		// ユーザー情報を作成
+		user := domain.NewUser(
+			domain.NewUserID(msg.Author.ID),
+			msg.Author.Username,
+			r.getDisplayName(msg),
+			msg.Author.Avatar,
+			msg.Author.Discriminator,
+			msg.Author.Bot,
+		)
 
 		domainMessage := domain.NewMessage(
 			msg.ID,
-			domain.NewUserID(msg.Author.ID),
-			displayName,
+			user,
 			msg.Content,
 			timestamp,
 		)
@@ -86,13 +92,19 @@ func (r *DiscordConversationRepository) GetMessagesBefore(ctx context.Context, c
 
 		timestamp := msg.Timestamp
 
-		// 表示名を取得（ニックネームがある場合はニックネーム、ない場合はユーザー名）
-		displayName := r.getDisplayName(msg)
+		// ユーザー情報を作成
+		user := domain.NewUser(
+			domain.NewUserID(msg.Author.ID),
+			msg.Author.Username,
+			r.getDisplayName(msg),
+			msg.Author.Avatar,
+			msg.Author.Discriminator,
+			msg.Author.Bot,
+		)
 
 		domainMessage := domain.NewMessage(
 			msg.ID,
-			domain.NewUserID(msg.Author.ID),
-			displayName,
+			user,
 			msg.Content,
 			timestamp,
 		)

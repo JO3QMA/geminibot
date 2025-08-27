@@ -37,7 +37,7 @@ func (pg *PromptGenerator) GeneratePromptWithMention(history ConversationHistory
 	// メンション情報がある場合は追加
 	if mentionerName != "" {
 		builder.WriteString("## メンション情報\n")
-		builder.WriteString(fmt.Sprintf("メンションした人: %s (ID: %s)\n", mentionerName, mentionerID))
+		builder.WriteString(fmt.Sprintf("メンションしたユーザー: %s (ID: %s)\n", mentionerName, mentionerID))
 		builder.WriteString("\n")
 	}
 
@@ -45,10 +45,7 @@ func (pg *PromptGenerator) GeneratePromptWithMention(history ConversationHistory
 	if !history.IsEmpty() {
 		builder.WriteString("## 会話履歴\n")
 		for _, msg := range history.Messages() {
-			displayName := msg.DisplayName
-			if displayName == "" {
-				displayName = "ユーザー" + string(msg.UserID)
-			}
+			displayName := msg.User.GetDisplayName()
 			builder.WriteString(fmt.Sprintf("%s: %s\n", displayName, msg.Content))
 		}
 		builder.WriteString("\n")
@@ -84,7 +81,7 @@ func (pg *PromptGenerator) GeneratePromptWithContextAndMention(history Conversat
 	// メンション情報がある場合は追加
 	if mentionerName != "" {
 		builder.WriteString("## メンション情報\n")
-		builder.WriteString(fmt.Sprintf("メンションした人: %s (ID: %s)\n", mentionerName, mentionerID))
+		builder.WriteString(fmt.Sprintf("メンションしたユーザー: %s (ID: %s)\n", mentionerName, mentionerID))
 		builder.WriteString("\n")
 	}
 
@@ -92,10 +89,7 @@ func (pg *PromptGenerator) GeneratePromptWithContextAndMention(history Conversat
 	if !history.IsEmpty() {
 		builder.WriteString("## 会話履歴\n")
 		for _, msg := range history.Messages() {
-			displayName := msg.DisplayName
-			if displayName == "" {
-				displayName = "ユーザー" + string(msg.UserID)
-			}
+			displayName := msg.User.GetDisplayName()
 			builder.WriteString(fmt.Sprintf("%s: %s\n", displayName, msg.Content))
 		}
 		builder.WriteString("\n")
