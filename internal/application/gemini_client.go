@@ -12,6 +12,9 @@ type GeminiClient interface {
 
 	// GenerateTextWithOptions は、オプション付きでテキストを生成します
 	GenerateTextWithOptions(ctx context.Context, prompt domain.Prompt, options TextGenerationOptions) (string, error)
+
+	// GenerateTextWithStructuredContext は、構造化されたコンテキストを使用してテキストを生成します
+	GenerateTextWithStructuredContext(ctx context.Context, systemPrompt string, conversationHistory []domain.Message, userQuestion string) (string, error)
 }
 
 // TextGenerationOptions は、テキスト生成時のオプションを定義します

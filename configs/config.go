@@ -33,9 +33,10 @@ type GeminiConfig struct {
 
 // BotConfig は、Bot関連の設定を定義します
 type BotConfig struct {
-	MaxHistoryMessages int
-	RequestTimeout     time.Duration
-	SystemPrompt       string
+	MaxHistoryMessages   int
+	RequestTimeout       time.Duration
+	SystemPrompt         string
+	UseStructuredContext bool // 構造化コンテキストを使用するかどうか
 }
 
 // LoadConfig は、環境変数から設定を読み込みます
@@ -59,9 +60,10 @@ func LoadConfig() (*Config, error) {
 			TopK:        int32(getEnvAsIntOrDefault("GEMINI_TOP_K", 40)),
 		},
 		Bot: BotConfig{
-			MaxHistoryMessages: getEnvAsIntOrDefault("MAX_HISTORY_MESSAGES", 10),
-			RequestTimeout:     getEnvAsDurationOrDefault("REQUEST_TIMEOUT", 30*time.Second),
-			SystemPrompt:       getEnvOrDefault("SYSTEM_PROMPT", "あなたは親切で役立つAIアシスタントです。ユーザーのチャット内容に対して、安全で適切な回答を提供してください。有害な内容や不適切な内容については、適切に断るか、代替案を提案してください。"),
+			MaxHistoryMessages:   getEnvAsIntOrDefault("MAX_HISTORY_MESSAGES", 10),
+			RequestTimeout:       getEnvAsDurationOrDefault("REQUEST_TIMEOUT", 30*time.Second),
+			SystemPrompt:         getEnvOrDefault("SYSTEM_PROMPT", "あなたは親切で役立つAIアシスタントです。ユーザーのチャット内容に対して、安全で適切な回答を提供してください。有害な内容や不適切な内容については、適切に断るか、代替案を提案してください。"),
+			UseStructuredContext: getEnvAsBoolOrDefault("USE_STRUCTURED_CONTEXT", true),
 		},
 	}
 
@@ -127,6 +129,16 @@ func getEnvAsDurationOrDefault(key string, defaultValue time.Duration) time.Dura
 	if value := os.Getenv(key); value != "" {
 		if duration, err := time.ParseDuration(value); err == nil {
 			return duration
+		}
+	}
+	return defaultValue
+}
+
+// getEnvAsBoolOrDefault は、環境変数を真偽値として取得し、存在しない場合はデフォルト値を返します
+func getEnvAsBoolOrDefault(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		if boolValue, err := strconv.ParseBool(value); err == nil {
+			return boolValue
 		}
 	}
 	return defaultValue
