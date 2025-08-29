@@ -6,38 +6,16 @@ import (
 	"strconv"
 	"time"
 
+	"geminibot/internal/infrastructure/config"
+
 	"github.com/joho/godotenv"
 )
 
 // Config は、アプリケーション全体の設定を定義します
 type Config struct {
-	Discord DiscordConfig
-	Gemini  GeminiConfig
-	Bot     BotConfig
-}
-
-// DiscordConfig は、Discord関連の設定を定義します
-type DiscordConfig struct {
-	BotToken string
-}
-
-// GeminiConfig は、Gemini API関連の設定を定義します
-type GeminiConfig struct {
-	APIKey      string
-	ModelName   string
-	MaxTokens   int32
-	Temperature float32
-	TopP        float32
-	TopK        int32
-}
-
-// BotConfig は、Bot関連の設定を定義します
-type BotConfig struct {
-	MaxContextLength     int // 最大コンテキスト長（文字数）
-	MaxHistoryLength     int // 最大履歴長（文字数）
-	RequestTimeout       time.Duration
-	SystemPrompt         string
-	UseStructuredContext bool // 構造化コンテキストを使用するかどうか
+	Discord config.DiscordConfig
+	Gemini  config.GeminiConfig
+	Bot     config.BotConfig
 }
 
 // LoadConfig は、環境変数から設定を読み込みます
@@ -49,10 +27,10 @@ func LoadConfig() (*Config, error) {
 	}
 
 	config := &Config{
-		Discord: DiscordConfig{
+		Discord: config.DiscordConfig{
 			BotToken: getEnvOrDefault("DISCORD_BOT_TOKEN", ""),
 		},
-		Gemini: GeminiConfig{
+		Gemini: config.GeminiConfig{
 			APIKey:      getEnvOrDefault("GEMINI_API_KEY", ""),
 			ModelName:   getEnvOrDefault("GEMINI_MODEL_NAME", "gemini-pro"),
 			MaxTokens:   int32(getEnvAsIntOrDefault("GEMINI_MAX_TOKENS", 1000)),
@@ -60,7 +38,7 @@ func LoadConfig() (*Config, error) {
 			TopP:        float32(getEnvAsFloatOrDefault("GEMINI_TOP_P", 0.9)),
 			TopK:        int32(getEnvAsIntOrDefault("GEMINI_TOP_K", 40)),
 		},
-		Bot: BotConfig{
+		Bot: config.BotConfig{
 			MaxContextLength:     getEnvAsIntOrDefault("MAX_CONTEXT_LENGTH", 8000),
 			MaxHistoryLength:     getEnvAsIntOrDefault("MAX_HISTORY_LENGTH", 4000),
 			RequestTimeout:       getEnvAsDurationOrDefault("REQUEST_TIMEOUT", 30*time.Second),

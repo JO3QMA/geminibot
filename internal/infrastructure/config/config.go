@@ -1,0 +1,56 @@
+package config
+
+import "time"
+
+// GeminiConfig は、Gemini API関連の設定を定義します
+type GeminiConfig struct {
+	APIKey      string
+	ModelName   string
+	MaxTokens   int32
+	Temperature float32
+	TopP        float32
+	TopK        int32
+}
+
+// BotConfig は、Bot関連の設定を定義します
+type BotConfig struct {
+	MaxContextLength     int // 最大コンテキスト長（文字数）
+	MaxHistoryLength     int // 最大履歴長（文字数）
+	RequestTimeout       time.Duration
+	SystemPrompt         string
+	UseStructuredContext bool // 構造化コンテキストを使用するかどうか
+}
+
+// DiscordConfig は、Discord関連の設定を定義します
+type DiscordConfig struct {
+	BotToken string
+}
+
+// AppConfig は、アプリケーション全体の設定を定義します
+type AppConfig struct {
+	Discord DiscordConfig
+	Gemini  GeminiConfig
+	Bot     BotConfig
+}
+
+// DefaultGeminiConfig は、デフォルトのGemini設定を返します
+func DefaultGeminiConfig() *GeminiConfig {
+	return &GeminiConfig{
+		ModelName:   "gemini-pro",
+		MaxTokens:   1000,
+		Temperature: 0.7,
+		TopP:        0.9,
+		TopK:        40,
+	}
+}
+
+// DefaultBotConfig は、デフォルトのBot設定を返します
+func DefaultBotConfig() *BotConfig {
+	return &BotConfig{
+		MaxContextLength:     8000,
+		MaxHistoryLength:     4000,
+		RequestTimeout:       30 * time.Second,
+		SystemPrompt:         "あなたは優秀なアシスタントです。与えられた会話履歴を参考に、ユーザーのチャット内容に適切に回答してください。",
+		UseStructuredContext: true, // デフォルトで構造化コンテキストを使用
+	}
+}

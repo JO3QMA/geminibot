@@ -40,16 +40,7 @@ func main() {
 	log.Printf("Bot情報: %s#%s (ID: %s)", user.Username, user.Discriminator, user.ID)
 
 	// Gemini APIクライアントを作成
-	geminiConfig := &gemini.Config{
-		APIKey:      config.Gemini.APIKey,
-		ModelName:   config.Gemini.ModelName,
-		MaxTokens:   config.Gemini.MaxTokens,
-		Temperature: config.Gemini.Temperature,
-		TopP:        config.Gemini.TopP,
-		TopK:        config.Gemini.TopK,
-	}
-
-	geminiClient, err := gemini.NewGeminiAPIClient(config.Gemini.APIKey, geminiConfig)
+	geminiClient, err := gemini.NewGeminiAPIClient(config.Gemini.APIKey, &config.Gemini)
 	if err != nil {
 		log.Fatalf("Gemini APIクライアントの作成に失敗: %v", err)
 	}
@@ -58,20 +49,11 @@ func main() {
 	// リポジトリを作成
 	conversationRepo := discordInfra.NewDiscordConversationRepository(session)
 
-	// アプリケーションサービスの設定を作成
-	appConfig := &application.Config{
-		MaxContextLength:     config.Bot.MaxContextLength,
-		MaxHistoryLength:     config.Bot.MaxHistoryLength,
-		RequestTimeout:       config.Bot.RequestTimeout,
-		SystemPrompt:         config.Bot.SystemPrompt,
-		UseStructuredContext: config.Bot.UseStructuredContext,
-	}
-
 	// アプリケーションサービスを作成
 	mentionService := application.NewMentionApplicationService(
 		conversationRepo,
 		geminiClient,
-		appConfig,
+		&config.Bot,
 	)
 
 	// Discordハンドラを作成

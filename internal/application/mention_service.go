@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
 	"geminibot/internal/domain"
+	"geminibot/internal/infrastructure/config"
 )
 
 // MentionApplicationService は、メンションイベントをトリガーに、一連の処理を制御するアプリケーションサービスです
@@ -16,45 +16,25 @@ type MentionApplicationService struct {
 	promptGenerator  *domain.PromptGenerator
 	geminiClient     GeminiClient
 	contextManager   *domain.ContextManager
-	config           *Config
-}
-
-// Config は、アプリケーションサービスの設定を定義します
-type Config struct {
-	MaxContextLength     int // 最大コンテキスト長（文字数）
-	MaxHistoryLength     int // 最大履歴長（文字数）
-	RequestTimeout       time.Duration
-	SystemPrompt         string
-	UseStructuredContext bool // 構造化コンテキストを使用するかどうか
-}
-
-// DefaultConfig は、デフォルトの設定を返します
-func DefaultConfig() *Config {
-	return &Config{
-		MaxContextLength:     8000,
-		MaxHistoryLength:     4000,
-		RequestTimeout:       30 * time.Second,
-		SystemPrompt:         "あなたは優秀なアシスタントです。与えられた会話履歴を参考に、ユーザーのチャット内容に適切に回答してください。",
-		UseStructuredContext: true, // デフォルトで構造化コンテキストを使用
-	}
+	config           *config.BotConfig
 }
 
 // NewMentionApplicationService は新しいMentionApplicationServiceインスタンスを作成します
 func NewMentionApplicationService(
 	conversationRepo domain.ConversationRepository,
 	geminiClient GeminiClient,
-	config *Config,
+	botConfig *config.BotConfig,
 ) *MentionApplicationService {
-	if config == nil {
-		config = DefaultConfig()
+	if botConfig == nil {
+		botConfig = config.DefaultBotConfig()
 	}
 
 	return &MentionApplicationService{
 		conversationRepo: conversationRepo,
-		promptGenerator:  domain.NewPromptGenerator(config.SystemPrompt),
+		promptGenerator:  domain.NewPromptGenerator(botConfig.SystemPrompt),
 		geminiClient:     geminiClient,
-		contextManager:   domain.NewContextManager(config.MaxContextLength, config.MaxHistoryLength),
-		config:           config,
+		contextManager:   domain.NewContextManager(botConfig.MaxContextLength, botConfig.MaxHistoryLength),
+		config:           botConfig,
 	}
 }
 
@@ -119,16 +99,11 @@ func (s *MentionApplicationService) HandleMentionWithStructuredContext(ctx conte
 
 	// 3. 統計情報をログ出力
 	stats := s.contextManager.GetContextStats(truncatedSystemPrompt, history, truncatedQuestion)
-	log.Printf("コンテキスト統計: 総長=%d, 履歴長=%d, 制限=%d, 切り詰め=%v",
-		stats.TotalLength, stats.HistoryLength, stats.MaxContextLength, stats.IsTruncated)
+	log.Printf("コンテキスト統計: システム=%d文字, 履歴=%d文字, 質問=%d文字, 合計=%d文字, 制限=%d文字, 切り詰め=%v",
+		stats.SystemPromptLength, stats.HistoryLength, stats.QuestionLength, stats.TotalLength, stats.MaxContextLength, stats.IsTruncated)
 
-	// 4. 構造化コンテキストを使用してGemini APIにリクエストを送信
-	response, err := s.geminiClient.GenerateTextWithStructuredContext(
-		ctx,
-		truncatedSystemPrompt,
-		history.Messages(),
-		truncatedQuestion,
-	)
+	// 4. 構造化コンテキストでGemini APIにリクエストを送信
+	response, err := s.geminiClient.GenerateTextWithStructuredContext(ctx, truncatedSystemPrompt, history.Messages(), truncatedQuestion)
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
 			return "", fmt.Errorf("Gemini APIからの応答取得がタイムアウトしました: %w", err)
@@ -136,48 +111,44 @@ func (s *MentionApplicationService) HandleMentionWithStructuredContext(ctx conte
 		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
 	}
 
-	log.Printf("構造化コンテキストでGemini APIからの応答を取得: %d文字", len(response))
+	log.Printf("Gemini APIからの応答を取得: %d文字", len(response))
 	return response, nil
 }
 
-// getConversationHistory は、メンションの種類に応じて適切なチャット履歴を取得します
+// getConversationHistory は、メンションに基づいて会話履歴を取得します
 func (s *MentionApplicationService) getConversationHistory(ctx context.Context, mention domain.BotMention) (domain.ConversationHistory, error) {
-	// 十分な数のメッセージを取得（コンテキスト長制限で調整される）
-	const defaultMessageLimit = 100
-
+	// スレッドかどうかを判定（簡易的な判定）
 	if mention.IsThread() {
-		// スレッドの場合：全メッセージを取得
-		log.Printf("スレッド内の全メッセージを取得中: %s", mention.ChannelID)
-		history, err := s.conversationRepo.GetThreadMessages(ctx, mention.ChannelID)
-		if err != nil {
-			return domain.ConversationHistory{}, err
-		}
-		// コンテキスト長制限を適用
-		return s.contextManager.TruncateConversationHistory(history), nil
+		log.Printf("スレッド内のメンションを検出: %s", mention.ChannelID)
+		// スレッドの場合は全メッセージを取得
+		return s.conversationRepo.GetThreadMessages(ctx, mention.ChannelID)
 	} else {
-		// 通常チャンネルの場合：十分な数のメッセージを取得
-		log.Printf("通常チャンネルの直近%d件のメッセージを取得中: %s", defaultMessageLimit, mention.ChannelID)
-		history, err := s.conversationRepo.GetRecentMessages(ctx, mention.ChannelID, defaultMessageLimit)
-		if err != nil {
-			return domain.ConversationHistory{}, err
-		}
-		// コンテキスト長制限を適用
-		return s.contextManager.TruncateConversationHistory(history), nil
+		log.Printf("通常チャンネル内のメンションを検出: %s", mention.ChannelID)
+		// 通常チャンネルの場合は直近のメッセージを取得
+		return s.conversationRepo.GetRecentMessages(ctx, mention.ChannelID, 10)
 	}
 }
 
-// ExtractUserQuestion は、メンションからユーザーのチャット内容部分を抽出します
-func (s *MentionApplicationService) ExtractUserQuestion(mention domain.BotMention) string {
-	content := strings.TrimSpace(mention.Content)
+// truncateResponse は、Discordのメッセージ長制限に合わせて応答を切り詰めます
+func (s *MentionApplicationService) truncateResponse(response string) string {
+	const DiscordMessageLimit = 2000
 
-	// Botのメンション部分を除去（例: "@Bot " を除去）
-	// 実際の実装では、Botの名前やIDに基づいて適切に除去する必要があります
-	content = strings.TrimPrefix(content, "@")
-
-	// 最初のスペース以降を取得
-	if idx := strings.Index(content, " "); idx != -1 {
-		content = strings.TrimSpace(content[idx+1:])
+	if len(response) <= DiscordMessageLimit {
+		return response
 	}
 
-	return content
+	// 文字数制限を超えている場合、完全な文で終わるように調整
+	truncated := response[:DiscordMessageLimit]
+	lastPeriod := strings.LastIndex(truncated, "。")
+	if lastPeriod > 0 && lastPeriod > DiscordMessageLimit-100 {
+		truncated = truncated[:lastPeriod+1]
+	} else {
+		// 句点がない場合は、最後の完全な単語で終わるように調整
+		lastSpace := strings.LastIndex(truncated, " ")
+		if lastSpace > 0 && lastSpace > DiscordMessageLimit-50 {
+			truncated = truncated[:lastSpace]
+		}
+	}
+
+	return truncated + "\n\n（文字数制限により省略されました）"
 }

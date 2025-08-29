@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"geminibot/internal/domain"
+	"geminibot/internal/infrastructure/config"
 
 	"google.golang.org/genai"
 )
@@ -14,14 +15,14 @@ import (
 // StructuredGeminiClient は、構造化されたコンテキストを使用してGemini APIと通信するクライアントです
 type StructuredGeminiClient struct {
 	client *genai.Client
-	config *Config
+	config *config.GeminiConfig
 }
 
 // NewStructuredGeminiClient は新しいStructuredGeminiClientインスタンスを作成します
-func NewStructuredGeminiClient(client *genai.Client, config *Config) *StructuredGeminiClient {
+func NewStructuredGeminiClient(client *genai.Client, geminiConfig *config.GeminiConfig) *StructuredGeminiClient {
 	return &StructuredGeminiClient{
 		client: client,
-		config: config,
+		config: geminiConfig,
 	}
 }
 
