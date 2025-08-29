@@ -20,6 +20,8 @@ type DiscordHandler struct {
 	botUsername    string
 }
 
+
+
 // DiscordMessageLimit は、Discordのメッセージ長制限です
 const DiscordMessageLimit = 2000
 
