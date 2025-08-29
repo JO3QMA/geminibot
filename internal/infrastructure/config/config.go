@@ -49,6 +49,6 @@ func DefaultBotConfig() *BotConfig {
 		MaxContextLength: 8000,
 		MaxHistoryLength: 4000,
 		RequestTimeout:   30 * time.Second,
-		SystemPrompt:     "あなたは優秀なアシスタントです。与えられた会話履歴を参考に、ユーザーのチャット内容に適切に回答してください。",
+		SystemPrompt:     "あなたは親切で役立つAIアシスタントです。最も重要なのは、ユーザーが今送信した質問やリクエストに直接答えることです。会話履歴は参考情報として使用し、ユーザーの現在の質問を最優先で回答してください。",
 	}
 }

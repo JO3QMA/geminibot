@@ -199,14 +199,15 @@ func (g *GeminiAPIClient) GenerateTextWithStructuredContext(ctx context.Context,
 	// システムプロンプトを追加
 	allContents = append(allContents, genai.Text(systemPrompt)...)
 
-	// 会話履歴を構造化して追加
+	// ユーザーの質問を最初に追加（最優先）
+	userQuestionText := fmt.Sprintf("## ユーザーの現在の質問\n%s", userQuestion)
+	allContents = append(allContents, genai.Text(userQuestionText)...)
+
+	// 会話履歴を最後に追加（参考情報として）
 	if len(conversationHistory) > 0 {
 		historyText := g.formatConversationHistory(conversationHistory)
 		allContents = append(allContents, genai.Text(historyText)...)
 	}
-
-	// ユーザーの質問を追加
-	allContents = append(allContents, genai.Text(userQuestion)...)
 
 	// 生成設定を作成
 	config := g.createGenerateConfig()
@@ -223,7 +224,8 @@ func (g *GeminiAPIClient) GenerateTextWithStructuredContext(ctx context.Context,
 // formatConversationHistory は、会話履歴を構造化された形式にフォーマットします
 func (g *GeminiAPIClient) formatConversationHistory(messages []domain.Message) string {
 	var builder strings.Builder
-	builder.WriteString("## 会話履歴\n")
+	builder.WriteString("## 参考情報：過去の会話履歴\n")
+	builder.WriteString("※ 以下の会話履歴は参考情報です。ユーザーの現在の質問に直接答えてください。\n\n")
 
 	for _, msg := range messages {
 		displayName := msg.User.GetDisplayName()

@@ -77,8 +77,6 @@ func (s *MentionApplicationService) HandleMention(ctx context.Context, mention d
 	return response, nil
 }
 
-
-
 // getConversationHistory は、メンションに基づいて会話履歴を取得します
 func (s *MentionApplicationService) getConversationHistory(ctx context.Context, mention domain.BotMention) (domain.ConversationHistory, error) {
 	// スレッドかどうかを判定（簡易的な判定）
