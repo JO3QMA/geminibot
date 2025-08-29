@@ -39,11 +39,10 @@ func LoadConfig() (*Config, error) {
 			TopK:        int32(getEnvAsIntOrDefault("GEMINI_TOP_K", 40)),
 		},
 		Bot: config.BotConfig{
-			MaxContextLength:     getEnvAsIntOrDefault("MAX_CONTEXT_LENGTH", 8000),
-			MaxHistoryLength:     getEnvAsIntOrDefault("MAX_HISTORY_LENGTH", 4000),
-			RequestTimeout:       getEnvAsDurationOrDefault("REQUEST_TIMEOUT", 30*time.Second),
-			SystemPrompt:         getEnvOrDefault("SYSTEM_PROMPT", "あなたは親切で役立つAIアシスタントです。ユーザーのチャット内容に対して、安全で適切な回答を提供してください。有害な内容や不適切な内容については、適切に断るか、代替案を提案してください。"),
-			UseStructuredContext: getEnvAsBoolOrDefault("USE_STRUCTURED_CONTEXT", true),
+			MaxContextLength: getEnvAsIntOrDefault("MAX_CONTEXT_LENGTH", 8000),
+			MaxHistoryLength: getEnvAsIntOrDefault("MAX_HISTORY_LENGTH", 4000),
+			RequestTimeout:   getEnvAsDurationOrDefault("REQUEST_TIMEOUT", 30*time.Second),
+			SystemPrompt:     getEnvOrDefault("SYSTEM_PROMPT", "あなたは親切で役立つAIアシスタントです。ユーザーのチャット内容に対して、安全で適切な回答を提供してください。有害な内容や不適切な内容については、適切に断るか、代替案を提案してください。"),
 		},
 	}
 

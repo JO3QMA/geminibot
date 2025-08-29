@@ -40,44 +40,6 @@ func NewMentionApplicationService(
 
 // HandleMention は、Botへのメンションを処理します
 func (s *MentionApplicationService) HandleMention(ctx context.Context, mention domain.BotMention) (string, error) {
-	// 設定に基づいて構造化コンテキストを使用するかどうかを決定
-	if s.config.UseStructuredContext {
-		return s.HandleMentionWithStructuredContext(ctx, mention)
-	}
-
-	log.Printf("従来の方法でメンションを処理中: %s", mention.String())
-
-	// コンテキストにタイムアウトを設定
-	ctx, cancel := context.WithTimeout(ctx, s.config.RequestTimeout)
-	defer cancel()
-
-	// 1. チャット履歴を取得
-	history, err := s.getConversationHistory(ctx, mention)
-	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			return "", fmt.Errorf("チャット履歴の取得がタイムアウトしました: %w", err)
-		}
-		return "", fmt.Errorf("チャット履歴の取得に失敗: %w", err)
-	}
-
-	// 2. プロンプトを生成
-	prompt := s.promptGenerator.GeneratePromptWithMention(history, mention.Content, mention.User.GetDisplayName(), mention.User.ID.String())
-
-	// 3. Gemini APIにリクエストを送信
-	response, err := s.geminiClient.GenerateText(ctx, prompt)
-	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			return "", fmt.Errorf("Gemini APIからの応答取得がタイムアウトしました: %w", err)
-		}
-		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
-	}
-
-	log.Printf("Gemini APIからの応答を取得: %d文字", len(response))
-	return response, nil
-}
-
-// HandleMentionWithStructuredContext は、構造化されたコンテキストを使用してメンションを処理します
-func (s *MentionApplicationService) HandleMentionWithStructuredContext(ctx context.Context, mention domain.BotMention) (string, error) {
 	log.Printf("構造化コンテキストでメンションを処理中: %s", mention.String())
 
 	// コンテキストにタイムアウトを設定
@@ -114,6 +76,8 @@ func (s *MentionApplicationService) HandleMentionWithStructuredContext(ctx conte
 	log.Printf("Gemini APIからの応答を取得: %d文字", len(response))
 	return response, nil
 }
+
+
 
 // getConversationHistory は、メンションに基づいて会話履歴を取得します
 func (s *MentionApplicationService) getConversationHistory(ctx context.Context, mention domain.BotMention) (domain.ConversationHistory, error) {

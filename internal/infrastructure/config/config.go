@@ -14,11 +14,10 @@ type GeminiConfig struct {
 
 // BotConfig は、Bot関連の設定を定義します
 type BotConfig struct {
-	MaxContextLength     int // 最大コンテキスト長（文字数）
-	MaxHistoryLength     int // 最大履歴長（文字数）
-	RequestTimeout       time.Duration
-	SystemPrompt         string
-	UseStructuredContext bool // 構造化コンテキストを使用するかどうか
+	MaxContextLength int // 最大コンテキスト長（文字数）
+	MaxHistoryLength int // 最大履歴長（文字数）
+	RequestTimeout   time.Duration
+	SystemPrompt     string
 }
 
 // DiscordConfig は、Discord関連の設定を定義します
@@ -47,10 +46,9 @@ func DefaultGeminiConfig() *GeminiConfig {
 // DefaultBotConfig は、デフォルトのBot設定を返します
 func DefaultBotConfig() *BotConfig {
 	return &BotConfig{
-		MaxContextLength:     8000,
-		MaxHistoryLength:     4000,
-		RequestTimeout:       30 * time.Second,
-		SystemPrompt:         "あなたは優秀なアシスタントです。与えられた会話履歴を参考に、ユーザーのチャット内容に適切に回答してください。",
-		UseStructuredContext: true, // デフォルトで構造化コンテキストを使用
+		MaxContextLength: 8000,
+		MaxHistoryLength: 4000,
+		RequestTimeout:   30 * time.Second,
+		SystemPrompt:     "あなたは優秀なアシスタントです。与えられた会話履歴を参考に、ユーザーのチャット内容に適切に回答してください。",
 	}
 }
