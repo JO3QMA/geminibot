@@ -56,8 +56,8 @@ func main() {
 		&config.Bot,
 	)
 
-	// Discordハンドラを作成
-	handler := discordPres.NewDiscordHandler(session, mentionService, user.ID)
+	// Discordハンドラを作成（新しいリファクタリング版）
+	handler := discordPres.NewDiscordHandlerNew(session, mentionService, user.ID)
 	handler.SetupHandlers()
 
 	// Discordに接続
