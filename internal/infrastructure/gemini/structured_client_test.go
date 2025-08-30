@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"geminibot/internal/domain"
+	"geminibot/internal/infrastructure/config"
 )
 
 func TestGeminiAPIClient_GenerateTextWithStructuredContext(t *testing.T) {
 	// テスト用の設定
-	config := &Config{
+	config := &config.GeminiConfig{
 		ModelName:   "gemini-pro",
 		MaxTokens:   1000,
 		Temperature: 0.7,

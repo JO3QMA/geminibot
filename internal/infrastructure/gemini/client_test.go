@@ -92,7 +92,7 @@ func TestGeminiAPIClient_GenerateText_Integration(t *testing.T) {
 	// このテストは実際のAPIキーがある環境でのみ実行されるべき
 	t.Skip("実際のAPIキーが必要なため、スキップします")
 
-	config := &Config{
+	config := &config.GeminiConfig{
 		APIKey:      "your-api-key-here",
 		ModelName:   "gemini-pro",
 		MaxTokens:   100,
@@ -128,7 +128,7 @@ func TestGeminiAPIClient_GenerateTextWithOptions_Integration(t *testing.T) {
 	// このテストは実際のAPIキーがある環境でのみ実行されるべき
 	t.Skip("実際のAPIキーが必要なため、スキップします")
 
-	config := &Config{
+	config := &config.GeminiConfig{
 		APIKey:      "your-api-key-here",
 		ModelName:   "gemini-pro",
 		MaxTokens:   100,
@@ -169,12 +169,12 @@ func TestGeminiAPIClient_GenerateTextWithOptions_Integration(t *testing.T) {
 func TestGeminiAPIClient_ConfigValidation(t *testing.T) {
 	tests := []struct {
 		name    string
-		config  *Config
+		config  *config.GeminiConfig
 		wantErr bool
 	}{
 		{
 			name: "有効な設定",
-			config: &Config{
+			config: &config.GeminiConfig{
 				APIKey:      "test-key",
 				ModelName:   "gemini-pro",
 				MaxTokens:   1000,
@@ -186,7 +186,7 @@ func TestGeminiAPIClient_ConfigValidation(t *testing.T) {
 		},
 		{
 			name: "空のAPIキー",
-			config: &Config{
+			config: &config.GeminiConfig{
 				APIKey:      "",
 				ModelName:   "gemini-pro",
 				MaxTokens:   1000,
@@ -198,7 +198,7 @@ func TestGeminiAPIClient_ConfigValidation(t *testing.T) {
 		},
 		{
 			name: "無効なTemperature",
-			config: &Config{
+			config: &config.GeminiConfig{
 				APIKey:      "test-key",
 				ModelName:   "gemini-pro",
 				MaxTokens:   1000,
