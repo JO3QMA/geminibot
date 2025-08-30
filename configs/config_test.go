@@ -29,9 +29,9 @@ func TestLoadConfig_WithValidEnvVars(t *testing.T) {
 		os.Unsetenv("GEMINI_MAX_TOKENS")
 		os.Unsetenv("GEMINI_TEMPERATURE")
 		os.Unsetenv("GEMINI_TOP_P")
-			os.Unsetenv("GEMINI_TOP_K")
-	os.Unsetenv("MAX_HISTORY_LENGTH")
-	os.Unsetenv("REQUEST_TIMEOUT")
+		os.Unsetenv("GEMINI_TOP_K")
+		os.Unsetenv("MAX_HISTORY_LENGTH")
+		os.Unsetenv("REQUEST_TIMEOUT")
 		os.Unsetenv("SYSTEM_PROMPT")
 	}()
 
@@ -108,7 +108,7 @@ func TestLoadConfig_WithInvalidValues(t *testing.T) {
 	// 無効な値の環境変数を設定
 	os.Setenv("DISCORD_BOT_TOKEN", "test-discord-token")
 	os.Setenv("GEMINI_API_KEY", "test-gemini-key")
-	os.Setenv("MAX_HISTORY_LENGTH", "-1") // 無効な値
+	os.Setenv("MAX_HISTORY_LENGTH", "-1")   // 無効な値
 	os.Setenv("REQUEST_TIMEOUT", "invalid") // 無効な値
 
 	defer func() {

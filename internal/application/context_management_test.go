@@ -54,10 +54,10 @@ func (m *ContextManagementMockConversationRepository) GetMessagesBefore(ctx cont
 func TestMentionApplicationService_ContextManagement(t *testing.T) {
 	// テスト用の設定
 	config := &config.BotConfig{
-		MaxContextLength:     100, // 小さな制限を設定
-		MaxHistoryLength:     50,  // 小さな制限を設定
-		RequestTimeout:       30 * time.Second,
-		SystemPrompt:         "テストシステムプロンプト",
+		MaxContextLength: 100, // 小さな制限を設定
+		MaxHistoryLength: 50,  // 小さな制限を設定
+		RequestTimeout:   30 * time.Second,
+		SystemPrompt:     "テストシステムプロンプト",
 	}
 
 	// モッククライアントとリポジトリを作成
@@ -101,10 +101,10 @@ func TestMentionApplicationService_ContextManagement(t *testing.T) {
 func TestMentionApplicationService_GetConversationHistory(t *testing.T) {
 	// テスト用の設定
 	botConfig := &config.BotConfig{
-		MaxContextLength:     8000,
-		MaxHistoryLength:     4000,
-		RequestTimeout:       30 * time.Second,
-		SystemPrompt:         "テストシステムプロンプト",
+		MaxContextLength: 8000,
+		MaxHistoryLength: 4000,
+		RequestTimeout:   30 * time.Second,
+		SystemPrompt:     "テストシステムプロンプト",
 	}
 
 	mockClient := &ContextManagementMockGeminiClient{}
@@ -151,10 +151,10 @@ func TestMentionApplicationService_GetConversationHistory(t *testing.T) {
 func TestMentionApplicationService_ContextTruncation(t *testing.T) {
 	// 非常に小さな制限を設定
 	botConfig := &config.BotConfig{
-		MaxContextLength:     10, // 非常に小さな制限
-		MaxHistoryLength:     5,  // 非常に小さな制限
-		RequestTimeout:       30 * time.Second,
-		SystemPrompt:         "これは非常に長いシステムプロンプトです。制限を超える長さです。",
+		MaxContextLength: 10, // 非常に小さな制限
+		MaxHistoryLength: 5,  // 非常に小さな制限
+		RequestTimeout:   30 * time.Second,
+		SystemPrompt:     "これは非常に長いシステムプロンプトです。制限を超える長さです。",
 	}
 
 	mockClient := &ContextManagementMockGeminiClient{}

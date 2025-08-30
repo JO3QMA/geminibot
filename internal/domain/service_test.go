@@ -55,8 +55,8 @@ func TestPromptGenerator_GeneratePrompt_WithHistory(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
 
 	messages := []Message{
-		NewMessage("msg1", NewUserID("user1"), "こんにちは", time.Now()),
-		NewMessage("msg2", NewUserID("user2"), "こんばんは", time.Now()),
+		NewMessage("msg1", NewUser(NewUserID("user1"), "user1", "User1", "", "", false), "こんにちは", time.Now()),
+		NewMessage("msg2", NewUser(NewUserID("user2"), "user2", "User2", "", "", false), "こんばんは", time.Now()),
 	}
 	history := NewConversationHistory(messages)
 	userQuestion := "今日の天気は？"
@@ -131,8 +131,8 @@ func TestPromptGenerator_GeneratePromptWithContext_WithHistory(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
 
 	messages := []Message{
-		NewMessage("msg1", NewUserID("user1"), "こんにちは", time.Now()),
-		NewMessage("msg2", NewUserID("user2"), "こんばんは", time.Now()),
+		NewMessage("msg1", NewUser(NewUserID("user1"), "user1", "User1", "", "", false), "こんにちは", time.Now()),
+		NewMessage("msg2", NewUser(NewUserID("user2"), "user2", "User2", "", "", false), "こんばんは", time.Now()),
 	}
 	history := NewConversationHistory(messages)
 	userQuestion := "今日の天気は？"

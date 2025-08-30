@@ -6,10 +6,11 @@ import (
 
 	"geminibot/internal/application"
 	"geminibot/internal/domain"
+	"geminibot/internal/infrastructure/config"
 )
 
 func TestDefaultConfig(t *testing.T) {
-	config := DefaultConfig()
+	config := config.DefaultGeminiConfig()
 
 	if config.ModelName != "gemini-pro" {
 		t.Errorf("期待されるModelName: gemini-pro, 実際: %s", config.ModelName)
@@ -33,7 +34,7 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestNewGeminiAPIClient_WithConfig(t *testing.T) {
-	config := &Config{
+	config := &config.GeminiConfig{
 		APIKey:      "test-api-key",
 		ModelName:   "gemini-pro",
 		MaxTokens:   500,
@@ -77,7 +78,7 @@ func TestGeminiAPIClient_Close(t *testing.T) {
 	// Closeメソッドが正常に動作することを確認
 	client := &GeminiAPIClient{
 		client: nil,
-		config: DefaultConfig(),
+		config: config.DefaultGeminiConfig(),
 	}
 
 	err := client.Close()
