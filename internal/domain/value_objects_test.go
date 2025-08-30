@@ -139,7 +139,7 @@ func TestBotMention_String(t *testing.T) {
 	messageID := "msg123"
 
 	mention := NewBotMention(channelID, user, content, messageID)
-	expected := "BotMention{ChannelID: channel123, UserID: user123, Content: テストメッセージ, MessageID: msg123}"
+	expected := "BotMention{ChannelID: channel123, User: User{ID: user123, Username: user123, DisplayName: User123}, Content: テストメッセージ, MessageID: msg123}"
 
 	if mention.String() != expected {
 		t.Errorf("期待されるString: %s, 実際のString: %s", expected, mention.String())
