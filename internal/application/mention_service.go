@@ -89,5 +89,3 @@ func (s *MentionApplicationService) getConversationHistory(ctx context.Context, 
 		return s.conversationRepo.GetRecentMessages(ctx, mention.ChannelID, 10)
 	}
 }
-
-

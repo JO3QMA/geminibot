@@ -120,5 +120,3 @@ func getEnvAsDurationOrDefault(key string, defaultValue time.Duration) time.Dura
 	}
 	return defaultValue
 }
-
-

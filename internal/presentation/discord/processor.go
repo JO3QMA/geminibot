@@ -88,7 +88,9 @@ func (p *MessageProcessor) ProcessMentionNormal(s *discordgo.Session, m *discord
 	response, err := p.mentionService.HandleMention(ctx, mention)
 
 	// 処理中メッセージを削除
-	s.ChannelMessageDelete(m.ChannelID, thinkingMsg.ID)
+	if err := s.ChannelMessageDelete(m.ChannelID, thinkingMsg.ID); err != nil {
+		log.Printf("処理中メッセージの削除に失敗: %v", err)
+	}
 
 	if err != nil {
 		log.Printf("メンション処理に失敗: %v", err)
