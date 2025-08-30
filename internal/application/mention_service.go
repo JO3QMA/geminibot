@@ -7,6 +7,7 @@ import (
 
 	"geminibot/internal/domain"
 	"geminibot/internal/infrastructure/config"
+	"geminibot/internal/infrastructure/database"
 )
 
 // MentionApplicationService は、メンションイベントをトリガーに、一連の処理を制御するアプリケーションサービスです
@@ -74,6 +75,18 @@ func (s *MentionApplicationService) HandleMention(ctx context.Context, mention d
 
 	log.Printf("Gemini APIからの応答を取得: %d文字", len(response))
 	return response, nil
+}
+
+// SaveMessage は、メッセージをデータベースに保存します
+func (s *MentionApplicationService) SaveMessage(ctx context.Context, message domain.Message, channelID domain.ChannelID) error {
+	// ハイブリッドリポジトリに保存
+	if hybridRepo, ok := s.conversationRepo.(*database.HybridConversationRepository); ok {
+		return hybridRepo.SaveMessage(ctx, message, channelID)
+	}
+
+	// 従来のDiscordリポジトリの場合は何もしない
+	log.Printf("メッセージ保存がサポートされていないリポジトリです")
+	return nil
 }
 
 // getConversationHistory は、メンションに基づいて会話履歴を取得します

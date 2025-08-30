@@ -13,9 +13,10 @@ import (
 
 // Config は、アプリケーション全体の設定を定義します
 type Config struct {
-	Discord config.DiscordConfig
-	Gemini  config.GeminiConfig
-	Bot     config.BotConfig
+	Discord  config.DiscordConfig
+	Gemini   config.GeminiConfig
+	Bot      config.BotConfig
+	Database config.DatabaseConfig
 }
 
 // LoadConfig は、環境変数から設定を読み込みます
@@ -43,6 +44,17 @@ func LoadConfig() (*Config, error) {
 			MaxHistoryLength: getEnvAsIntOrDefault("MAX_HISTORY_LENGTH", 4000),
 			RequestTimeout:   getEnvAsDurationOrDefault("REQUEST_TIMEOUT", 30*time.Second),
 			SystemPrompt:     getEnvOrDefault("SYSTEM_PROMPT", "あなたは親切で役立つAIアシスタントです。最も重要なのは、ユーザーが今送信した質問やリクエストに直接答えることです。会話履歴は参考情報として使用し、ユーザーの現在の質問を最優先で回答してください。有害な内容や不適切な内容については、適切に断るか、代替案を提案してください。"),
+		},
+		Database: config.DatabaseConfig{
+			PostgresHost:     getEnvOrDefault("POSTGRES_HOST", "localhost"),
+			PostgresPort:     getEnvAsIntOrDefault("POSTGRES_PORT", 5432),
+			PostgresDB:       getEnvOrDefault("POSTGRES_DB", "geminibot"),
+			PostgresUser:     getEnvOrDefault("POSTGRES_USER", "geminibot"),
+			PostgresPassword: getEnvOrDefault("POSTGRES_PASSWORD", "geminibot_password"),
+			RedisHost:        getEnvOrDefault("REDIS_HOST", "localhost"),
+			RedisPort:        getEnvAsIntOrDefault("REDIS_PORT", 6379),
+			RedisPassword:    getEnvOrDefault("REDIS_PASSWORD", ""),
+			RedisDB:          getEnvAsIntOrDefault("REDIS_DB", 0),
 		},
 	}
 

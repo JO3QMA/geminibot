@@ -20,6 +20,19 @@ type BotConfig struct {
 	SystemPrompt     string
 }
 
+// DatabaseConfig は、データベース関連の設定を定義します
+type DatabaseConfig struct {
+	PostgresHost     string
+	PostgresPort     int
+	PostgresDB       string
+	PostgresUser     string
+	PostgresPassword string
+	RedisHost        string
+	RedisPort        int
+	RedisPassword    string
+	RedisDB          int
+}
+
 // DiscordConfig は、Discord関連の設定を定義します
 type DiscordConfig struct {
 	BotToken string

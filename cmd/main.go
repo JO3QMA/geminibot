@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -8,7 +9,7 @@ import (
 
 	"geminibot/configs"
 	"geminibot/internal/application"
-	discordInfra "geminibot/internal/infrastructure/discord"
+	"geminibot/internal/infrastructure/database"
 	"geminibot/internal/infrastructure/gemini"
 	discordPres "geminibot/internal/presentation/discord"
 
@@ -46,8 +47,31 @@ func main() {
 	}
 	defer geminiClient.Close()
 
-	// リポジトリを作成
-	conversationRepo := discordInfra.NewDiscordConversationRepository(session)
+	// PostgreSQLリポジトリを作成
+	postgresConnStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		config.Database.PostgresHost,
+		config.Database.PostgresPort,
+		config.Database.PostgresUser,
+		config.Database.PostgresPassword,
+		config.Database.PostgresDB,
+	)
+
+	postgresRepo, err := database.NewPostgresConversationRepository(postgresConnStr)
+	if err != nil {
+		log.Fatalf("PostgreSQLリポジトリの作成に失敗: %v", err)
+	}
+	defer postgresRepo.Close()
+
+	// Redisキャッシュを作成
+	redisAddr := fmt.Sprintf("%s:%d", config.Database.RedisHost, config.Database.RedisPort)
+	redisCache, err := database.NewRedisConversationCache(redisAddr, config.Database.RedisPassword, config.Database.RedisDB)
+	if err != nil {
+		log.Fatalf("Redisキャッシュの作成に失敗: %v", err)
+	}
+	defer redisCache.Close()
+
+	// ハイブリッドリポジトリを作成
+	conversationRepo := database.NewHybridConversationRepository(postgresRepo, redisCache)
 
 	// アプリケーションサービスを作成
 	mentionService := application.NewMentionApplicationService(

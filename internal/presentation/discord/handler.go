@@ -57,6 +57,9 @@ func (h *DiscordHandler) handleMessageCreate(s *discordgo.Session, m *discordgo.
 		return
 	}
 
+	// メッセージをデータベースに保存
+	h.saveMessageToDatabase(m)
+
 	// メンションされているかチェック
 	if !h.isMentioned(m) {
 		return
@@ -88,6 +91,38 @@ func (h *DiscordHandler) isMentioned(m *discordgo.MessageCreate) bool {
 	}
 
 	return false
+}
+
+// saveMessageToDatabase は、メッセージをデータベースに保存します
+func (h *DiscordHandler) saveMessageToDatabase(m *discordgo.MessageCreate) {
+	// ユーザー情報を作成
+	user := domain.NewUser(
+		domain.NewUserID(m.Author.ID),
+		m.Author.Username,
+		h.getDisplayName(m),
+		m.Author.Avatar,
+		m.Author.Discriminator,
+		m.Author.Bot,
+	)
+
+	// メッセージ情報を作成
+	message := domain.NewMessage(
+		m.ID,
+		user,
+		m.Content,
+		m.Timestamp,
+	)
+
+	// チャンネルIDを作成
+	channelID := domain.NewChannelID(m.ChannelID)
+
+	// データベースに保存（非同期）
+	go func() {
+		ctx := context.Background()
+		if err := h.mentionService.SaveMessage(ctx, message, channelID); err != nil {
+			log.Printf("メッセージ保存に失敗: %v", err)
+		}
+	}()
 }
 
 // createBotMention は、DiscordメッセージからBotMentionオブジェクトを作成します
