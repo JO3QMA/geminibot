@@ -213,7 +213,7 @@ func TestGeminiAPIClient_ConfigValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := NewGeminiAPIClient(tt.config.APIKey, tt.config)
-			
+
 			if tt.wantErr && err == nil {
 				t.Error("エラーが期待されましたが、発生しませんでした")
 			}

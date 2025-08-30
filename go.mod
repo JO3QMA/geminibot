@@ -7,6 +7,8 @@ toolchain go1.24.6
 require (
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/joho/godotenv v1.5.1
+	github.com/lib/pq v1.10.9
+	github.com/redis/go-redis/v9 v9.12.1
 	google.golang.org/genai v1.21.0
 )
 
@@ -21,8 +23,6 @@ require (
 	github.com/google/s2a-go v0.1.8 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/lib/pq v1.10.9 // indirect
-	github.com/redis/go-redis/v9 v9.12.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.27.0 // indirect
 	golang.org/x/net v0.29.0 // indirect

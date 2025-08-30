@@ -18,12 +18,12 @@ func (h *ErrorHandler) IsTimeoutError(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	// context.DeadlineExceeded エラーの検出
 	if err.Error() == "context deadline exceeded" {
 		return true
 	}
-	
+
 	// タイムアウト関連のエラーメッセージを検出
 	errorMsg := err.Error()
 	timeoutKeywords := []string{
@@ -33,13 +33,13 @@ func (h *ErrorHandler) IsTimeoutError(err error) bool {
 		"context deadline",
 		"request timeout",
 	}
-	
+
 	for _, keyword := range timeoutKeywords {
 		if strings.Contains(strings.ToLower(errorMsg), strings.ToLower(keyword)) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -53,7 +53,7 @@ func (h *ErrorHandler) FormatError(err error) string {
 			"• しばらく待ってから再度お試しください\n\n" +
 			"ご不便をおかけして申し訳ございません。"
 	}
-	
+
 	// 荒らし対策エラーの場合
 	switch err.Error() {
 	case "レート制限を超過しました":

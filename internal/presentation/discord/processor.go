@@ -38,8 +38,8 @@ func (p *MessageProcessor) ProcessMentionAsync(s *discordgo.Session, m *discordg
 	thread, err := s.MessageThreadStart(m.ChannelID, m.ID, "Bot応答", 60) // 60分後にアーカイブ
 	if err != nil {
 		log.Printf("スレッド作成に失敗: %v", err)
-			// スレッド作成に失敗した場合は通常のリプライとして送信
-	p.ProcessMentionNormal(s, m, mention)
+		// スレッド作成に失敗した場合は通常のリプライとして送信
+		p.ProcessMentionNormal(s, m, mention)
 		return
 	}
 

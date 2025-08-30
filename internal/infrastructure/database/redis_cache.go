@@ -211,14 +211,14 @@ func (r *RedisConversationCache) convertFromHash(data map[string]string) domain.
 func (r *RedisConversationCache) getContextLength(ctx context.Context, userKey string) int {
 	// 最新10件のメッセージの文字数を合計
 	messageIDs, _ := r.client.ZRevRange(ctx, userKey, 0, 9).Result()
-	
+
 	totalLength := 0
 	for _, messageID := range messageIDs {
 		messageKey := fmt.Sprintf("message:%s", messageID)
 		content, _ := r.client.HGet(ctx, messageKey, "content").Result()
 		totalLength += len(content)
 	}
-	
+
 	return totalLength
 }
 

@@ -20,8 +20,6 @@ type DiscordHandler struct {
 	botUsername    string
 }
 
-
-
 // DiscordMessageLimit は、Discordのメッセージ長制限です
 const DiscordMessageLimit = 2000
 
@@ -205,10 +203,10 @@ func (h *DiscordHandler) processMentionAsync(s *discordgo.Session, m *discordgo.
 	ctx := context.Background()
 	response, err := h.mentionService.HandleMention(ctx, mention)
 
-			// 処理中メッセージを削除
-		if err := s.ChannelMessageDelete(thread.ID, thinkingMsg.ID); err != nil {
-			log.Printf("処理中メッセージの削除に失敗: %v", err)
-		}
+	// 処理中メッセージを削除
+	if err := s.ChannelMessageDelete(thread.ID, thinkingMsg.ID); err != nil {
+		log.Printf("処理中メッセージの削除に失敗: %v", err)
+	}
 
 	if err != nil {
 		log.Printf("メンション処理に失敗: %v", err)
@@ -230,12 +228,12 @@ func (h *DiscordHandler) isTimeoutError(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	// context.DeadlineExceeded エラーの検出
 	if err.Error() == "context deadline exceeded" {
 		return true
 	}
-	
+
 	// タイムアウト関連のエラーメッセージを検出
 	errorMsg := err.Error()
 	timeoutKeywords := []string{
@@ -245,13 +243,13 @@ func (h *DiscordHandler) isTimeoutError(err error) bool {
 		"context deadline",
 		"request timeout",
 	}
-	
+
 	for _, keyword := range timeoutKeywords {
 		if strings.Contains(strings.ToLower(errorMsg), strings.ToLower(keyword)) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -265,7 +263,7 @@ func (h *DiscordHandler) formatError(err error) string {
 			"• しばらく待ってから再度お試しください\n\n" +
 			"ご不便をおかけして申し訳ございません。"
 	}
-	
+
 	// 荒らし対策エラーの場合
 	switch err.Error() {
 	case "レート制限を超過しました":
@@ -300,23 +298,23 @@ func (h *DiscordHandler) sendNormalReply(s *discordgo.Session, m *discordgo.Mess
 	ctx := context.Background()
 	response, err := h.mentionService.HandleMention(ctx, mention)
 
-			// 処理中メッセージを削除
-		if err := s.ChannelMessageDelete(m.ChannelID, thinkingMsg.ID); err != nil {
-			log.Printf("処理中メッセージの削除に失敗: %v", err)
-		}
+	// 処理中メッセージを削除
+	if err := s.ChannelMessageDelete(m.ChannelID, thinkingMsg.ID); err != nil {
+		log.Printf("処理中メッセージの削除に失敗: %v", err)
+	}
 
 	if err != nil {
 		log.Printf("メンション処理に失敗: %v", err)
 
-					// エラーを適切なメッセージにフォーマット
-			errorMsg := h.formatError(err)
-			if _, err := s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
-				MessageID: m.ID,
-				ChannelID: m.ChannelID,
-				GuildID:   m.GuildID,
-			}); err != nil {
-				log.Printf("エラーメッセージの送信に失敗: %v", err)
-			}
+		// エラーを適切なメッセージにフォーマット
+		errorMsg := h.formatError(err)
+		if _, err := s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
+			MessageID: m.ID,
+			ChannelID: m.ChannelID,
+			GuildID:   m.GuildID,
+		}); err != nil {
+			log.Printf("エラーメッセージの送信に失敗: %v", err)
+		}
 		return
 	}
 
