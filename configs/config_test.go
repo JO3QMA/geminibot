@@ -4,6 +4,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"geminibot/internal/infrastructure/config"
 )
 
 func TestLoadConfig_WithValidEnvVars(t *testing.T) {
@@ -15,7 +17,7 @@ func TestLoadConfig_WithValidEnvVars(t *testing.T) {
 	os.Setenv("GEMINI_TEMPERATURE", "0.5")
 	os.Setenv("GEMINI_TOP_P", "0.8")
 	os.Setenv("GEMINI_TOP_K", "20")
-	os.Setenv("MAX_HISTORY_MESSAGES", "5")
+	os.Setenv("MAX_HISTORY_LENGTH", "5")
 	os.Setenv("REQUEST_TIMEOUT", "15s")
 	os.Setenv("SYSTEM_PROMPT", "テストシステムプロンプト")
 
@@ -27,9 +29,9 @@ func TestLoadConfig_WithValidEnvVars(t *testing.T) {
 		os.Unsetenv("GEMINI_MAX_TOKENS")
 		os.Unsetenv("GEMINI_TEMPERATURE")
 		os.Unsetenv("GEMINI_TOP_P")
-		os.Unsetenv("GEMINI_TOP_K")
-		os.Unsetenv("MAX_HISTORY_MESSAGES")
-		os.Unsetenv("REQUEST_TIMEOUT")
+			os.Unsetenv("GEMINI_TOP_K")
+	os.Unsetenv("MAX_HISTORY_LENGTH")
+	os.Unsetenv("REQUEST_TIMEOUT")
 		os.Unsetenv("SYSTEM_PROMPT")
 	}()
 
@@ -65,8 +67,8 @@ func TestLoadConfig_WithValidEnvVars(t *testing.T) {
 	}
 
 	// Bot設定の検証
-	if config.Bot.MaxHistoryMessages != 5 {
-		t.Errorf("期待されるBot MaxHistoryMessages: 5, 実際: %d", config.Bot.MaxHistoryMessages)
+	if config.Bot.MaxHistoryLength != 5 {
+		t.Errorf("期待されるBot MaxHistoryLength: 5, 実際: %d", config.Bot.MaxHistoryLength)
 	}
 	if config.Bot.RequestTimeout != 15*time.Second {
 		t.Errorf("期待されるBot RequestTimeout: 15s, 実際: %v", config.Bot.RequestTimeout)
@@ -85,7 +87,7 @@ func TestLoadConfig_WithDefaultValues(t *testing.T) {
 	os.Unsetenv("GEMINI_TEMPERATURE")
 	os.Unsetenv("GEMINI_TOP_P")
 	os.Unsetenv("GEMINI_TOP_K")
-	os.Unsetenv("MAX_HISTORY_MESSAGES")
+	os.Unsetenv("MAX_HISTORY_LENGTH")
 	os.Unsetenv("REQUEST_TIMEOUT")
 	os.Unsetenv("SYSTEM_PROMPT")
 
@@ -106,13 +108,13 @@ func TestLoadConfig_WithInvalidValues(t *testing.T) {
 	// 無効な値の環境変数を設定
 	os.Setenv("DISCORD_BOT_TOKEN", "test-discord-token")
 	os.Setenv("GEMINI_API_KEY", "test-gemini-key")
-	os.Setenv("MAX_HISTORY_MESSAGES", "-1") // 無効な値
+	os.Setenv("MAX_HISTORY_LENGTH", "-1") // 無効な値
 	os.Setenv("REQUEST_TIMEOUT", "invalid") // 無効な値
 
 	defer func() {
 		os.Unsetenv("DISCORD_BOT_TOKEN")
 		os.Unsetenv("GEMINI_API_KEY")
-		os.Unsetenv("MAX_HISTORY_MESSAGES")
+		os.Unsetenv("MAX_HISTORY_LENGTH")
 		os.Unsetenv("REQUEST_TIMEOUT")
 	}()
 
@@ -125,21 +127,22 @@ func TestLoadConfig_WithInvalidValues(t *testing.T) {
 }
 
 func TestConfig_Validate_ValidConfig(t *testing.T) {
-	config := &Config{
-		Discord: DiscordConfig{
+	cfg := &Config{
+		Discord: config.DiscordConfig{
 			BotToken: "valid-token",
 		},
-		Gemini: GeminiConfig{
+		Gemini: config.GeminiConfig{
 			APIKey: "valid-key",
 		},
-		Bot: BotConfig{
-			MaxHistoryMessages: 10,
-			RequestTimeout:     30 * time.Second,
-			SystemPrompt:       "テストプロンプト",
+		Bot: config.BotConfig{
+			MaxContextLength: 8000,
+			MaxHistoryLength: 10,
+			RequestTimeout:   30 * time.Second,
+			SystemPrompt:     "テストプロンプト",
 		},
 	}
 
-	err := config.Validate()
+	err := cfg.Validate()
 
 	if err != nil {
 		t.Errorf("有効な設定でエラーが発生しました: %v", err)
@@ -147,21 +150,22 @@ func TestConfig_Validate_ValidConfig(t *testing.T) {
 }
 
 func TestConfig_Validate_MissingDiscordToken(t *testing.T) {
-	config := &Config{
-		Discord: DiscordConfig{
+	cfg := &Config{
+		Discord: config.DiscordConfig{
 			BotToken: "", // 空のトークン
 		},
-		Gemini: GeminiConfig{
+		Gemini: config.GeminiConfig{
 			APIKey: "valid-key",
 		},
-		Bot: BotConfig{
-			MaxHistoryMessages: 10,
-			RequestTimeout:     30 * time.Second,
-			SystemPrompt:       "テストプロンプト",
+		Bot: config.BotConfig{
+			MaxContextLength: 8000,
+			MaxHistoryLength: 10,
+			RequestTimeout:   30 * time.Second,
+			SystemPrompt:     "テストプロンプト",
 		},
 	}
 
-	err := config.Validate()
+	err := cfg.Validate()
 
 	if err == nil {
 		t.Error("Discordトークンが不足しているのにエラーが発生しませんでした")
@@ -173,21 +177,22 @@ func TestConfig_Validate_MissingDiscordToken(t *testing.T) {
 }
 
 func TestConfig_Validate_MissingGeminiKey(t *testing.T) {
-	config := &Config{
-		Discord: DiscordConfig{
+	cfg := &Config{
+		Discord: config.DiscordConfig{
 			BotToken: "valid-token",
 		},
-		Gemini: GeminiConfig{
+		Gemini: config.GeminiConfig{
 			APIKey: "", // 空のAPIキー
 		},
-		Bot: BotConfig{
-			MaxHistoryMessages: 10,
-			RequestTimeout:     30 * time.Second,
-			SystemPrompt:       "テストプロンプト",
+		Bot: config.BotConfig{
+			MaxContextLength: 8000,
+			MaxHistoryLength: 10,
+			RequestTimeout:   30 * time.Second,
+			SystemPrompt:     "テストプロンプト",
 		},
 	}
 
-	err := config.Validate()
+	err := cfg.Validate()
 
 	if err == nil {
 		t.Error("Gemini APIキーが不足しているのにエラーが発生しませんでした")
@@ -198,25 +203,26 @@ func TestConfig_Validate_MissingGeminiKey(t *testing.T) {
 	}
 }
 
-func TestConfig_Validate_InvalidMaxHistoryMessages(t *testing.T) {
-	config := &Config{
-		Discord: DiscordConfig{
+func TestConfig_Validate_InvalidMaxHistoryLength(t *testing.T) {
+	cfg := &Config{
+		Discord: config.DiscordConfig{
 			BotToken: "valid-token",
 		},
-		Gemini: GeminiConfig{
+		Gemini: config.GeminiConfig{
 			APIKey: "valid-key",
 		},
-		Bot: BotConfig{
-			MaxHistoryMessages: 0, // 無効な値
-			RequestTimeout:     30 * time.Second,
-			SystemPrompt:       "テストプロンプト",
+		Bot: config.BotConfig{
+			MaxContextLength: 8000,
+			MaxHistoryLength: 0, // 無効な値
+			RequestTimeout:   30 * time.Second,
+			SystemPrompt:     "テストプロンプト",
 		},
 	}
 
-	err := config.Validate()
+	err := cfg.Validate()
 
 	if err == nil {
-		t.Error("無効なMaxHistoryMessagesなのにエラーが発生しませんでした")
+		t.Error("無効なMaxHistoryLengthなのにエラーが発生しませんでした")
 	}
 
 	if err.Error() == "" {
@@ -225,21 +231,22 @@ func TestConfig_Validate_InvalidMaxHistoryMessages(t *testing.T) {
 }
 
 func TestConfig_Validate_InvalidRequestTimeout(t *testing.T) {
-	config := &Config{
-		Discord: DiscordConfig{
+	cfg := &Config{
+		Discord: config.DiscordConfig{
 			BotToken: "valid-token",
 		},
-		Gemini: GeminiConfig{
+		Gemini: config.GeminiConfig{
 			APIKey: "valid-key",
 		},
-		Bot: BotConfig{
-			MaxHistoryMessages: 10,
-			RequestTimeout:     0, // 無効な値
-			SystemPrompt:       "テストプロンプト",
+		Bot: config.BotConfig{
+			MaxContextLength: 8000,
+			MaxHistoryLength: 10,
+			RequestTimeout:   0, // 無効な値
+			SystemPrompt:     "テストプロンプト",
 		},
 	}
 
-	err := config.Validate()
+	err := cfg.Validate()
 
 	if err == nil {
 		t.Error("無効なRequestTimeoutなのにエラーが発生しませんでした")

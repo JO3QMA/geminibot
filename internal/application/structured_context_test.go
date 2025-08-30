@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"geminibot/internal/domain"
+	"geminibot/internal/infrastructure/config"
 )
 
 // MockGeminiClient は、テスト用のGeminiClientモックです
@@ -54,12 +55,11 @@ func (m *MockConversationRepository) GetMessagesBefore(ctx context.Context, chan
 
 func TestMentionApplicationService_HandleMentionWithStructuredContext(t *testing.T) {
 	// テスト用の設定
-	config := &Config{
+	botConfig := &config.BotConfig{
 		MaxContextLength:     8000,
 		MaxHistoryLength:     4000,
 		RequestTimeout:       30 * time.Second,
 		SystemPrompt:         "テストシステムプロンプト",
-		UseStructuredContext: true,
 	}
 
 	// モッククライアントとリポジトリを作成
