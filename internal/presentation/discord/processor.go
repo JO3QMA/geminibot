@@ -55,14 +55,18 @@ func (p *MessageProcessor) ProcessMentionAsync(s *discordgo.Session, m *discordg
 	response, err := p.mentionService.HandleMention(ctx, mention)
 
 	// 処理中メッセージを削除
-	s.ChannelMessageDelete(thread.ID, thinkingMsg.ID)
+	if err := s.ChannelMessageDelete(thread.ID, thinkingMsg.ID); err != nil {
+		log.Printf("処理中メッセージの削除に失敗: %v", err)
+	}
 
 	if err != nil {
 		log.Printf("メンション処理に失敗: %v", err)
 
 		// エラーを適切なメッセージにフォーマット
 		errorMsg := p.errorHandler.FormatError(err)
-		s.ChannelMessageSend(thread.ID, errorMsg)
+		if _, err := s.ChannelMessageSend(thread.ID, errorMsg); err != nil {
+			log.Printf("エラーメッセージの送信に失敗: %v", err)
+		}
 		return
 	}
 
@@ -91,11 +95,13 @@ func (p *MessageProcessor) ProcessMentionNormal(s *discordgo.Session, m *discord
 
 		// エラーを適切なメッセージにフォーマット
 		errorMsg := p.errorHandler.FormatError(err)
-		s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
+		if _, err := s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
 			MessageID: m.ID,
 			ChannelID: m.ChannelID,
 			GuildID:   m.GuildID,
-		})
+		}); err != nil {
+			log.Printf("エラーメッセージの送信に失敗: %v", err)
+		}
 		return
 	}
 

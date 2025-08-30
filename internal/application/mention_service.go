@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 
 	"geminibot/internal/domain"
 	"geminibot/internal/infrastructure/config"
@@ -91,26 +90,4 @@ func (s *MentionApplicationService) getConversationHistory(ctx context.Context, 
 	}
 }
 
-// truncateResponse は、Discordのメッセージ長制限に合わせて応答を切り詰めます
-func (s *MentionApplicationService) truncateResponse(response string) string {
-	const DiscordMessageLimit = 2000
 
-	if len(response) <= DiscordMessageLimit {
-		return response
-	}
-
-	// 文字数制限を超えている場合、完全な文で終わるように調整
-	truncated := response[:DiscordMessageLimit]
-	lastPeriod := strings.LastIndex(truncated, "。")
-	if lastPeriod > 0 && lastPeriod > DiscordMessageLimit-100 {
-		truncated = truncated[:lastPeriod+1]
-	} else {
-		// 句点がない場合は、最後の完全な単語で終わるように調整
-		lastSpace := strings.LastIndex(truncated, " ")
-		if lastSpace > 0 && lastSpace > DiscordMessageLimit-50 {
-			truncated = truncated[:lastSpace]
-		}
-	}
-
-	return truncated + "\n\n（文字数制限により省略されました）"
-}

@@ -10,9 +10,7 @@ import (
 )
 
 // MockGeminiClient は、テスト用のGeminiClientモックです
-type MockGeminiClient struct {
-	shouldUseStructuredContext bool
-}
+type MockGeminiClient struct{}
 
 func (m *MockGeminiClient) GenerateText(ctx context.Context, prompt domain.Prompt) (string, error) {
 	return "従来の方法での応答", nil

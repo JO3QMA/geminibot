@@ -158,7 +158,9 @@ func (s *MessageSender) sendAsFileToThread(session *discordgo.Session, threadID 
 
 	// ファイル送信成功のメッセージを送信
 	fileMsg := fmt.Sprintf("📄 **応答が長いため、ファイルとして送信しました**\nファイル名: `%s`", filename)
-	session.ChannelMessageSend(threadID, fileMsg)
+	if _, err := session.ChannelMessageSend(threadID, fileMsg); err != nil {
+		log.Printf("ファイル送信メッセージの送信に失敗: %v", err)
+	}
 }
 
 // sendAsFile は、長い応答をファイルとして送信します
@@ -182,11 +184,13 @@ func (s *MessageSender) sendAsFile(session *discordgo.Session, m *discordgo.Mess
 
 	// ファイル送信成功のメッセージをスレッド返信として送信
 	fileMsg := fmt.Sprintf("📄 **応答が長いため、ファイルとして送信しました**\nファイル名: `%s`", filename)
-	session.ChannelMessageSendReply(m.ChannelID, fileMsg, &discordgo.MessageReference{
+	if _, err := session.ChannelMessageSendReply(m.ChannelID, fileMsg, &discordgo.MessageReference{
 		MessageID: m.ID,
 		ChannelID: m.ChannelID,
 		GuildID:   m.GuildID,
-	})
+	}); err != nil {
+		log.Printf("ファイル送信メッセージの送信に失敗: %v", err)
+	}
 }
 
 // splitMessage は、長いメッセージをDiscordの制限に合わせて分割します

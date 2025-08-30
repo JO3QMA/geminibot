@@ -170,15 +170,19 @@ func (h *DiscordHandler) processMentionAsync(s *discordgo.Session, m *discordgo.
 	ctx := context.Background()
 	response, err := h.mentionService.HandleMention(ctx, mention)
 
-	// 処理中メッセージを削除
-	s.ChannelMessageDelete(thread.ID, thinkingMsg.ID)
+			// 処理中メッセージを削除
+		if err := s.ChannelMessageDelete(thread.ID, thinkingMsg.ID); err != nil {
+			log.Printf("処理中メッセージの削除に失敗: %v", err)
+		}
 
 	if err != nil {
 		log.Printf("メンション処理に失敗: %v", err)
 
 		// エラーを適切なメッセージにフォーマット
 		errorMsg := h.formatError(err)
-		s.ChannelMessageSend(thread.ID, errorMsg)
+		if _, err := s.ChannelMessageSend(thread.ID, errorMsg); err != nil {
+			log.Printf("エラーメッセージの送信に失敗: %v", err)
+		}
 		return
 	}
 
@@ -261,19 +265,23 @@ func (h *DiscordHandler) sendNormalReply(s *discordgo.Session, m *discordgo.Mess
 	ctx := context.Background()
 	response, err := h.mentionService.HandleMention(ctx, mention)
 
-	// 処理中メッセージを削除
-	s.ChannelMessageDelete(m.ChannelID, thinkingMsg.ID)
+			// 処理中メッセージを削除
+		if err := s.ChannelMessageDelete(m.ChannelID, thinkingMsg.ID); err != nil {
+			log.Printf("処理中メッセージの削除に失敗: %v", err)
+		}
 
 	if err != nil {
 		log.Printf("メンション処理に失敗: %v", err)
 
-		// エラーを適切なメッセージにフォーマット
-		errorMsg := h.formatError(err)
-		s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
-			MessageID: m.ID,
-			ChannelID: m.ChannelID,
-			GuildID:   m.GuildID,
-		})
+					// エラーを適切なメッセージにフォーマット
+			errorMsg := h.formatError(err)
+			if _, err := s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
+				MessageID: m.ID,
+				ChannelID: m.ChannelID,
+				GuildID:   m.GuildID,
+			}); err != nil {
+				log.Printf("エラーメッセージの送信に失敗: %v", err)
+			}
 		return
 	}
 
@@ -322,7 +330,9 @@ func (h *DiscordHandler) sendAsFileToThread(s *discordgo.Session, threadID strin
 
 	// ファイル送信成功のメッセージを送信
 	fileMsg := fmt.Sprintf("📄 **応答が長いため、ファイルとして送信しました**\nファイル名: `%s`", filename)
-	s.ChannelMessageSend(threadID, fileMsg)
+	if _, err := s.ChannelMessageSend(threadID, fileMsg); err != nil {
+		log.Printf("ファイル送信メッセージの送信に失敗: %v", err)
+	}
 }
 
 // sendSplitResponse は、長い応答を複数のメッセージに分割して送信します
@@ -388,11 +398,13 @@ func (h *DiscordHandler) sendAsFile(s *discordgo.Session, m *discordgo.MessageCr
 
 	// ファイル送信成功のメッセージをスレッド返信として送信
 	fileMsg := fmt.Sprintf("📄 **応答が長いため、ファイルとして送信しました**\nファイル名: `%s`", filename)
-	s.ChannelMessageSendReply(m.ChannelID, fileMsg, &discordgo.MessageReference{
+	if _, err := s.ChannelMessageSendReply(m.ChannelID, fileMsg, &discordgo.MessageReference{
 		MessageID: m.ID,
 		ChannelID: m.ChannelID,
 		GuildID:   m.GuildID,
-	})
+	}); err != nil {
+		log.Printf("ファイル送信メッセージの送信に失敗: %v", err)
+	}
 }
 
 // formatForDiscord は、Geminiからの応答をDiscord用にフォーマットします

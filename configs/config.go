@@ -121,12 +121,4 @@ func getEnvAsDurationOrDefault(key string, defaultValue time.Duration) time.Dura
 	return defaultValue
 }
 
-// getEnvAsBoolOrDefault は、環境変数を真偽値として取得し、存在しない場合はデフォルト値を返します
-func getEnvAsBoolOrDefault(key string, defaultValue bool) bool {
-	if value := os.Getenv(key); value != "" {
-		if boolValue, err := strconv.ParseBool(value); err == nil {
-			return boolValue
-		}
-	}
-	return defaultValue
-}
+
