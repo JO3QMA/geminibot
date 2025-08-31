@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    container_name: geminibot-dev
+    volumes:
+      - ..:/workspaces/geminibot:cached
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: sleep infinity
+    environment:
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GO111MODULE=on
+      - GOPRIVATE=*
+      - GOPATH=/go
+      - GOROOT=/usr/local/go
+      - CGO_ENABLED=1
+      - GOMODCACHE=/go/pkg/mod
+      - GOSUMDB=sum.golang.org
+      - GIT_TERMINAL_PROMPT=0
+      # 開発用データベース設定
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-geminibot_dev}
+      - POSTGRES_USER=${POSTGRES_USER:-geminibot_dev}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devpassword}
+      - POSTGRES_SSL_MODE=${POSTGRES_SSL_MODE:-disable}
+      # 開発用Redis設定
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-devpassword}
+      - REDIS_DB=${REDIS_DB:-0}
+    networks:
+      - geminibot-dev-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  postgres:
+    image: ghcr.io/goccy/postgres-japanese-text-search:15
+    container_name: geminibot-postgres-dev
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-geminibot_dev}
+      - POSTGRES_USER=${POSTGRES_USER:-geminibot_dev}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devpassword}
+      - POSTGRES_INITDB_ARGS=${POSTGRES_INITDB_ARGS:-}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ./scripts/migrations:/docker-entrypoint-initdb.d/migrations:ro
+    restart: unless-stopped
+    networks:
+      - geminibot-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-geminibot_dev} -d ${POSTGRES_DB:-geminibot_dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    labels:
+      - "devcontainer.metadata=postgres"
+
+  redis:
+    image: redis:7-alpine
+    container_name: geminibot-redis-dev
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-devpassword} --maxmemory ${REDIS_MAX_MEMORY:-256mb} --maxmemory-policy ${REDIS_MAX_MEMORY_POLICY:-allkeys-lru}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_dev_data:/data
+      - ./configs/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    restart: unless-stopped
+    networks:
+      - geminibot-dev-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    labels:
+      - "devcontainer.metadata=redis"
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+
+networks:
+  geminibot-dev-network:
+    driver: bridge
