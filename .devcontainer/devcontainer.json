@@ -1,6 +1,10 @@
 {
 	"name": "Discord-Gemini Bot Development",
-	"image": "mcr.microsoft.com/devcontainers/go",
+	"dockerComposeFile": [
+		"compose.devcontainer.yml"
+	  ],
+	"service": "app",
+	"workspaceFolder": "/workspaces/geminibot",
 	"features": {
 		"ghcr.io/devcontainers/features/git:1": {},
 		"ghcr.io/devcontainers/features/github-cli:1": {}
@@ -38,22 +42,6 @@
 			}
 		}
 	},
-	"postCreateCommand": "go clean -modcache && go mod download && go mod tidy && go install golang.org/x/tools/cmd/goimports@latest && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && go install golang.org/x/tools/gopls@latest",
-	"remoteUser": "vscode",
-	"mounts": [
-		"source=${localWorkspaceFolder}/.devcontainer/cache,target=/go/pkg,type=bind,consistency=cached",
-		"source=${localWorkspaceFolder}/.env,target=/workspaces/geminibot/.env,type=bind,consistency=cached"
-	],
-	"env": {
-		"DISCORD_BOT_TOKEN": "",
-		"GEMINI_API_KEY": "",
-		"GO111MODULE": "on",
-		"GOPRIVATE": "*",
-		"GOPATH": "/go",
-		"GOROOT": "/usr/local/go",
-		"CGO_ENABLED": "1",
-		"GOMODCACHE": "/go/pkg/mod",
-		"GOSUMDB": "sum.golang.org",
-		"GIT_TERMINAL_PROMPT": "0"
-	}
+	"postCreateCommand": "go clean -modcache && go mod download && go mod tidy",
+	"remoteUser": "vscode"
 }

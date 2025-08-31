@@ -32,5 +32,11 @@ CREATE INDEX IF NOT EXISTS idx_messages_channel_timestamp ON messages(channel_id
 CREATE INDEX IF NOT EXISTS idx_messages_user_timestamp ON messages(user_id, timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_content_gin ON messages USING gin(to_tsvector('japanese', content));
 
--- 日本語全文検索用の設定
-CREATE TEXT SEARCH CONFIGURATION IF NOT EXISTS japanese (COPY = pg_catalog.simple);
+-- 日本語全文検索用の設定（既に作成済みの場合はスキップ）
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_ts_config WHERE cfgname = 'japanese') THEN
+        CREATE TEXT SEARCH CONFIGURATION japanese (COPY = pg_catalog.simple);
+    END IF;
+END
+$$;

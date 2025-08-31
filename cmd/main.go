@@ -1,17 +1,15 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"geminibot/configs"
-	"geminibot/internal/application"
-	"geminibot/internal/infrastructure/database"
-	"geminibot/internal/infrastructure/gemini"
-	discordPres "geminibot/internal/presentation/discord"
+	"geminibot/internal/infrastructure/container"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -25,68 +23,28 @@ func main() {
 		log.Fatalf("設定の読み込みに失敗: %v", err)
 	}
 
-	// Discordセッションを作成
-	session, err := discordgo.New("Bot " + config.Discord.BotToken)
+	// 依存性注入コンテナを作成
+	container, err := container.NewContainer(config)
 	if err != nil {
-		log.Fatalf("Discordセッションの作成に失敗: %v", err)
-	}
-	defer session.Close()
-
-	// Botの情報を取得
-	user, err := session.User("@me")
-	if err != nil {
-		log.Fatalf("Bot情報の取得に失敗: %v", err)
+		log.Fatalf("コンテナの初期化に失敗: %v", err)
 	}
 
-	log.Printf("Bot情報: %s#%s (ID: %s)", user.Username, user.Discriminator, user.ID)
+	// クリーンアップを確実に実行
+	defer func() {
+		if err := container.Close(); err != nil {
+			log.Printf("コンテナのクローズに失敗: %v", err)
+		}
+	}()
 
-	// Gemini APIクライアントを作成
-	geminiClient, err := gemini.NewGeminiAPIClient(config.Gemini.APIKey, &config.Gemini)
-	if err != nil {
-		log.Fatalf("Gemini APIクライアントの作成に失敗: %v", err)
-	}
-	defer geminiClient.Close()
+	// Discordセッションを取得
+	session := container.GetDiscordSession()
+	handler := container.GetDiscordHandler()
 
-	// PostgreSQLリポジトリを作成
-	postgresConnStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		config.Database.PostgresHost,
-		config.Database.PostgresPort,
-		config.Database.PostgresUser,
-		config.Database.PostgresPassword,
-		config.Database.PostgresDB,
-	)
-
-	postgresRepo, err := database.NewPostgresConversationRepository(postgresConnStr)
-	if err != nil {
-		log.Fatalf("PostgreSQLリポジトリの作成に失敗: %v", err)
-	}
-	defer postgresRepo.Close()
-
-	// Redisキャッシュを作成
-	redisAddr := fmt.Sprintf("%s:%d", config.Database.RedisHost, config.Database.RedisPort)
-	redisCache, err := database.NewRedisConversationCache(redisAddr, config.Database.RedisPassword, config.Database.RedisDB)
-	if err != nil {
-		log.Fatalf("Redisキャッシュの作成に失敗: %v", err)
-	}
-	defer redisCache.Close()
-
-	// ハイブリッドリポジトリを作成
-	conversationRepo := database.NewHybridConversationRepository(postgresRepo, redisCache)
-
-	// アプリケーションサービスを作成
-	mentionService := application.NewMentionApplicationService(
-		conversationRepo,
-		geminiClient,
-		&config.Bot,
-	)
-
-	// Discordハンドラを作成（新しいリファクタリング版）
-	handler := discordPres.NewDiscordHandlerNew(session, mentionService, user.ID)
+	// ハンドラーを設定
 	handler.SetupHandlers()
 
 	// Discordに接続
-	err = session.Open()
-	if err != nil {
+	if err := session.Open(); err != nil {
 		log.Fatalf("Discordへの接続に失敗: %v", err)
 	}
 
@@ -100,10 +58,31 @@ func main() {
 	<-stop
 	log.Println("終了シグナルを受信しました。Botを停止中...")
 
-	// クリーンアップ
-	if err := session.Close(); err != nil {
-		log.Printf("Discordセッションのクローズに失敗: %v", err)
+	// グレースフルシャットダウン
+	if err := gracefulShutdown(session); err != nil {
+		log.Printf("グレースフルシャットダウンに失敗: %v", err)
 	}
 
 	log.Println("Botが正常に停止しました。")
+}
+
+// gracefulShutdown はグレースフルシャットダウンを実行します
+func gracefulShutdown(session *discordgo.Session) error {
+	// コンテキストにタイムアウトを設定
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Discordセッションをクローズ
+	if err := session.Close(); err != nil {
+		return err
+	}
+
+	// 残りの処理を待機
+	select {
+	case <-ctx.Done():
+		log.Println("シャットダウンがタイムアウトしました")
+		return ctx.Err()
+	default:
+		return nil
+	}
 }

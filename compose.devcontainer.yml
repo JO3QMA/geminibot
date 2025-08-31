@@ -41,8 +41,11 @@ services:
       redis:
         condition: service_healthy
   postgres:
-    image: ghcr.io/goccy/postgres-japanese-text-search:15
+    build:
+      context: .
+      dockerfile: docker/postgres-japanese.Dockerfile
     container_name: geminibot-postgres-dev
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-geminibot_dev}
       - POSTGRES_USER=${POSTGRES_USER:-geminibot_dev}

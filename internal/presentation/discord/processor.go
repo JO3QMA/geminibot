@@ -116,10 +116,33 @@ func (p *MessageProcessor) CreateBotMention(s *discordgo.Session, m *discordgo.M
 	// メンション部分を除去したコンテンツを取得
 	content := p.extractUserContent(m)
 
+	// コンテンツのバリデーション
+	if content == "" {
+		content = "こんにちは！何かお手伝いできることはありますか？"
+	}
+
+	// ユーザー情報のバリデーション
+	if m.Author == nil {
+		log.Printf("警告: メッセージの作成者がnilです")
+		return domain.NewBotMention(
+			domain.NewChannelID(m.ChannelID),
+			domain.NewUser(
+				domain.NewUserID("unknown"),
+				"Unknown User",
+				"Unknown User",
+				"",
+				"",
+				false,
+			),
+			content,
+			m.ID,
+		)
+	}
+
 	// ユーザー情報を作成
 	user := domain.NewUser(
 		domain.NewUserID(m.Author.ID),
-		m.Author.Username,
+		p.sanitizeUsername(m.Author.Username),
 		p.getDisplayName(s, m),
 		m.Author.Avatar,
 		m.Author.Discriminator,
@@ -132,6 +155,55 @@ func (p *MessageProcessor) CreateBotMention(s *discordgo.Session, m *discordgo.M
 		content,
 		m.ID,
 	)
+}
+
+// sanitizeUsername はユーザー名をサニタイズします
+func (p *MessageProcessor) sanitizeUsername(username string) string {
+	if username == "" {
+		return "Unknown User"
+	}
+
+	// 制御文字を除去
+	sanitized := strings.Map(func(r rune) rune {
+		if r < 32 || r == 127 {
+			return -1
+		}
+		return r
+	}, username)
+
+	// 長さ制限
+	if len(sanitized) > 32 {
+		sanitized = sanitized[:32]
+	}
+
+	return sanitized
+}
+
+// extractUserContent は、メンション部分を除去したユーザーのコンテンツを抽出します
+func (p *MessageProcessor) extractUserContent(m *discordgo.MessageCreate) string {
+	if m.Content == "" {
+		return ""
+	}
+
+	content := m.Content
+
+	// メンション配列がある場合、それらを除去
+	for _, mention := range m.Mentions {
+		if mention != nil && mention.ID != "" {
+			mentionText := fmt.Sprintf("<@%s>", mention.ID)
+			content = strings.ReplaceAll(content, mentionText, "")
+		}
+	}
+
+	// 先頭と末尾の空白を除去
+	content = strings.TrimSpace(content)
+
+	// 長さ制限（Discordの制限に合わせる）
+	if len(content) > 2000 {
+		content = content[:2000]
+	}
+
+	return content
 }
 
 // IsMentioned は、メッセージがBotへのメンションかどうかを判定します
@@ -151,22 +223,6 @@ func (p *MessageProcessor) IsMentioned(m *discordgo.MessageCreate, botID string,
 	}
 
 	return false
-}
-
-// extractUserContent は、メンション部分を除去したユーザーのコンテンツを抽出します
-func (p *MessageProcessor) extractUserContent(m *discordgo.MessageCreate) string {
-	content := m.Content
-
-	// メンション配列がある場合、それらを除去
-	for _, mention := range m.Mentions {
-		mentionText := fmt.Sprintf("<@%s>", mention.ID)
-		content = strings.ReplaceAll(content, mentionText, "")
-	}
-
-	// 先頭と末尾の空白を除去
-	content = strings.TrimSpace(content)
-
-	return content
 }
 
 // getDisplayName は、Discordメッセージから表示名を取得します

@@ -75,9 +75,50 @@ cp env.example .env
 3. Devcontainerで開発環境を起動
 ```bash
 # VS Codeで Devcontainer: Reopen in Container を実行
+# または、コマンドパレットから "Dev Containers: Reopen in Container" を選択
 ```
 
 **注意**: Devcontainer内では`.env`ファイルが自動的に読み込まれます。アプリケーション起動時に環境変数が正しく設定されているか確認してください。
+
+### 3. Devcontainer環境
+
+本プロジェクトは、**Devcontainer**を使用して開発環境を提供しています。これにより、以下の利点があります：
+
+#### 🐳 含まれるサービス
+- **PostgreSQL**: 開発用データベース（ポート5432）
+- **Redis**: 開発用キャッシュ（ポート6379）
+- **Go開発環境**: 必要なツールが全てインストール済み
+
+#### 🔧 開発用ツール
+- `postgresql-client`: データベース接続・操作
+- `redis-tools`: Redis接続・操作
+- `goimports`: コードフォーマット
+- `golangci-lint`: コード品質チェック
+- `gopls`: Go言語サーバー
+
+#### 📝 環境変数設定
+開発環境用の環境変数ファイルを作成してください：
+```bash
+cp env.devcontainer.example .env
+# .envファイルを編集して認証情報を設定
+```
+
+#### 🚀 使用方法
+1. VS Codeでプロジェクトを開く
+2. コマンドパレット（`Ctrl+Shift+P`）を開く
+3. "Dev Containers: Reopen in Container" を選択
+4. コンテナのビルド完了を待つ
+5. 開発開始！
+
+#### 🔍 データベース接続
+Devcontainer内からデータベースに接続する場合：
+```bash
+# PostgreSQL接続
+psql -h postgres -U geminibot_dev -d geminibot_dev
+
+# Redis接続
+redis-cli -h redis -p 6379 -a devpassword
+```
 
 ## 🔧 コンテキスト管理機能
 

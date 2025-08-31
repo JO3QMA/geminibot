@@ -1,7 +1,7 @@
 # ========================================
 # 🏗️  BUILD STAGE - アプリケーションのビルド
 # ========================================
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
@@ -32,8 +32,8 @@ WORKDIR /root/
 # Copy the binary from builder stage
 COPY --from=builder /app/main .
 
-# Expose port (if needed)
-EXPOSE 8080
+# ヘルスチェック用のツールをインストール
+RUN apk add --no-cache procps
 
 # Run the binary
 CMD ["./main"]
