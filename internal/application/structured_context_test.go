@@ -29,7 +29,7 @@ func (m *MockGeminiClient) GenerateTextWithStructuredContext(ctx context.Context
 // MockConversationRepository は、テスト用のConversationRepositoryモックです
 type MockConversationRepository struct{}
 
-func (m *MockConversationRepository) GetRecentMessages(ctx context.Context, channelID string, limit int) (domain.ConversationHistory, error) {
+func (m *MockConversationRepository) GetRecentMessages(ctx context.Context, channelID string, limit int) ([]domain.Message, error) {
 	messages := []domain.Message{
 		{
 			ID: "msg1",
@@ -45,14 +45,14 @@ func (m *MockConversationRepository) GetRecentMessages(ctx context.Context, chan
 			Timestamp: time.Now(),
 		},
 	}
-	return domain.NewConversationHistory(messages), nil
+	return messages, nil
 }
 
-func (m *MockConversationRepository) GetThreadMessages(ctx context.Context, threadID string) (domain.ConversationHistory, error) {
+func (m *MockConversationRepository) GetThreadMessages(ctx context.Context, threadID string) ([]domain.Message, error) {
 	return m.GetRecentMessages(ctx, threadID, 10)
 }
 
-func (m *MockConversationRepository) GetMessagesBefore(ctx context.Context, channelID string, messageID string, limit int) (domain.ConversationHistory, error) {
+func (m *MockConversationRepository) GetMessagesBefore(ctx context.Context, channelID string, messageID string, limit int) ([]domain.Message, error) {
 	return m.GetRecentMessages(ctx, channelID, limit)
 }
 

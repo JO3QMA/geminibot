@@ -74,7 +74,7 @@ func (s *MentionApplicationService) HandleMention(ctx context.Context, mention d
 		stats.SystemPromptLength, stats.HistoryLength, stats.QuestionLength, stats.TotalLength, stats.MaxContextLength, stats.IsTruncated)
 
 	// 4. サーバー別のAPIキーを使用してGemini APIにリクエストを送信
-	response, err := s.generateResponseWithGuildAPIKey(ctx, mention, truncatedSystemPrompt, history.Messages(), truncatedQuestion)
+	response, err := s.generateResponseWithGuildAPIKey(ctx, mention, truncatedSystemPrompt, history, truncatedQuestion)
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
 			return "", fmt.Errorf("Gemini APIからの応答取得がタイムアウトしました: %w", err)
@@ -156,7 +156,7 @@ func (s *MentionApplicationService) createGeminiClientWithAPIKey(apiKey string) 
 }
 
 // getConversationHistory は、メンションに基づいて会話履歴を取得します
-func (s *MentionApplicationService) getConversationHistory(ctx context.Context, mention domain.BotMention) (domain.ConversationHistory, error) {
+func (s *MentionApplicationService) getConversationHistory(ctx context.Context, mention domain.BotMention) ([]domain.Message, error) {
 	// スレッドかどうかを判定（簡易的な判定）
 	if mention.IsThread() {
 		log.Printf("スレッド内のメンションを検出: %s", mention.ChannelID)

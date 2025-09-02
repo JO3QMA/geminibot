@@ -27,7 +27,7 @@ func (m *ContextManagementMockGeminiClient) GenerateTextWithStructuredContext(ct
 // ContextManagementMockConversationRepository は、テスト用のConversationRepositoryモックです
 type ContextManagementMockConversationRepository struct{}
 
-func (m *ContextManagementMockConversationRepository) GetRecentMessages(ctx context.Context, channelID string, limit int) (domain.ConversationHistory, error) {
+func (m *ContextManagementMockConversationRepository) GetRecentMessages(ctx context.Context, channelID string, limit int) ([]domain.Message, error) {
 	messages := []domain.Message{
 		{
 			ID: "msg1",
@@ -40,14 +40,14 @@ func (m *ContextManagementMockConversationRepository) GetRecentMessages(ctx cont
 			Timestamp: time.Now(),
 		},
 	}
-	return domain.NewConversationHistory(messages), nil
+	return messages, nil
 }
 
-func (m *ContextManagementMockConversationRepository) GetThreadMessages(ctx context.Context, threadID string) (domain.ConversationHistory, error) {
+func (m *ContextManagementMockConversationRepository) GetThreadMessages(ctx context.Context, threadID string) ([]domain.Message, error) {
 	return m.GetRecentMessages(ctx, threadID, 10)
 }
 
-func (m *ContextManagementMockConversationRepository) GetMessagesBefore(ctx context.Context, channelID string, messageID string, limit int) (domain.ConversationHistory, error) {
+func (m *ContextManagementMockConversationRepository) GetMessagesBefore(ctx context.Context, channelID string, messageID string, limit int) ([]domain.Message, error) {
 	return m.GetRecentMessages(ctx, channelID, limit)
 }
 
@@ -143,12 +143,12 @@ func TestMentionApplicationService_GetConversationHistory(t *testing.T) {
 		t.Errorf("会話履歴の取得でエラーが発生しました: %v", err)
 	}
 
-	if history.IsEmpty() {
+	if len(history) == 0 {
 		t.Error("会話履歴が空です")
 	}
 
 	// コンテキスト長制限が適用されていることを確認
-	messages := history.Messages()
+	messages := history
 	if len(messages) == 0 {
 		t.Error("メッセージが取得されていません")
 	}

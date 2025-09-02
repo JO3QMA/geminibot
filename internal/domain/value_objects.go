@@ -23,33 +23,6 @@ type User struct {
 	Discriminator string
 }
 
-// ConversationHistory は、複数のMessageを内包する、コンテキストを表すオブジェクトです
-type ConversationHistory struct {
-	messages []Message
-}
-
-// NewConversationHistory は新しいConversationHistoryインスタンスを作成します
-func NewConversationHistory(messages []Message) ConversationHistory {
-	return ConversationHistory{
-		messages: messages,
-	}
-}
-
-// Messages は履歴メッセージのスライスを返します
-func (ch ConversationHistory) Messages() []Message {
-	return ch.messages
-}
-
-// Count は履歴メッセージの数を返します
-func (ch ConversationHistory) Count() int {
-	return len(ch.messages)
-}
-
-// IsEmpty は履歴が空かどうかを判定します
-func (ch ConversationHistory) IsEmpty() bool {
-	return len(ch.messages) == 0
-}
-
 // Prompt は、Gemini APIに送信するために整形されたテキストを表現する値オブジェクトです
 type Prompt struct {
 	content string

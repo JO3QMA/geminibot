@@ -26,7 +26,7 @@ func TestNewPromptGenerator(t *testing.T) {
 
 func TestPromptGenerator_GeneratePrompt_EmptyHistory(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
-	history := NewConversationHistory([]Message{})
+	history := []Message{}
 	userQuestion := "こんにちは"
 
 	prompt := generator.GeneratePrompt(history, userQuestion)
@@ -58,7 +58,7 @@ func TestPromptGenerator_GeneratePrompt_WithHistory(t *testing.T) {
 		Message{ID: "msg1", User: User{ID: "user1", Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, Content: "こんにちは", Timestamp: time.Now()},
 		Message{ID: "msg2", User: User{ID: "user2", Username: "user2", DisplayName: "User2", Avatar: "", Discriminator: "", IsBot: false}, Content: "こんばんは", Timestamp: time.Now()},
 	}
-	history := NewConversationHistory(messages)
+	history := messages
 	userQuestion := "今日の天気は？"
 
 	prompt := generator.GeneratePrompt(history, userQuestion)
@@ -93,7 +93,7 @@ func TestPromptGenerator_GeneratePrompt_WithHistory(t *testing.T) {
 
 func TestPromptGenerator_GeneratePromptWithContext_EmptyHistory(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
-	history := NewConversationHistory([]Message{})
+	history := []Message{}
 	userQuestion := "こんにちは"
 	additionalContext := "今日は晴れです"
 
@@ -134,7 +134,7 @@ func TestPromptGenerator_GeneratePromptWithContext_WithHistory(t *testing.T) {
 		Message{ID: "msg1", User: User{ID: "user1", Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, Content: "こんにちは", Timestamp: time.Now()},
 		Message{ID: "msg2", User: User{ID: "user2", Username: "user2", DisplayName: "User2", Avatar: "", Discriminator: "", IsBot: false}, Content: "こんばんは", Timestamp: time.Now()},
 	}
-	history := NewConversationHistory(messages)
+	history := messages
 	userQuestion := "今日の天気は？"
 	additionalContext := "今日は晴れです"
 
@@ -178,7 +178,7 @@ func TestPromptGenerator_GeneratePromptWithContext_WithHistory(t *testing.T) {
 
 func TestPromptGenerator_GeneratePromptWithContext_EmptyContext(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
-	history := NewConversationHistory([]Message{})
+	history := []Message{}
 	userQuestion := "こんにちは"
 	additionalContext := ""
 
@@ -201,7 +201,7 @@ func TestPromptGenerator_GeneratePromptWithContext_EmptyContext(t *testing.T) {
 
 func TestPromptGenerator_GeneratePrompt_Order(t *testing.T) {
 	generator := NewPromptGenerator("システムプロンプト")
-	history := NewConversationHistory([]Message{})
+	history := []Message{}
 	userQuestion := "質問"
 
 	prompt := generator.GeneratePrompt(history, userQuestion)

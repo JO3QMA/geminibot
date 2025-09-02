@@ -2,71 +2,7 @@ package domain
 
 import (
 	"testing"
-	"time"
 )
-
-func TestNewMessage(t *testing.T) {
-	user := User{
-		ID:            "123",
-		Username:      "testuser",
-		DisplayName:   "Test User",
-		Avatar:        "avatar.jpg",
-		IsBot:         false,
-		Discriminator: "1234",
-	}
-
-	now := time.Now()
-	message := Message{ID: "msg123", User: user, Content: "Hello, World!", Timestamp: now}
-
-	if message.ID != "msg123" {
-		t.Errorf("Expected ID 'msg123', got '%s'", message.ID)
-	}
-
-	if message.User.Username != "testuser" {
-		t.Errorf("Expected Username 'testuser', got '%s'", message.User.Username)
-	}
-
-	if message.Content != "Hello, World!" {
-		t.Errorf("Expected Content 'Hello, World!', got '%s'", message.Content)
-	}
-
-	if !message.Timestamp.Equal(now) {
-		t.Errorf("Expected Timestamp %v, got %v", now, message.Timestamp)
-	}
-}
-
-func TestNewConversationHistory(t *testing.T) {
-	messages := []Message{
-		Message{ID: "1", User: User{Username: "user1"}, Content: "Hello", Timestamp: time.Now()},
-		Message{ID: "2", User: User{Username: "user2"}, Content: "Hi there", Timestamp: time.Now()},
-	}
-
-	history := NewConversationHistory(messages)
-
-	if history.Count() != 2 {
-		t.Errorf("Expected count 2, got %d", history.Count())
-	}
-
-	if history.IsEmpty() {
-		t.Error("Expected history to not be empty")
-	}
-
-	if len(history.Messages()) != 2 {
-		t.Errorf("Expected 2 messages, got %d", len(history.Messages()))
-	}
-}
-
-func TestConversationHistoryEmpty(t *testing.T) {
-	history := NewConversationHistory([]Message{})
-
-	if !history.IsEmpty() {
-		t.Error("Expected history to be empty")
-	}
-
-	if history.Count() != 0 {
-		t.Errorf("Expected count 0, got %d", history.Count())
-	}
-}
 
 func TestNewPrompt(t *testing.T) {
 	content := "This is a test prompt"

@@ -22,12 +22,12 @@ func NewPromptGenerator(systemPrompt string) *PromptGenerator {
 }
 
 // GeneratePrompt は、会話履歴とユーザーのチャット内容からプロンプトを生成します
-func (pg *PromptGenerator) GeneratePrompt(history ConversationHistory, userQuestion string) Prompt {
+func (pg *PromptGenerator) GeneratePrompt(history []Message, userQuestion string) Prompt {
 	return pg.GeneratePromptWithMention(history, userQuestion, "", "")
 }
 
 // GeneratePromptWithMention は、メンション情報を含めてプロンプトを生成します
-func (pg *PromptGenerator) GeneratePromptWithMention(history ConversationHistory, userQuestion string, mentionerName string, mentionerID string) Prompt {
+func (pg *PromptGenerator) GeneratePromptWithMention(history []Message, userQuestion string, mentionerName string, mentionerID string) Prompt {
 	var builder strings.Builder
 
 	// システムプロンプトを追加
@@ -42,9 +42,9 @@ func (pg *PromptGenerator) GeneratePromptWithMention(history ConversationHistory
 	}
 
 	// 会話履歴を追加
-	if !history.IsEmpty() {
+	if len(history) > 0 {
 		builder.WriteString("## 会話履歴\n")
-		for _, msg := range history.Messages() {
+		for _, msg := range history {
 			displayName := msg.User.DisplayName
 			builder.WriteString(fmt.Sprintf("%s: %s\n", displayName, msg.Content))
 		}
@@ -59,12 +59,12 @@ func (pg *PromptGenerator) GeneratePromptWithMention(history ConversationHistory
 }
 
 // GeneratePromptWithContext は、追加のコンテキスト情報を含めてプロンプトを生成します
-func (pg *PromptGenerator) GeneratePromptWithContext(history ConversationHistory, userQuestion string, additionalContext string) Prompt {
+func (pg *PromptGenerator) GeneratePromptWithContext(history []Message, userQuestion string, additionalContext string) Prompt {
 	return pg.GeneratePromptWithContextAndMention(history, userQuestion, additionalContext, "", "")
 }
 
 // GeneratePromptWithContextAndMention は、追加のコンテキスト情報とメンション情報を含めてプロンプトを生成します
-func (pg *PromptGenerator) GeneratePromptWithContextAndMention(history ConversationHistory, userQuestion string, additionalContext string, mentionerName string, mentionerID string) Prompt {
+func (pg *PromptGenerator) GeneratePromptWithContextAndMention(history []Message, userQuestion string, additionalContext string, mentionerName string, mentionerID string) Prompt {
 	var builder strings.Builder
 
 	// システムプロンプトを追加
@@ -86,9 +86,9 @@ func (pg *PromptGenerator) GeneratePromptWithContextAndMention(history Conversat
 	}
 
 	// 会話履歴を追加
-	if !history.IsEmpty() {
+	if len(history) > 0 {
 		builder.WriteString("## 会話履歴\n")
-		for _, msg := range history.Messages() {
+		for _, msg := range history {
 			displayName := msg.User.DisplayName
 			builder.WriteString(fmt.Sprintf("%s: %s\n", displayName, msg.Content))
 		}
