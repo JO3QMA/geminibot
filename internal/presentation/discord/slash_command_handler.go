@@ -32,6 +32,12 @@ func NewSlashCommandHandler(
 
 // SetupSlashCommands は、スラッシュコマンドを設定します
 func (h *SlashCommandHandler) SetupSlashCommands() error {
+	// BotのユーザーIDを取得
+	user, err := h.session.User("@me")
+	if err != nil {
+		return fmt.Errorf("Botユーザー情報の取得に失敗: %w", err)
+	}
+
 	// スラッシュコマンドの定義
 	commands := []*discordgo.ApplicationCommand{
 		{
@@ -54,7 +60,7 @@ func (h *SlashCommandHandler) SetupSlashCommands() error {
 
 	// グローバルコマンドとして登録
 	for _, command := range commands {
-		_, err := h.session.ApplicationCommandCreate(h.session.State.User.ID, "", command)
+		_, err := h.session.ApplicationCommandCreate(user.ID, "", command)
 		if err != nil {
 			log.Printf("スラッシュコマンド %s の登録に失敗: %v", command.Name, err)
 			return err
