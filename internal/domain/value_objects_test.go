@@ -82,10 +82,16 @@ func TestNewPrompt(t *testing.T) {
 }
 
 func TestNewBotMention(t *testing.T) {
-	channelID := NewChannelID("channel123")
+	channelID := "channel123"
 	user := User{Username: "testuser"}
 
-	mention := NewBotMention(channelID, "guild123", user, "Hello bot!", "msg123")
+	mention := BotMention{
+		ChannelID: channelID,
+		GuildID:   "guild123",
+		User:      user,
+		Content:   "Hello bot!",
+		MessageID: "msg123",
+	}
 
 	if mention.ChannelID != channelID {
 		t.Errorf("Expected ChannelID %v, got %v", channelID, mention.ChannelID)
@@ -109,10 +115,16 @@ func TestNewBotMention(t *testing.T) {
 }
 
 func TestBotMentionString(t *testing.T) {
-	channelID := NewChannelID("channel123")
+	channelID := "channel123"
 	user := User{Username: "testuser"}
 
-	mention := NewBotMention(channelID, "guild123", user, "Hello bot!", "msg123")
+	mention := BotMention{
+		ChannelID: channelID,
+		GuildID:   "guild123",
+		User:      user,
+		Content:   "Hello bot!",
+		MessageID: "msg123",
+	}
 
 	expected := "BotMention{ChannelID: channel123, GuildID: guild123, User: testuser, Content: Hello bot!, MessageID: msg123}"
 	if mention.String() != expected {
@@ -121,9 +133,9 @@ func TestBotMentionString(t *testing.T) {
 }
 
 func TestChannelID(t *testing.T) {
-	channelID := NewChannelID("channel123")
+	channelID := "channel123"
 
-	if channelID.String() != "channel123" {
-		t.Errorf("Expected 'channel123', got '%s'", channelID.String())
+	if channelID != "channel123" {
+		t.Errorf("Expected 'channel123', got '%s'", channelID)
 	}
 }

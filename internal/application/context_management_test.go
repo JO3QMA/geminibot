@@ -27,7 +27,7 @@ func (m *ContextManagementMockGeminiClient) GenerateTextWithStructuredContext(ct
 // ContextManagementMockConversationRepository は、テスト用のConversationRepositoryモックです
 type ContextManagementMockConversationRepository struct{}
 
-func (m *ContextManagementMockConversationRepository) GetRecentMessages(ctx context.Context, channelID domain.ChannelID, limit int) (domain.ConversationHistory, error) {
+func (m *ContextManagementMockConversationRepository) GetRecentMessages(ctx context.Context, channelID string, limit int) (domain.ConversationHistory, error) {
 	messages := []domain.Message{
 		{
 			ID: "msg1",
@@ -43,11 +43,11 @@ func (m *ContextManagementMockConversationRepository) GetRecentMessages(ctx cont
 	return domain.NewConversationHistory(messages), nil
 }
 
-func (m *ContextManagementMockConversationRepository) GetThreadMessages(ctx context.Context, threadID domain.ChannelID) (domain.ConversationHistory, error) {
+func (m *ContextManagementMockConversationRepository) GetThreadMessages(ctx context.Context, threadID string) (domain.ConversationHistory, error) {
 	return m.GetRecentMessages(ctx, threadID, 10)
 }
 
-func (m *ContextManagementMockConversationRepository) GetMessagesBefore(ctx context.Context, channelID domain.ChannelID, messageID string, limit int) (domain.ConversationHistory, error) {
+func (m *ContextManagementMockConversationRepository) GetMessagesBefore(ctx context.Context, channelID string, messageID string, limit int) (domain.ConversationHistory, error) {
 	return m.GetRecentMessages(ctx, channelID, limit)
 }
 
@@ -84,7 +84,7 @@ func TestMentionApplicationService_ContextManagement(t *testing.T) {
 			DisplayName:   "TestUser",
 		},
 		Content:   "テストメッセージ",
-		ChannelID: domain.NewChannelID("testchannel"),
+		ChannelID: "testchannel",
 		MessageID: "testmessageid",
 	}
 
@@ -131,7 +131,7 @@ func TestMentionApplicationService_GetConversationHistory(t *testing.T) {
 			IsBot:         false,
 		},
 		Content:   "テストメッセージ",
-		ChannelID: domain.NewChannelID("testchannel"),
+		ChannelID: "testchannel",
 		MessageID: "testmessageid",
 	}
 
@@ -181,7 +181,7 @@ func TestMentionApplicationService_ContextTruncation(t *testing.T) {
 			DisplayName: "TestUser",
 		},
 		Content:   "これは非常に長いユーザーの質問です。制限を超える長さです。",
-		ChannelID: domain.NewChannelID("testchannel"),
+		ChannelID: "testchannel",
 		MessageID: "testmessageid",
 	}
 

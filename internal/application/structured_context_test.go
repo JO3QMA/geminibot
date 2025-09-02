@@ -29,7 +29,7 @@ func (m *MockGeminiClient) GenerateTextWithStructuredContext(ctx context.Context
 // MockConversationRepository は、テスト用のConversationRepositoryモックです
 type MockConversationRepository struct{}
 
-func (m *MockConversationRepository) GetRecentMessages(ctx context.Context, channelID domain.ChannelID, limit int) (domain.ConversationHistory, error) {
+func (m *MockConversationRepository) GetRecentMessages(ctx context.Context, channelID string, limit int) (domain.ConversationHistory, error) {
 	messages := []domain.Message{
 		{
 			ID: "msg1",
@@ -48,11 +48,11 @@ func (m *MockConversationRepository) GetRecentMessages(ctx context.Context, chan
 	return domain.NewConversationHistory(messages), nil
 }
 
-func (m *MockConversationRepository) GetThreadMessages(ctx context.Context, threadID domain.ChannelID) (domain.ConversationHistory, error) {
+func (m *MockConversationRepository) GetThreadMessages(ctx context.Context, threadID string) (domain.ConversationHistory, error) {
 	return m.GetRecentMessages(ctx, threadID, 10)
 }
 
-func (m *MockConversationRepository) GetMessagesBefore(ctx context.Context, channelID domain.ChannelID, messageID string, limit int) (domain.ConversationHistory, error) {
+func (m *MockConversationRepository) GetMessagesBefore(ctx context.Context, channelID string, messageID string, limit int) (domain.ConversationHistory, error) {
 	return m.GetRecentMessages(ctx, channelID, limit)
 }
 
@@ -89,7 +89,7 @@ func TestMentionApplicationService_HandleMentionWithStructuredContext(t *testing
 			IsBot:         false,
 		},
 		Content:   "テストメッセージ",
-		ChannelID: domain.NewChannelID("testchannel"),
+		ChannelID: "testchannel",
 		MessageID: "testmessageid",
 	}
 
@@ -136,7 +136,7 @@ func TestMentionApplicationService_HandleMention_WithStructuredContext(t *testin
 			IsBot:         false,
 		},
 		Content:   "テストメッセージ",
-		ChannelID: domain.NewChannelID("testchannel"),
+		ChannelID: "testchannel",
 		MessageID: "testmessageid",
 	}
 
@@ -183,7 +183,7 @@ func TestMentionApplicationService_HandleMention_WithoutStructuredContext(t *tes
 			IsBot:         false,
 		},
 		Content:   "テストメッセージ",
-		ChannelID: domain.NewChannelID("testchannel"),
+		ChannelID: "testchannel",
 		MessageID: "testmessageid",
 	}
 

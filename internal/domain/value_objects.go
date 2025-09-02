@@ -23,19 +23,6 @@ type User struct {
 	Discriminator string
 }
 
-// ChannelID は、DiscordのチャンネルIDを表現する値オブジェクトです
-type ChannelID string
-
-// NewChannelID は新しいChannelIDインスタンスを作成します
-func NewChannelID(id string) ChannelID {
-	return ChannelID(id)
-}
-
-// String はChannelIDを文字列として返します
-func (c ChannelID) String() string {
-	return string(c)
-}
-
 // ConversationHistory は、複数のMessageを内包する、コンテキストを表すオブジェクトです
 type ConversationHistory struct {
 	messages []Message
@@ -87,22 +74,11 @@ func (p Prompt) String() string {
 
 // BotMention は、Botへのメンション情報を表現する値オブジェクトです
 type BotMention struct {
-	ChannelID ChannelID
+	ChannelID string
 	GuildID   string
 	User      User
 	Content   string
 	MessageID string
-}
-
-// NewBotMention は新しいBotMentionインスタンスを作成します
-func NewBotMention(channelID ChannelID, guildID string, user User, content, messageID string) BotMention {
-	return BotMention{
-		ChannelID: channelID,
-		GuildID:   guildID,
-		User:      user,
-		Content:   content,
-		MessageID: messageID,
-	}
 }
 
 // IsThread は、このメンションがスレッド内で発生したかどうかを判定します

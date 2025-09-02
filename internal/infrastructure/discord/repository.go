@@ -23,10 +23,10 @@ func NewDiscordConversationRepository(session *discordgo.Session) *DiscordConver
 }
 
 // GetRecentMessages は、指定されたチャンネルの直近のメッセージを取得します
-func (r *DiscordConversationRepository) GetRecentMessages(ctx context.Context, channelID domain.ChannelID, limit int) (domain.ConversationHistory, error) {
+func (r *DiscordConversationRepository) GetRecentMessages(ctx context.Context, channelID string, limit int) (domain.ConversationHistory, error) {
 	log.Printf("Discordから直近%d件のメッセージを取得中: %s", limit, channelID)
 
-	messages, err := r.session.ChannelMessages(channelID.String(), limit, "", "", "")
+	messages, err := r.session.ChannelMessages(channelID, limit, "", "", "")
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
 			return domain.ConversationHistory{}, fmt.Errorf("Discord APIからのメッセージ取得がタイムアウトしました: %w", err)
@@ -66,7 +66,7 @@ func (r *DiscordConversationRepository) GetRecentMessages(ctx context.Context, c
 }
 
 // GetThreadMessages は、指定されたスレッドの全メッセージを取得します
-func (r *DiscordConversationRepository) GetThreadMessages(ctx context.Context, threadID domain.ChannelID) (domain.ConversationHistory, error) {
+func (r *DiscordConversationRepository) GetThreadMessages(ctx context.Context, threadID string) (domain.ConversationHistory, error) {
 	log.Printf("Discordからスレッドの全メッセージを取得中: %s", threadID)
 
 	// スレッドの場合は十分な数のメッセージを取得（コンテキスト長制限で調整される）
@@ -75,10 +75,10 @@ func (r *DiscordConversationRepository) GetThreadMessages(ctx context.Context, t
 }
 
 // GetMessagesBefore は、指定されたメッセージIDより前のメッセージを取得します
-func (r *DiscordConversationRepository) GetMessagesBefore(ctx context.Context, channelID domain.ChannelID, messageID string, limit int) (domain.ConversationHistory, error) {
+func (r *DiscordConversationRepository) GetMessagesBefore(ctx context.Context, channelID string, messageID string, limit int) (domain.ConversationHistory, error) {
 	log.Printf("DiscordからメッセージID %s より前の%d件のメッセージを取得中: %s", messageID, limit, channelID)
 
-	messages, err := r.session.ChannelMessages(channelID.String(), limit, messageID, "", "")
+	messages, err := r.session.ChannelMessages(channelID, limit, messageID, "", "")
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
 			return domain.ConversationHistory{}, fmt.Errorf("Discord APIからのメッセージ取得がタイムアウトしました: %w", err)
