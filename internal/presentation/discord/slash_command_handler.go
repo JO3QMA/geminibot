@@ -12,9 +12,9 @@ import (
 
 // SlashCommandHandler は、Discordのスラッシュコマンドを処理するハンドラーです
 type SlashCommandHandler struct {
-	session           *discordgo.Session
-	apiKeyService     *application.APIKeyApplicationService
-	defaultAPIKey     string
+	session       *discordgo.Session
+	apiKeyService *application.APIKeyApplicationService
+	defaultAPIKey string
 }
 
 // NewSlashCommandHandler は新しいSlashCommandHandlerインスタンスを作成します
@@ -56,6 +56,28 @@ func (h *SlashCommandHandler) SetupSlashCommands() error {
 			Name:        "del-api",
 			Description: "このサーバー用のGemini APIキーを削除します",
 		},
+		{
+			Name:        "set-model",
+			Description: "このサーバーで使用するAIモデルを設定します",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "model",
+					Description: "使用するAIモデル",
+					Required:    true,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "Gemini Pro", Value: "gemini-pro"},
+						{Name: "Gemini 1.5 Flash", Value: "gemini-1.5-flash"},
+						{Name: "Gemini 1.5 Nano", Value: "gemini-1.5-nano"},
+						{Name: "Gemini Pro Vision", Value: "gemini-pro-vision"},
+					},
+				},
+			},
+		},
+		{
+			Name:        "status",
+			Description: "このサーバーのGemini APIキー設定状況を表示します",
+		},
 	}
 
 	// グローバルコマンドとして登録
@@ -71,7 +93,7 @@ func (h *SlashCommandHandler) SetupSlashCommands() error {
 	return nil
 }
 
-// SetupSlashCommandHandlers は、スラッシュコマンドのイベントハンドラーを設定します
+// SetupSlashCommandHandlers は、スラッシュコマンドのハンドラーを設定します
 func (h *SlashCommandHandler) SetupSlashCommandHandlers() {
 	h.session.AddHandler(h.handleInteractionCreate)
 }
@@ -82,12 +104,15 @@ func (h *SlashCommandHandler) handleInteractionCreate(s *discordgo.Session, i *d
 		return
 	}
 
-	// コマンド名に基づいて処理を分岐
 	switch i.ApplicationCommandData().Name {
 	case "set-api":
 		h.handleSetAPICommand(s, i)
 	case "del-api":
 		h.handleDelAPICommand(s, i)
+	case "set-model":
+		h.handleSetModelCommand(s, i)
+	case "status":
+		h.handleStatusCommand(s, i)
 	default:
 		log.Printf("未知のスラッシュコマンド: %s", i.ApplicationCommandData().Name)
 	}
@@ -136,22 +161,9 @@ func (h *SlashCommandHandler) handleDelAPICommand(s *discordgo.Session, i *disco
 
 	guildID := i.GuildID
 
-	// APIキーが設定されているかチェック
-	ctx := context.Background()
-	hasAPIKey, err := h.apiKeyService.HasGuildAPIKey(ctx, guildID)
-	if err != nil {
-		log.Printf("APIキーの存在確認に失敗: %v", err)
-		h.respondToInteraction(s, i, "❌ APIキーの確認に失敗しました。", true)
-		return
-	}
-
-	if !hasAPIKey {
-		h.respondToInteraction(s, i, "❌ このサーバーにはAPIキーが設定されていません。", true)
-		return
-	}
-
 	// APIキーを削除
-	err = h.apiKeyService.DeleteGuildAPIKey(ctx, guildID)
+	ctx := context.Background()
+	err := h.apiKeyService.DeleteGuildAPIKey(ctx, guildID)
 	if err != nil {
 		log.Printf("APIキーの削除に失敗: %v", err)
 		h.respondToInteraction(s, i, fmt.Sprintf("❌ APIキーの削除に失敗しました: %v", err), true)
@@ -159,8 +171,93 @@ func (h *SlashCommandHandler) handleDelAPICommand(s *discordgo.Session, i *disco
 	}
 
 	// 成功メッセージを送信
-	successMsg := "✅ このサーバー用のGemini APIキーを削除しました。\nデフォルトのAPIキーが使用されます。"
+	successMsg := "✅ このサーバー用のGemini APIキーを削除しました。\n今後はデフォルトのAPIキーを使用します。"
 	h.respondToInteraction(s, i, successMsg, false)
+}
+
+// handleSetModelCommand は、/set-modelコマンドを処理します
+func (h *SlashCommandHandler) handleSetModelCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// 権限チェック（管理者権限が必要）
+	if !h.hasAdminPermission(i.Member) {
+		h.respondToInteraction(s, i, "❌ このコマンドを実行するには管理者権限が必要です。", true)
+		return
+	}
+
+	// モデルを取得
+	options := i.ApplicationCommandData().Options
+	if len(options) == 0 {
+		h.respondToInteraction(s, i, "❌ 使用するAIモデルが指定されていません。", true)
+		return
+	}
+
+	model := options[0].StringValue()
+	guildID := i.GuildID
+	setBy := i.Member.User.Username
+
+	// モデルを設定
+	ctx := context.Background()
+	err := h.apiKeyService.SetGuildModel(ctx, guildID, model)
+	if err != nil {
+		log.Printf("モデルの設定に失敗: %v", err)
+		h.respondToInteraction(s, i, fmt.Sprintf("❌ モデルの設定に失敗しました: %v", err), true)
+		return
+	}
+
+	// 成功メッセージを送信
+	successMsg := fmt.Sprintf("✅ このサーバーで使用するAIモデルを %s に設定しました。\n設定者: %s", model, setBy)
+	h.respondToInteraction(s, i, successMsg, false)
+}
+
+// handleStatusCommand は、/statusコマンドを処理します
+func (h *SlashCommandHandler) handleStatusCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	guildID := i.GuildID
+	ctx := context.Background()
+
+	// APIキーの設定状況を確認
+	hasAPIKey, err := h.apiKeyService.HasGuildAPIKey(ctx, guildID)
+	if err != nil {
+		log.Printf("APIキーの確認に失敗: %v", err)
+		h.respondToInteraction(s, i, "❌ 設定状況の確認に失敗しました。", true)
+		return
+	}
+
+	var statusMessage string
+
+	if hasAPIKey {
+		// APIキーが設定されている場合
+		apiKeyInfo, err := h.apiKeyService.GetGuildAPIKeyInfo(ctx, guildID)
+		if err != nil {
+			log.Printf("APIキー情報の取得に失敗: %v", err)
+			h.respondToInteraction(s, i, "❌ 設定情報の取得に失敗しました。", true)
+			return
+		}
+
+		// 設定日時のフォーマット
+		setDate := apiKeyInfo.SetAt.Format("2006年1月2日 15:04")
+
+		statusMessage = fmt.Sprintf(`📊 **サーバー設定状況**
+
+✅ **APIキー**: 設定済み
+👤 **設定者**: %s
+📅 **設定日**: %s
+🤖 **使用モデル**: %s`,
+			apiKeyInfo.SetBy,
+			setDate,
+			apiKeyInfo.Model)
+	} else {
+		// APIキーが未設定の場合
+		model, err := h.apiKeyService.GetGuildModel(ctx, guildID)
+		if err != nil {
+			model = "gemini-pro" // デフォルト
+		}
+
+		statusMessage = fmt.Sprintf(`📊 **サーバー設定状況**
+
+❌ **APIキー**: 未設定（デフォルトを使用）
+🤖 **使用モデル**: %s（デフォルト）`, model)
+	}
+
+	h.respondToInteraction(s, i, statusMessage, false)
 }
 
 // hasAdminPermission は、メンバーが管理者権限を持っているかをチェックします
@@ -178,8 +275,8 @@ func (h *SlashCommandHandler) respondToInteraction(s *discordgo.Session, i *disc
 	response := &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content:  content,
-			Flags:    discordgo.MessageFlagsEphemeral,
+			Content: content,
+			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	}
 

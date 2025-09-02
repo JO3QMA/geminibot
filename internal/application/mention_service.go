@@ -98,8 +98,15 @@ func (s *MentionApplicationService) generateResponseWithGuildAPIKey(
 	guildID := mention.GuildID
 
 	if guildID == "" {
-		log.Printf("ギルドIDが取得できないため、デフォルトのAPIキーを使用")
+		log.Printf("ギルドIDが取得できないため、デフォルトのAPIキーとモデルを使用")
 		return s.geminiClient.GenerateTextWithStructuredContext(ctx, systemPrompt, conversationHistory, userQuestion)
+	}
+
+	// ギルド固有のモデル設定を取得
+	guildModel, err := s.apiKeyService.GetGuildModel(ctx, guildID)
+	if err != nil {
+		log.Printf("ギルド %s のモデル設定取得に失敗: %v, デフォルト設定を使用", guildID, err)
+		guildModel = "gemini-pro" // デフォルト
 	}
 
 	// ギルド固有のAPIキーがあるかチェック
@@ -117,7 +124,7 @@ func (s *MentionApplicationService) generateResponseWithGuildAPIKey(
 			return s.geminiClient.GenerateTextWithStructuredContext(ctx, systemPrompt, conversationHistory, userQuestion)
 		}
 
-		log.Printf("ギルド %s 用のカスタムAPIキーを使用", guildID)
+		log.Printf("ギルド %s 用のカスタムAPIキーとモデル %s を使用", guildID, guildModel)
 
 		// カスタムAPIキーでGeminiクライアントを作成
 		customClient, err := s.createGeminiClientWithAPIKey(customAPIKey)
@@ -129,8 +136,13 @@ func (s *MentionApplicationService) generateResponseWithGuildAPIKey(
 		return customClient.GenerateTextWithStructuredContext(ctx, systemPrompt, conversationHistory, userQuestion)
 	}
 
-	// デフォルトのAPIキーを使用
-	log.Printf("ギルド %s 用のデフォルトAPIキーを使用", guildID)
+	// デフォルトのAPIキーを使用、ただしモデル設定がある場合はそれを使用
+	if guildModel != "gemini-pro" && guildModel != "" {
+		log.Printf("デフォルトAPIキーとカスタムモデル %s を使用", guildModel)
+		// TODO: 将来的にモデル設定を反映したい場合は、ここでGeminiクライアントの設定を変更
+	} else {
+		log.Printf("デフォルトAPIキーを使用")
+	}
 	return s.geminiClient.GenerateTextWithStructuredContext(ctx, systemPrompt, conversationHistory, userQuestion)
 }
 

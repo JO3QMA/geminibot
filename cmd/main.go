@@ -52,12 +52,12 @@ func main() {
 
 	// アプリケーションサービスを作成
 	apiKeyService := application.NewAPIKeyApplicationService(apiKeyRepo)
-	
+
 	// Geminiクライアントファクトリー関数を作成
 	geminiClientFactory := func(apiKey string) (application.GeminiClient, error) {
 		return gemini.NewStructuredGeminiClientWithAPIKey(apiKey, &config.Gemini)
 	}
-	
+
 	mentionService := application.NewMentionApplicationService(
 		conversationRepo,
 		geminiClient,
