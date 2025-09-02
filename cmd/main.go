@@ -51,12 +51,21 @@ func main() {
 	apiKeyRepo := discordInfra.NewDiscordGuildAPIKeyRepository()
 
 	// アプリケーションサービスを作成
+	apiKeyService := application.NewAPIKeyApplicationService(apiKeyRepo)
+	
+	// Geminiクライアントファクトリー関数を作成
+	geminiClientFactory := func(apiKey string) (application.GeminiClient, error) {
+		return gemini.NewStructuredGeminiClientWithAPIKey(apiKey, &config.Gemini)
+	}
+	
 	mentionService := application.NewMentionApplicationService(
 		conversationRepo,
 		geminiClient,
 		&config.Bot,
+		apiKeyService,
+		&config.Gemini,
+		geminiClientFactory,
 	)
-	apiKeyService := application.NewAPIKeyApplicationService(apiKeyRepo)
 
 	// Discordハンドラを作成
 	handler := discordPres.NewDiscordHandler(session, mentionService, user.ID)

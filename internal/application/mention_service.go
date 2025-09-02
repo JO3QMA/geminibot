@@ -12,11 +12,14 @@ import (
 
 // MentionApplicationService は、メンションイベントをトリガーに、一連の処理を制御するアプリケーションサービスです
 type MentionApplicationService struct {
-	conversationRepo domain.ConversationRepository
-	promptGenerator  *domain.PromptGenerator
-	geminiClient     GeminiClient
-	contextManager   *domain.ContextManager
-	config           *config.BotConfig
+	conversationRepo    domain.ConversationRepository
+	promptGenerator     *domain.PromptGenerator
+	geminiClient        GeminiClient
+	contextManager      *domain.ContextManager
+	config              *config.BotConfig
+	apiKeyService       *APIKeyApplicationService
+	defaultGeminiConfig *config.GeminiConfig
+	geminiClientFactory func(apiKey string) (GeminiClient, error)
 }
 
 // NewMentionApplicationService は新しいMentionApplicationServiceインスタンスを作成します
@@ -24,17 +27,23 @@ func NewMentionApplicationService(
 	conversationRepo domain.ConversationRepository,
 	geminiClient GeminiClient,
 	botConfig *config.BotConfig,
+	apiKeyService *APIKeyApplicationService,
+	defaultGeminiConfig *config.GeminiConfig,
+	geminiClientFactory func(apiKey string) (GeminiClient, error),
 ) *MentionApplicationService {
 	if botConfig == nil {
 		botConfig = config.DefaultBotConfig()
 	}
 
 	return &MentionApplicationService{
-		conversationRepo: conversationRepo,
-		promptGenerator:  domain.NewPromptGenerator(botConfig.SystemPrompt),
-		geminiClient:     geminiClient,
-		contextManager:   domain.NewContextManager(botConfig.MaxContextLength, botConfig.MaxHistoryLength),
-		config:           botConfig,
+		conversationRepo:    conversationRepo,
+		promptGenerator:     domain.NewPromptGenerator(botConfig.SystemPrompt),
+		geminiClient:        geminiClient,
+		contextManager:      domain.NewContextManager(botConfig.MaxContextLength, botConfig.MaxHistoryLength),
+		config:              botConfig,
+		apiKeyService:       apiKeyService,
+		defaultGeminiConfig: defaultGeminiConfig,
+		geminiClientFactory: geminiClientFactory,
 	}
 }
 
@@ -64,8 +73,8 @@ func (s *MentionApplicationService) HandleMention(ctx context.Context, mention d
 	log.Printf("コンテキスト統計: システム=%d文字, 履歴=%d文字, 質問=%d文字, 合計=%d文字, 制限=%d文字, 切り詰め=%v",
 		stats.SystemPromptLength, stats.HistoryLength, stats.QuestionLength, stats.TotalLength, stats.MaxContextLength, stats.IsTruncated)
 
-	// 4. 構造化コンテキストでGemini APIにリクエストを送信
-	response, err := s.geminiClient.GenerateTextWithStructuredContext(ctx, truncatedSystemPrompt, history.Messages(), truncatedQuestion)
+	// 4. サーバー別のAPIキーを使用してGemini APIにリクエストを送信
+	response, err := s.generateResponseWithGuildAPIKey(ctx, mention, truncatedSystemPrompt, history.Messages(), truncatedQuestion)
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
 			return "", fmt.Errorf("Gemini APIからの応答取得がタイムアウトしました: %w", err)
@@ -75,6 +84,63 @@ func (s *MentionApplicationService) HandleMention(ctx context.Context, mention d
 
 	log.Printf("Gemini APIからの応答を取得: %d文字", len(response))
 	return response, nil
+}
+
+// generateResponseWithGuildAPIKey は、サーバー別のAPIキーを使用してGemini APIにリクエストを送信します
+func (s *MentionApplicationService) generateResponseWithGuildAPIKey(
+	ctx context.Context,
+	mention domain.BotMention,
+	systemPrompt string,
+	conversationHistory []domain.Message,
+	userQuestion string,
+) (string, error) {
+	// ギルドIDを取得
+	guildID := mention.GuildID
+
+	if guildID == "" {
+		log.Printf("ギルドIDが取得できないため、デフォルトのAPIキーを使用")
+		return s.geminiClient.GenerateTextWithStructuredContext(ctx, systemPrompt, conversationHistory, userQuestion)
+	}
+
+	// ギルド固有のAPIキーがあるかチェック
+	hasCustomAPIKey, err := s.apiKeyService.HasGuildAPIKey(ctx, guildID)
+	if err != nil {
+		log.Printf("ギルド %s のAPIキー確認に失敗: %v, デフォルトのAPIキーを使用", guildID, err)
+		return s.geminiClient.GenerateTextWithStructuredContext(ctx, systemPrompt, conversationHistory, userQuestion)
+	}
+
+	if hasCustomAPIKey {
+		// カスタムAPIキーを使用
+		customAPIKey, err := s.apiKeyService.GetGuildAPIKey(ctx, guildID)
+		if err != nil {
+			log.Printf("ギルド %s のカスタムAPIキー取得に失敗: %v, デフォルトのAPIキーを使用", guildID, err)
+			return s.geminiClient.GenerateTextWithStructuredContext(ctx, systemPrompt, conversationHistory, userQuestion)
+		}
+
+		log.Printf("ギルド %s 用のカスタムAPIキーを使用", guildID)
+
+		// カスタムAPIキーでGeminiクライアントを作成
+		customClient, err := s.createGeminiClientWithAPIKey(customAPIKey)
+		if err != nil {
+			log.Printf("カスタムAPIキーでのGeminiクライアント作成に失敗: %v, デフォルトのAPIキーを使用", err)
+			return s.geminiClient.GenerateTextWithStructuredContext(ctx, systemPrompt, conversationHistory, userQuestion)
+		}
+
+		return customClient.GenerateTextWithStructuredContext(ctx, systemPrompt, conversationHistory, userQuestion)
+	}
+
+	// デフォルトのAPIキーを使用
+	log.Printf("ギルド %s 用のデフォルトAPIキーを使用", guildID)
+	return s.geminiClient.GenerateTextWithStructuredContext(ctx, systemPrompt, conversationHistory, userQuestion)
+}
+
+// createGeminiClientWithAPIKey は、指定されたAPIキーでGeminiクライアントを作成します
+func (s *MentionApplicationService) createGeminiClientWithAPIKey(apiKey string) (GeminiClient, error) {
+	// ファクトリー関数を使用してカスタムAPIキーでGeminiクライアントを作成
+	if s.geminiClientFactory != nil {
+		return s.geminiClientFactory(apiKey)
+	}
+	return nil, fmt.Errorf("Geminiクライアントファクトリーが設定されていません")
 }
 
 // getConversationHistory は、メンションに基づいて会話履歴を取得します

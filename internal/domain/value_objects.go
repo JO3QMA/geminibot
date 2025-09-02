@@ -136,15 +136,17 @@ func (p Prompt) String() string {
 // BotMention は、Botへのメンション情報を表現する値オブジェクトです
 type BotMention struct {
 	ChannelID ChannelID
+	GuildID   string
 	User      User
 	Content   string
 	MessageID string
 }
 
 // NewBotMention は新しいBotMentionインスタンスを作成します
-func NewBotMention(channelID ChannelID, user User, content, messageID string) BotMention {
+func NewBotMention(channelID ChannelID, guildID string, user User, content, messageID string) BotMention {
 	return BotMention{
 		ChannelID: channelID,
+		GuildID:   guildID,
 		User:      user,
 		Content:   content,
 		MessageID: messageID,
@@ -161,6 +163,6 @@ func (bm BotMention) IsThread() bool {
 
 // String はBotMentionの文字列表現を返します
 func (bm BotMention) String() string {
-	return fmt.Sprintf("BotMention{ChannelID: %s, User: %s, Content: %s, MessageID: %s}",
-		bm.ChannelID, bm.User, bm.Content, bm.MessageID)
+	return fmt.Sprintf("BotMention{ChannelID: %s, GuildID: %s, User: %s, Content: %s, MessageID: %s}",
+		bm.ChannelID, bm.GuildID, bm.User, bm.Content, bm.MessageID)
 }
