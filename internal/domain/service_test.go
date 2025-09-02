@@ -26,11 +26,11 @@ func TestNewPromptGenerator(t *testing.T) {
 
 func TestPromptGenerator_GeneratePrompt_EmptyHistory(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
-	history := NewConversationHistory([]Message{})
+	history := []Message{}
 	userQuestion := "こんにちは"
 
 	prompt := generator.GeneratePrompt(history, userQuestion)
-	content := prompt.Content()
+	content := prompt.Content
 
 	// システムプロンプトが含まれているかチェック
 	if !strings.Contains(content, "テストシステムプロンプト") {
@@ -55,14 +55,14 @@ func TestPromptGenerator_GeneratePrompt_WithHistory(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
 
 	messages := []Message{
-		NewMessage("msg1", User{ID: "user1", Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, "こんにちは", time.Now()),
-		NewMessage("msg2", User{ID: "user2", Username: "user2", DisplayName: "User2", Avatar: "", Discriminator: "", IsBot: false}, "こんばんは", time.Now()),
+		Message{ID: "msg1", User: User{ID: "user1", Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, Content: "こんにちは", Timestamp: time.Now()},
+		Message{ID: "msg2", User: User{ID: "user2", Username: "user2", DisplayName: "User2", Avatar: "", Discriminator: "", IsBot: false}, Content: "こんばんは", Timestamp: time.Now()},
 	}
-	history := NewConversationHistory(messages)
+	history := messages
 	userQuestion := "今日の天気は？"
 
 	prompt := generator.GeneratePrompt(history, userQuestion)
-	content := prompt.Content()
+	content := prompt.Content
 
 	// システムプロンプトが含まれているかチェック
 	if !strings.Contains(content, "テストシステムプロンプト") {
@@ -93,12 +93,12 @@ func TestPromptGenerator_GeneratePrompt_WithHistory(t *testing.T) {
 
 func TestPromptGenerator_GeneratePromptWithContext_EmptyHistory(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
-	history := NewConversationHistory([]Message{})
+	history := []Message{}
 	userQuestion := "こんにちは"
 	additionalContext := "今日は晴れです"
 
 	prompt := generator.GeneratePromptWithContext(history, userQuestion, additionalContext)
-	content := prompt.Content()
+	content := prompt.Content
 
 	// システムプロンプトが含まれているかチェック
 	if !strings.Contains(content, "テストシステムプロンプト") {
@@ -131,15 +131,15 @@ func TestPromptGenerator_GeneratePromptWithContext_WithHistory(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
 
 	messages := []Message{
-		NewMessage("msg1", User{ID: "user1", Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, "こんにちは", time.Now()),
-		NewMessage("msg2", User{ID: "user2", Username: "user2", DisplayName: "User2", Avatar: "", Discriminator: "", IsBot: false}, "こんばんは", time.Now()),
+		Message{ID: "msg1", User: User{ID: "user1", Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, Content: "こんにちは", Timestamp: time.Now()},
+		Message{ID: "msg2", User: User{ID: "user2", Username: "user2", DisplayName: "User2", Avatar: "", Discriminator: "", IsBot: false}, Content: "こんばんは", Timestamp: time.Now()},
 	}
-	history := NewConversationHistory(messages)
+	history := messages
 	userQuestion := "今日の天気は？"
 	additionalContext := "今日は晴れです"
 
 	prompt := generator.GeneratePromptWithContext(history, userQuestion, additionalContext)
-	content := prompt.Content()
+	content := prompt.Content
 
 	// システムプロンプトが含まれているかチェック
 	if !strings.Contains(content, "テストシステムプロンプト") {
@@ -178,12 +178,12 @@ func TestPromptGenerator_GeneratePromptWithContext_WithHistory(t *testing.T) {
 
 func TestPromptGenerator_GeneratePromptWithContext_EmptyContext(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
-	history := NewConversationHistory([]Message{})
+	history := []Message{}
 	userQuestion := "こんにちは"
 	additionalContext := ""
 
 	prompt := generator.GeneratePromptWithContext(history, userQuestion, additionalContext)
-	content := prompt.Content()
+	content := prompt.Content
 
 	// 追加コンテキストセクションが含まれていないかチェック（空なので）
 	if strings.Contains(content, "## 追加コンテキスト") {
@@ -201,11 +201,11 @@ func TestPromptGenerator_GeneratePromptWithContext_EmptyContext(t *testing.T) {
 
 func TestPromptGenerator_GeneratePrompt_Order(t *testing.T) {
 	generator := NewPromptGenerator("システムプロンプト")
-	history := NewConversationHistory([]Message{})
+	history := []Message{}
 	userQuestion := "質問"
 
 	prompt := generator.GeneratePrompt(history, userQuestion)
-	content := prompt.Content()
+	content := prompt.Content
 
 	// 順序をチェック: システムプロンプト -> 会話履歴 -> ユーザーのチャット内容
 	parts := strings.Split(content, "\n\n")

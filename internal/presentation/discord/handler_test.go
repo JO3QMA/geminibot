@@ -174,7 +174,7 @@ func TestDiscordHandler_HandleReady(t *testing.T) {
 
 	event := &discordgo.Ready{
 		User: &discordgo.User{
-			Username:    "TestBot",
+			Username:      "TestBot",
 			Discriminator: "1234",
 		},
 	}

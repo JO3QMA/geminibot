@@ -103,13 +103,13 @@ func (h *DiscordHandler) createBotMention(m *discordgo.MessageCreate) domain.Bot
 		IsBot:         m.Author.Bot,
 	}
 
-	return domain.NewBotMention(
-		domain.NewChannelID(m.ChannelID),
-		m.GuildID,
-		user,
-		content,
-		m.ID,
-	)
+	return domain.BotMention{
+		ChannelID: m.ChannelID,
+		GuildID:   m.GuildID,
+		User:      user,
+		Content:   content,
+		MessageID: m.ID,
+	}
 }
 
 // extractUserContent は、メンション部分を除去したユーザーのコンテンツを抽出します

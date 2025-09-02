@@ -23,15 +23,15 @@ func NewDiscordConversationRepository(session *discordgo.Session) *DiscordConver
 }
 
 // GetRecentMessages は、指定されたチャンネルの直近のメッセージを取得します
-func (r *DiscordConversationRepository) GetRecentMessages(ctx context.Context, channelID domain.ChannelID, limit int) (domain.ConversationHistory, error) {
+func (r *DiscordConversationRepository) GetRecentMessages(ctx context.Context, channelID string, limit int) ([]domain.Message, error) {
 	log.Printf("Discordから直近%d件のメッセージを取得中: %s", limit, channelID)
 
-	messages, err := r.session.ChannelMessages(channelID.String(), limit, "", "", "")
+	messages, err := r.session.ChannelMessages(channelID, limit, "", "", "")
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
-			return domain.ConversationHistory{}, fmt.Errorf("Discord APIからのメッセージ取得がタイムアウトしました: %w", err)
+			return nil, fmt.Errorf("Discord APIからのメッセージ取得がタイムアウトしました: %w", err)
 		}
-		return domain.ConversationHistory{}, fmt.Errorf("Discord APIからメッセージ取得に失敗: %w", err)
+		return nil, fmt.Errorf("Discord APIからメッセージ取得に失敗: %w", err)
 	}
 
 	domainMessages := make([]domain.Message, 0, len(messages))
@@ -53,20 +53,20 @@ func (r *DiscordConversationRepository) GetRecentMessages(ctx context.Context, c
 			IsBot:         msg.Author.Bot,
 		}
 
-		domainMessage := domain.NewMessage(
-			msg.ID,
-			user,
-			msg.Content,
-			timestamp,
-		)
+		domainMessage := domain.Message{
+			ID:        msg.ID,
+			User:      user,
+			Content:   msg.Content,
+			Timestamp: timestamp,
+		}
 		domainMessages = append(domainMessages, domainMessage)
 	}
 
-	return domain.NewConversationHistory(domainMessages), nil
+	return domainMessages, nil
 }
 
 // GetThreadMessages は、指定されたスレッドの全メッセージを取得します
-func (r *DiscordConversationRepository) GetThreadMessages(ctx context.Context, threadID domain.ChannelID) (domain.ConversationHistory, error) {
+func (r *DiscordConversationRepository) GetThreadMessages(ctx context.Context, threadID string) ([]domain.Message, error) {
 	log.Printf("Discordからスレッドの全メッセージを取得中: %s", threadID)
 
 	// スレッドの場合は十分な数のメッセージを取得（コンテキスト長制限で調整される）
@@ -75,15 +75,15 @@ func (r *DiscordConversationRepository) GetThreadMessages(ctx context.Context, t
 }
 
 // GetMessagesBefore は、指定されたメッセージIDより前のメッセージを取得します
-func (r *DiscordConversationRepository) GetMessagesBefore(ctx context.Context, channelID domain.ChannelID, messageID string, limit int) (domain.ConversationHistory, error) {
+func (r *DiscordConversationRepository) GetMessagesBefore(ctx context.Context, channelID string, messageID string, limit int) ([]domain.Message, error) {
 	log.Printf("DiscordからメッセージID %s より前の%d件のメッセージを取得中: %s", messageID, limit, channelID)
 
-	messages, err := r.session.ChannelMessages(channelID.String(), limit, messageID, "", "")
+	messages, err := r.session.ChannelMessages(channelID, limit, messageID, "", "")
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
-			return domain.ConversationHistory{}, fmt.Errorf("Discord APIからのメッセージ取得がタイムアウトしました: %w", err)
+			return nil, fmt.Errorf("Discord APIからのメッセージ取得がタイムアウトしました: %w", err)
 		}
-		return domain.ConversationHistory{}, fmt.Errorf("Discord APIからメッセージ取得に失敗: %w", err)
+		return nil, fmt.Errorf("Discord APIからメッセージ取得に失敗: %w", err)
 	}
 
 	domainMessages := make([]domain.Message, 0, len(messages))
@@ -105,16 +105,16 @@ func (r *DiscordConversationRepository) GetMessagesBefore(ctx context.Context, c
 			IsBot:         msg.Author.Bot,
 		}
 
-		domainMessage := domain.NewMessage(
-			msg.ID,
-			user,
-			msg.Content,
-			timestamp,
-		)
+		domainMessage := domain.Message{
+			ID:        msg.ID,
+			User:      user,
+			Content:   msg.Content,
+			Timestamp: timestamp,
+		}
 		domainMessages = append(domainMessages, domainMessage)
 	}
 
-	return domain.NewConversationHistory(domainMessages), nil
+	return domainMessages, nil
 }
 
 // getDisplayName は、Discordメッセージから表示名を取得します

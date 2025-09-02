@@ -13,16 +13,6 @@ type Message struct {
 	Timestamp time.Time
 }
 
-// NewMessage は新しいMessageインスタンスを作成します
-func NewMessage(id string, user User, content string, timestamp time.Time) Message {
-	return Message{
-		ID:        id,
-		User:      user,
-		Content:   content,
-		Timestamp: timestamp,
-	}
-}
-
 // User は、Discordのユーザー情報を表現する値オブジェクトです
 type User struct {
 	ID            string
@@ -33,86 +23,18 @@ type User struct {
 	Discriminator string
 }
 
-// ChannelID は、DiscordのチャンネルIDを表現する値オブジェクトです
-type ChannelID string
-
-// NewChannelID は新しいChannelIDインスタンスを作成します
-func NewChannelID(id string) ChannelID {
-	return ChannelID(id)
-}
-
-// String はChannelIDを文字列として返します
-func (c ChannelID) String() string {
-	return string(c)
-}
-
-// ConversationHistory は、複数のMessageを内包する、コンテキストを表すオブジェクトです
-type ConversationHistory struct {
-	messages []Message
-}
-
-// NewConversationHistory は新しいConversationHistoryインスタンスを作成します
-func NewConversationHistory(messages []Message) ConversationHistory {
-	return ConversationHistory{
-		messages: messages,
-	}
-}
-
-// Messages は履歴メッセージのスライスを返します
-func (ch ConversationHistory) Messages() []Message {
-	return ch.messages
-}
-
-// Count は履歴メッセージの数を返します
-func (ch ConversationHistory) Count() int {
-	return len(ch.messages)
-}
-
-// IsEmpty は履歴が空かどうかを判定します
-func (ch ConversationHistory) IsEmpty() bool {
-	return len(ch.messages) == 0
-}
-
 // Prompt は、Gemini APIに送信するために整形されたテキストを表現する値オブジェクトです
 type Prompt struct {
-	content string
-}
-
-// NewPrompt は新しいPromptインスタンスを作成します
-func NewPrompt(content string) Prompt {
-	return Prompt{
-		content: content,
-	}
-}
-
-// Content はプロンプトの内容を返します
-func (p Prompt) Content() string {
-	return p.content
-}
-
-// String はPromptを文字列として返します
-func (p Prompt) String() string {
-	return p.content
+	Content string
 }
 
 // BotMention は、Botへのメンション情報を表現する値オブジェクトです
 type BotMention struct {
-	ChannelID ChannelID
+	ChannelID string
 	GuildID   string
 	User      User
 	Content   string
 	MessageID string
-}
-
-// NewBotMention は新しいBotMentionインスタンスを作成します
-func NewBotMention(channelID ChannelID, guildID string, user User, content, messageID string) BotMention {
-	return BotMention{
-		ChannelID: channelID,
-		GuildID:   guildID,
-		User:      user,
-		Content:   content,
-		MessageID: messageID,
-	}
 }
 
 // IsThread は、このメンションがスレッド内で発生したかどうかを判定します

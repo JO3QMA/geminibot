@@ -21,12 +21,12 @@ func NewContextManager(maxContextLength, maxHistoryLength int) *ContextManager {
 }
 
 // TruncateConversationHistory は、会話履歴を指定された長さに制限します
-func (cm *ContextManager) TruncateConversationHistory(history ConversationHistory) ConversationHistory {
-	if history.IsEmpty() {
+func (cm *ContextManager) TruncateConversationHistory(history []Message) []Message {
+	if len(history) == 0 {
 		return history
 	}
 
-	messages := history.Messages()
+	messages := history
 	if len(messages) == 0 {
 		return history
 	}
@@ -42,7 +42,7 @@ func (cm *ContextManager) TruncateConversationHistory(history ConversationHistor
 	// 制限を超えている場合、新しいメッセージから優先的に保持
 	truncatedMessages := cm.truncateMessagesFromNewest(messages)
 
-	return NewConversationHistory(truncatedMessages)
+	return truncatedMessages
 }
 
 // TruncateSystemPrompt は、システムプロンプトを指定された長さに制限します
@@ -129,9 +129,9 @@ func (cm *ContextManager) truncateMessagesFromNewest(messages []Message) []Messa
 }
 
 // GetContextStats は、コンテキストの統計情報を返します
-func (cm *ContextManager) GetContextStats(systemPrompt string, history ConversationHistory, userQuestion string) ContextStats {
+func (cm *ContextManager) GetContextStats(systemPrompt string, history []Message, userQuestion string) ContextStats {
 	systemLength := utf8.RuneCountInString(systemPrompt)
-	historyLength := cm.calculateHistoryLength(history.Messages())
+	historyLength := cm.calculateHistoryLength(history)
 	questionLength := utf8.RuneCountInString(userQuestion)
 	totalLength := systemLength + historyLength + questionLength
 

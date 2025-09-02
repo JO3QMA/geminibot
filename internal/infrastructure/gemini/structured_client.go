@@ -108,11 +108,11 @@ func (g *StructuredGeminiClient) GenerateTextWithStructuredContext(
 
 // GenerateText は、プロンプトを受け取ってGemini APIからテキストを生成します
 func (g *StructuredGeminiClient) GenerateText(ctx context.Context, prompt domain.Prompt) (string, error) {
-	log.Printf("Gemini APIにテキスト生成をリクエスト中: %d文字", len(prompt.Content()))
-	log.Printf("プロンプト内容: %s", prompt.Content())
+	log.Printf("Gemini APIにテキスト生成をリクエスト中: %d文字", len(prompt.Content))
+	log.Printf("プロンプト内容: %s", prompt)
 
 	// 新しいGemini APIライブラリの仕様に合わせて実装
-	contents := genai.Text(prompt.Content())
+	contents := genai.Text(prompt.Content)
 
 	// 生成設定を作成
 	config := g.createGenerateConfig()
@@ -131,7 +131,7 @@ func (g *StructuredGeminiClient) GenerateText(ctx context.Context, prompt domain
 
 // GenerateTextWithOptions は、オプション付きでテキストを生成します
 func (g *StructuredGeminiClient) GenerateTextWithOptions(ctx context.Context, prompt domain.Prompt, options application.TextGenerationOptions) (string, error) {
-	log.Printf("オプション付きでGemini APIにテキスト生成をリクエスト中: %d文字", len(prompt.Content()))
+	log.Printf("オプション付きでGemini APIにテキスト生成をリクエスト中: %d文字", len(prompt.Content))
 
 	// 型変換
 	temperature := float32(options.Temperature)
@@ -169,7 +169,7 @@ func (g *StructuredGeminiClient) GenerateTextWithOptions(ctx context.Context, pr
 		modelName = options.Model
 	}
 
-	contents := genai.Text(prompt.Content())
+	contents := genai.Text(prompt.Content)
 	resp, err := g.client.Models.GenerateContent(ctx, modelName, contents, config)
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {

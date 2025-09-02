@@ -21,11 +21,11 @@ func TestNewContextManager(t *testing.T) {
 
 func TestContextManager_TruncateConversationHistory_Empty(t *testing.T) {
 	manager := NewContextManager(8000, 4000)
-	emptyHistory := NewConversationHistory([]Message{})
+	emptyHistory := []Message{}
 
 	result := manager.TruncateConversationHistory(emptyHistory)
 
-	if !result.IsEmpty() {
+	if len(result) != 0 {
 		t.Error("空の履歴は空のままである必要があります")
 	}
 }
@@ -56,11 +56,11 @@ func TestContextManager_TruncateConversationHistory_WithinLimit(t *testing.T) {
 		},
 	}
 
-	history := NewConversationHistory(messages)
+	history := messages
 	result := manager.TruncateConversationHistory(history)
 
-	if result.Count() != 2 {
-		t.Errorf("制限内の履歴は切り詰められてはいけません。期待される件数: 2, 実際の件数: %d", result.Count())
+	if len(result) != 2 {
+		t.Errorf("制限内の履歴は切り詰められてはいけます。期待される件数: 2, 実際の件数: %d", len(result))
 	}
 }
 
@@ -93,15 +93,15 @@ func TestContextManager_TruncateConversationHistory_ExceedsLimit(t *testing.T) {
 		},
 	}
 
-	history := NewConversationHistory(messages)
+	history := messages
 	result := manager.TruncateConversationHistory(history)
 
 	// 新しいメッセージが優先的に保持されることを確認
-	if result.Count() != 1 {
-		t.Errorf("制限を超えた履歴は切り詰められる必要があります。期待される件数: 1, 実際の件数: %d", result.Count())
+	if len(result) != 1 {
+		t.Errorf("制限を超えた履歴は切り詰められる必要があります。期待される件数: 1, 実際の件数: %d", len(result))
 	}
 
-	resultMessages := result.Messages()
+	resultMessages := result
 	if len(resultMessages) > 0 && resultMessages[0].Content != "新しい短いメッセージ" {
 		t.Error("新しいメッセージが優先的に保持される必要があります")
 	}
@@ -159,7 +159,7 @@ func TestContextManager_GetContextStats(t *testing.T) {
 			Timestamp: time.Now(),
 		},
 	}
-	history := NewConversationHistory(messages)
+	history := messages
 	userQuestion := "ユーザーの質問"
 
 	stats := manager.GetContextStats(systemPrompt, history, userQuestion)

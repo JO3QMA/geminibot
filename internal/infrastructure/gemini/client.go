@@ -71,11 +71,11 @@ func (g *GeminiAPIClient) createGenerateConfig() *genai.GenerateContentConfig {
 
 // GenerateText は、プロンプトを受け取ってGemini APIからテキストを生成します
 func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt) (string, error) {
-	log.Printf("Gemini APIにテキスト生成をリクエスト中: %d文字", len(prompt.Content()))
-	log.Printf("プロンプト内容: %s", prompt.Content())
+	log.Printf("Gemini APIにテキスト生成をリクエスト中: %d文字", len(prompt.Content))
+	log.Printf("プロンプト内容: %s", prompt)
 
 	// 新しいGemini APIライブラリの仕様に合わせて実装
-	contents := genai.Text(prompt.Content())
+	contents := genai.Text(prompt.Content)
 
 	// 生成設定を作成
 	config := g.createGenerateConfig()
@@ -135,10 +135,10 @@ func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt
 
 // GenerateTextWithOptions は、オプション付きでテキストを生成します
 func (g *GeminiAPIClient) GenerateTextWithOptions(ctx context.Context, prompt domain.Prompt, options application.TextGenerationOptions) (string, error) {
-	log.Printf("オプション付きでGemini APIにテキスト生成をリクエスト中: %d文字", len(prompt.Content()))
+	log.Printf("オプション付きでGemini APIにテキスト生成をリクエスト中: %d文字", len(prompt.Content))
 
 	// 新しいGemini APIライブラリの仕様に合わせて実装
-	contents := genai.Text(prompt.Content())
+	contents := genai.Text(prompt.Content)
 
 	// オプションに基づいて生成設定を作成
 	temp := float32(options.Temperature)
