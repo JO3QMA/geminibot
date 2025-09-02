@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func TestNewContextManager(t *testing.T) {
@@ -36,7 +37,7 @@ func TestContextManager_TruncateConversationHistory_WithinLimit(t *testing.T) {
 		{
 			ID: "msg1",
 			User: User{
-				ID:          NewUserID("user1"),
+				ID:          "user1",
 				Username:    "testuser1",
 				DisplayName: "TestUser1",
 			},
@@ -46,7 +47,7 @@ func TestContextManager_TruncateConversationHistory_WithinLimit(t *testing.T) {
 		{
 			ID: "msg2",
 			User: User{
-				ID:          NewUserID("user2"),
+				ID:          "user2",
 				Username:    "testuser2",
 				DisplayName: "TestUser2",
 			},
@@ -73,7 +74,7 @@ func TestContextManager_TruncateConversationHistory_ExceedsLimit(t *testing.T) {
 		{
 			ID: "msg1",
 			User: User{
-				ID:          NewUserID("user1"),
+				ID:          "user1",
 				Username:    "testuser1",
 				DisplayName: "TestUser1",
 			},
@@ -83,7 +84,7 @@ func TestContextManager_TruncateConversationHistory_ExceedsLimit(t *testing.T) {
 		{
 			ID: "msg2",
 			User: User{
-				ID:          NewUserID("user2"),
+				ID:          "user2",
 				Username:    "testuser2",
 				DisplayName: "TestUser2",
 			},
@@ -116,10 +117,10 @@ func TestContextManager_TruncateSystemPrompt(t *testing.T) {
 		t.Errorf("制限内のプロンプトは変更されません。期待される値: %s, 実際の値: %s", shortPrompt, result)
 	}
 
-	// 制限を超えるプロンプト
-	longPrompt := "これは非常に長いシステムプロンプトです。制限を超える長さのプロンプトです。"
+	// 制限を超えるプロンプト（rune数で制限を超える）
+	longPrompt := "これは非常に長いシステムプロンプトです。制限を超える長さのプロンプトです。これは非常に長いシステムプロンプトです。制限を超える長さのプロンプトです。これは非常に長いシステムプロンプトです。制限を超える長さのプロンプトです。"
 	result = manager.TruncateSystemPrompt(longPrompt)
-	if len(result) >= len(longPrompt) {
+	if utf8.RuneCountInString(result) >= utf8.RuneCountInString(longPrompt) {
 		t.Error("制限を超えるプロンプトは切り詰められる必要があります")
 	}
 }
@@ -134,10 +135,10 @@ func TestContextManager_TruncateUserQuestion(t *testing.T) {
 		t.Errorf("制限内の質問は変更されません。期待される値: %s, 実際の値: %s", shortQuestion, result)
 	}
 
-	// 制限を超える質問
-	longQuestion := "これは非常に長い質問です。制限を超える長さの質問です。"
+	// 制限を超える質問（rune数で制限を超える）
+	longQuestion := "これは非常に長い質問です。制限を超える長さの質問です。これは非常に長い質問です。制限を超える長さの質問です。これは非常に長い質問です。制限を超える長さの質問です。"
 	result = manager.TruncateUserQuestion(longQuestion)
-	if len(result) >= len(longQuestion) {
+	if utf8.RuneCountInString(result) >= utf8.RuneCountInString(longQuestion) {
 		t.Error("制限を超える質問は切り詰められる必要があります")
 	}
 }
@@ -150,7 +151,7 @@ func TestContextManager_GetContextStats(t *testing.T) {
 		{
 			ID: "msg1",
 			User: User{
-				ID:          NewUserID("user1"),
+				ID:          "user1",
 				Username:    "testuser1",
 				DisplayName: "TestUser1",
 			},
@@ -195,7 +196,7 @@ func TestContextManager_calculateHistoryLength(t *testing.T) {
 		{
 			ID: "msg1",
 			User: User{
-				ID:          NewUserID("user1"),
+				ID:          "user1",
 				Username:    "testuser1",
 				DisplayName: "TestUser1",
 			},
@@ -205,7 +206,7 @@ func TestContextManager_calculateHistoryLength(t *testing.T) {
 	}
 
 	length := manager.calculateHistoryLength(messages)
-	expectedLength := len("TestUser1") + 2 + len("テストメッセージ") + 1
+	expectedLength := utf8.RuneCountInString("TestUser1") + 2 + utf8.RuneCountInString("テストメッセージ") + 1
 
 	if length != expectedLength {
 		t.Errorf("期待される履歴長: %d, 実際の履歴長: %d", expectedLength, length)

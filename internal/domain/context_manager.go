@@ -57,7 +57,7 @@ func (cm *ContextManager) TruncateSystemPrompt(systemPrompt string) string {
 		runes = runes[:cm.maxContextLength]
 		// 完全な文で終わるように調整
 		lastPeriod := strings.LastIndex(string(runes), "。")
-		if lastPeriod > 0 && lastPeriod > len(runes)-50 {
+		if lastPeriod > 0 && lastPeriod < len(runes)-50 {
 			runes = runes[:lastPeriod+1]
 		}
 	}
@@ -77,7 +77,7 @@ func (cm *ContextManager) TruncateUserQuestion(userQuestion string) string {
 		runes = runes[:cm.maxContextLength]
 		// 完全な文で終わるように調整
 		lastPeriod := strings.LastIndex(string(runes), "。")
-		if lastPeriod > 0 && lastPeriod > len(runes)-30 {
+		if lastPeriod > 0 && lastPeriod < len(runes)-30 {
 			runes = runes[:lastPeriod+1]
 		}
 	}
@@ -90,7 +90,7 @@ func (cm *ContextManager) calculateHistoryLength(messages []Message) int {
 	totalLength := 0
 	for _, msg := range messages {
 		// ユーザー名 + ": " + メッセージ内容 + 改行
-		displayName := msg.User.GetDisplayName()
+		displayName := msg.User.DisplayName
 		totalLength += utf8.RuneCountInString(displayName) + 2 + utf8.RuneCountInString(msg.Content) + 1
 	}
 	return totalLength
@@ -108,7 +108,7 @@ func (cm *ContextManager) truncateMessagesFromNewest(messages []Message) []Messa
 
 	// 新しいメッセージから順に追加
 	for _, msg := range messages {
-		messageLength := utf8.RuneCountInString(msg.User.GetDisplayName()) + 2 + utf8.RuneCountInString(msg.Content) + 1
+		messageLength := utf8.RuneCountInString(msg.User.DisplayName) + 2 + utf8.RuneCountInString(msg.Content) + 1
 
 		// このメッセージを追加しても制限内に収まる場合
 		if currentLength+messageLength <= cm.maxHistoryLength {

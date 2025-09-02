@@ -228,7 +228,7 @@ func (g *GeminiAPIClient) formatConversationHistory(messages []domain.Message) s
 	builder.WriteString("※ 以下の会話履歴は参考情報です。ユーザーの現在の質問に直接答えてください。\n\n")
 
 	for _, msg := range messages {
-		displayName := msg.User.GetDisplayName()
+		displayName := msg.User.DisplayName
 		builder.WriteString(fmt.Sprintf("%s: %s\n", displayName, msg.Content))
 	}
 

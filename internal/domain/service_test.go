@@ -55,8 +55,8 @@ func TestPromptGenerator_GeneratePrompt_WithHistory(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
 
 	messages := []Message{
-		NewMessage("msg1", NewUser(NewUserID("user1"), "user1", "User1", "", "", false), "こんにちは", time.Now()),
-		NewMessage("msg2", NewUser(NewUserID("user2"), "user2", "User2", "", "", false), "こんばんは", time.Now()),
+		NewMessage("msg1", User{ID: "user1", Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, "こんにちは", time.Now()),
+		NewMessage("msg2", User{ID: "user2", Username: "user2", DisplayName: "User2", Avatar: "", Discriminator: "", IsBot: false}, "こんばんは", time.Now()),
 	}
 	history := NewConversationHistory(messages)
 	userQuestion := "今日の天気は？"
@@ -75,10 +75,10 @@ func TestPromptGenerator_GeneratePrompt_WithHistory(t *testing.T) {
 	}
 
 	// 履歴メッセージが含まれているかチェック
-	if !strings.Contains(content, "ユーザーuser1: こんにちは") {
+	if !strings.Contains(content, "User1: こんにちは") {
 		t.Error("生成されたプロンプトに最初の履歴メッセージが含まれていません")
 	}
-	if !strings.Contains(content, "ユーザーuser2: こんばんは") {
+	if !strings.Contains(content, "User2: こんばんは") {
 		t.Error("生成されたプロンプトに2番目の履歴メッセージが含まれていません")
 	}
 
@@ -131,8 +131,8 @@ func TestPromptGenerator_GeneratePromptWithContext_WithHistory(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
 
 	messages := []Message{
-		NewMessage("msg1", NewUser(NewUserID("user1"), "user1", "User1", "", "", false), "こんにちは", time.Now()),
-		NewMessage("msg2", NewUser(NewUserID("user2"), "user2", "User2", "", "", false), "こんばんは", time.Now()),
+		NewMessage("msg1", User{ID: "user1", Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, "こんにちは", time.Now()),
+		NewMessage("msg2", User{ID: "user2", Username: "user2", DisplayName: "User2", Avatar: "", Discriminator: "", IsBot: false}, "こんばんは", time.Now()),
 	}
 	history := NewConversationHistory(messages)
 	userQuestion := "今日の天気は？"
@@ -160,10 +160,10 @@ func TestPromptGenerator_GeneratePromptWithContext_WithHistory(t *testing.T) {
 	}
 
 	// 履歴メッセージが含まれているかチェック
-	if !strings.Contains(content, "ユーザーuser1: こんにちは") {
+	if !strings.Contains(content, "User1: こんにちは") {
 		t.Error("生成されたプロンプトに最初の履歴メッセージが含まれていません")
 	}
-	if !strings.Contains(content, "ユーザーuser2: こんばんは") {
+	if !strings.Contains(content, "User2: こんばんは") {
 		t.Error("生成されたプロンプトに2番目の履歴メッセージが含まれていません")
 	}
 

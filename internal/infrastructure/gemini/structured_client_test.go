@@ -31,7 +31,7 @@ func TestGeminiAPIClient_GenerateTextWithStructuredContext(t *testing.T) {
 		{
 			ID: "msg1",
 			User: domain.User{
-				ID:          domain.NewUserID("user1"),
+				ID:          "user1",
 				Username:    "testuser1",
 				DisplayName: "TestUser1",
 			},
@@ -41,7 +41,7 @@ func TestGeminiAPIClient_GenerateTextWithStructuredContext(t *testing.T) {
 		{
 			ID: "msg2",
 			User: domain.User{
-				ID:          domain.NewUserID("user2"),
+				ID:          "user2",
 				Username:    "testuser2",
 				DisplayName: "TestUser2",
 			},
@@ -56,7 +56,7 @@ func TestGeminiAPIClient_GenerateTextWithStructuredContext(t *testing.T) {
 
 	// 期待される形式をチェック
 	expectedSections := []string{
-		"## 会話履歴",
+		"## 参考情報：過去の会話履歴",
 		"TestUser1: こんにちは",
 		"TestUser2: こんばんは",
 	}
@@ -91,7 +91,7 @@ func TestGeminiAPIClient_GenerateTextWithStructuredContext(t *testing.T) {
 		t.Errorf("最初のコンテンツがシステムプロンプトではありません: %s", allContents[0])
 	}
 
-	if !strings.Contains(allContents[1], "## 会話履歴") {
+	if !strings.Contains(allContents[1], "## 参考情報：過去の会話履歴") {
 		t.Errorf("2番目のコンテンツに会話履歴が含まれていません: %s", allContents[1])
 	}
 
@@ -110,7 +110,7 @@ func TestGeminiAPIClient_formatConversationHistory(t *testing.T) {
 	emptyHistory := []domain.Message{}
 	result := client.formatConversationHistory(emptyHistory)
 
-	if !strings.Contains(result, "## 会話履歴") {
+	if !strings.Contains(result, "## 参考情報：過去の会話履歴") {
 		t.Error("空の履歴でも会話履歴セクションが含まれている必要があります")
 	}
 
@@ -119,7 +119,7 @@ func TestGeminiAPIClient_formatConversationHistory(t *testing.T) {
 		{
 			ID: "msg1",
 			User: domain.User{
-				ID:          domain.NewUserID("user1"),
+				ID:          "user1",
 				Username:    "testuser",
 				DisplayName: "TestUser",
 			},
@@ -139,7 +139,7 @@ func TestGeminiAPIClient_formatConversationHistory(t *testing.T) {
 		{
 			ID: "msg1",
 			User: domain.User{
-				ID:          domain.NewUserID("user1"),
+				ID:          "user1",
 				Username:    "user1",
 				DisplayName: "User1",
 			},
@@ -149,7 +149,7 @@ func TestGeminiAPIClient_formatConversationHistory(t *testing.T) {
 		{
 			ID: "msg2",
 			User: domain.User{
-				ID:          domain.NewUserID("user2"),
+				ID:          "user2",
 				Username:    "user2",
 				DisplayName: "User2",
 			},
@@ -161,7 +161,7 @@ func TestGeminiAPIClient_formatConversationHistory(t *testing.T) {
 	result = client.formatConversationHistory(multipleMessages)
 
 	expectedLines := []string{
-		"## 会話履歴",
+		"## 参考情報：過去の会話履歴",
 		"User1: 最初のメッセージ",
 		"User2: 2番目のメッセージ",
 	}
