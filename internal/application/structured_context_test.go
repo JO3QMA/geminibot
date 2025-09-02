@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"geminibot/internal/domain"
+	"geminibot/internal/infrastructure/config"
 )
 
 // MockGeminiClient は、テスト用のGeminiClientモックです
@@ -54,12 +55,11 @@ func (m *MockConversationRepository) GetMessagesBefore(ctx context.Context, chan
 
 func TestMentionApplicationService_HandleMentionWithStructuredContext(t *testing.T) {
 	// テスト用の設定
-	config := &Config{
-		MaxContextLength:     8000,
-		MaxHistoryLength:     4000,
-		RequestTimeout:       30 * time.Second,
-		SystemPrompt:         "テストシステムプロンプト",
-		UseStructuredContext: true,
+	config := &config.BotConfig{
+		MaxContextLength: 8000,
+		MaxHistoryLength: 4000,
+		RequestTimeout:   30 * time.Second,
+		SystemPrompt:     "テストシステムプロンプト",
 	}
 
 	// モッククライアントとリポジトリを作成
@@ -89,7 +89,7 @@ func TestMentionApplicationService_HandleMentionWithStructuredContext(t *testing
 
 	// 構造化コンテキストを使用したメンション処理をテスト
 	ctx := context.Background()
-	response, err := service.HandleMentionWithStructuredContext(ctx, mention)
+	response, err := service.HandleMention(ctx, mention)
 
 	if err != nil {
 		t.Errorf("メンション処理でエラーが発生しました: %v", err)
@@ -102,12 +102,11 @@ func TestMentionApplicationService_HandleMentionWithStructuredContext(t *testing
 
 func TestMentionApplicationService_HandleMention_WithStructuredContext(t *testing.T) {
 	// 構造化コンテキストを有効にした設定
-	config := &Config{
-		MaxContextLength:     8000,
-		MaxHistoryLength:     4000,
-		RequestTimeout:       30 * time.Second,
-		SystemPrompt:         "テストシステムプロンプト",
-		UseStructuredContext: true,
+	config := &config.BotConfig{
+		MaxContextLength: 8000,
+		MaxHistoryLength: 4000,
+		RequestTimeout:   30 * time.Second,
+		SystemPrompt:     "テストシステムプロンプト",
 	}
 
 	mockClient := &MockGeminiClient{}
@@ -147,12 +146,11 @@ func TestMentionApplicationService_HandleMention_WithStructuredContext(t *testin
 
 func TestMentionApplicationService_HandleMention_WithoutStructuredContext(t *testing.T) {
 	// 構造化コンテキストを無効にした設定
-	config := &Config{
-		MaxContextLength:     8000,
-		MaxHistoryLength:     4000,
-		RequestTimeout:       30 * time.Second,
-		SystemPrompt:         "テストシステムプロンプト",
-		UseStructuredContext: false,
+	config := &config.BotConfig{
+		MaxContextLength: 8000,
+		MaxHistoryLength: 4000,
+		RequestTimeout:   30 * time.Second,
+		SystemPrompt:     "テストシステムプロンプト",
 	}
 
 	mockClient := &MockGeminiClient{}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"geminibot/internal/domain"
+	"geminibot/internal/infrastructure/config"
 )
 
 // ContextManagementMockGeminiClient は、テスト用のGeminiClientモックです
@@ -52,12 +53,11 @@ func (m *ContextManagementMockConversationRepository) GetMessagesBefore(ctx cont
 
 func TestMentionApplicationService_ContextManagement(t *testing.T) {
 	// テスト用の設定
-	config := &Config{
-		MaxContextLength:     100, // 小さな制限を設定
-		MaxHistoryLength:     50,  // 小さな制限を設定
-		RequestTimeout:       30 * time.Second,
-		SystemPrompt:         "テストシステムプロンプト",
-		UseStructuredContext: true,
+	config := &config.BotConfig{
+		MaxContextLength: 100, // 小さな制限を設定
+		MaxHistoryLength: 50,  // 小さな制限を設定
+		RequestTimeout:   30 * time.Second,
+		SystemPrompt:     "テストシステムプロンプト",
 	}
 
 	// モッククライアントとリポジトリを作成
@@ -87,7 +87,7 @@ func TestMentionApplicationService_ContextManagement(t *testing.T) {
 
 	// コンテキスト管理機能をテスト
 	ctx := context.Background()
-	response, err := service.HandleMentionWithStructuredContext(ctx, mention)
+	response, err := service.HandleMention(ctx, mention)
 
 	if err != nil {
 		t.Errorf("メンション処理でエラーが発生しました: %v", err)
@@ -100,12 +100,11 @@ func TestMentionApplicationService_ContextManagement(t *testing.T) {
 
 func TestMentionApplicationService_GetConversationHistory(t *testing.T) {
 	// テスト用の設定
-	config := &Config{
-		MaxContextLength:     8000,
-		MaxHistoryLength:     4000,
-		RequestTimeout:       30 * time.Second,
-		SystemPrompt:         "テストシステムプロンプト",
-		UseStructuredContext: true,
+	config := &config.BotConfig{
+		MaxContextLength: 8000,
+		MaxHistoryLength: 4000,
+		RequestTimeout:   30 * time.Second,
+		SystemPrompt:     "テストシステムプロンプト",
 	}
 
 	mockClient := &ContextManagementMockGeminiClient{}
@@ -151,12 +150,11 @@ func TestMentionApplicationService_GetConversationHistory(t *testing.T) {
 
 func TestMentionApplicationService_ContextTruncation(t *testing.T) {
 	// 非常に小さな制限を設定
-	config := &Config{
-		MaxContextLength:     10, // 非常に小さな制限
-		MaxHistoryLength:     5,  // 非常に小さな制限
-		RequestTimeout:       30 * time.Second,
-		SystemPrompt:         "これは非常に長いシステムプロンプトです。制限を超える長さです。",
-		UseStructuredContext: true,
+	config := &config.BotConfig{
+		MaxContextLength: 10, // 非常に小さな制限
+		MaxHistoryLength: 5,  // 非常に小さな制限
+		RequestTimeout:   30 * time.Second,
+		SystemPrompt:     "これは非常に長いシステムプロンプトです。制限を超える長さです。",
 	}
 
 	mockClient := &ContextManagementMockGeminiClient{}
@@ -183,7 +181,7 @@ func TestMentionApplicationService_ContextTruncation(t *testing.T) {
 
 	// コンテキスト切り詰め機能をテスト
 	ctx := context.Background()
-	response, err := service.HandleMentionWithStructuredContext(ctx, mention)
+	response, err := service.HandleMention(ctx, mention)
 
 	if err != nil {
 		t.Errorf("メンション処理でエラーが発生しました: %v", err)
