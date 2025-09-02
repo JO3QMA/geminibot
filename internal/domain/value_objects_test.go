@@ -10,13 +10,13 @@ func TestNewMessage(t *testing.T) {
 	timestamp := time.Now()
 	content := "テストメッセージ"
 
-	msg := NewMessage("msg123", userID, content, timestamp)
+	msg := NewMessage("msg123", NewUser(userID, "user1", "User1", "", "", false), content, timestamp)
 
 	if msg.ID != "msg123" {
 		t.Errorf("期待されるID: msg123, 実際のID: %s", msg.ID)
 	}
-	if msg.UserID != userID {
-		t.Errorf("期待されるUserID: %v, 実際のUserID: %v", userID, msg.UserID)
+	if msg.User.ID != userID {
+		t.Errorf("期待されるUserID: %v, 実際のUserID: %v", userID, msg.User.ID)
 	}
 	if msg.Content != content {
 		t.Errorf("期待されるContent: %s, 実際のContent: %s", content, msg.Content)
@@ -46,8 +46,8 @@ func TestNewChannelID(t *testing.T) {
 
 func TestNewConversationHistory(t *testing.T) {
 	messages := []Message{
-		NewMessage("msg1", NewUserID("user1"), "こんにちは", time.Now()),
-		NewMessage("msg2", NewUserID("user2"), "こんばんは", time.Now()),
+		NewMessage("msg1", NewUser(NewUserID("user1"), "user1", "User1", "", "", false), "こんにちは", time.Now()),
+		NewMessage("msg2", NewUser(NewUserID("user2"), "user2", "User2", "", "", false), "こんばんは", time.Now()),
 	}
 
 	history := NewConversationHistory(messages)
@@ -75,7 +75,7 @@ func TestConversationHistory_IsEmpty(t *testing.T) {
 
 	// メッセージがある履歴
 	messages := []Message{
-		NewMessage("msg1", NewUserID("user1"), "テスト", time.Now()),
+		NewMessage("msg1", NewUser(NewUserID("user1"), "user1", "User1", "", "", false), "テスト", time.Now()),
 	}
 	nonEmptyHistory := NewConversationHistory(messages)
 	if nonEmptyHistory.IsEmpty() {
@@ -102,13 +102,13 @@ func TestNewBotMention(t *testing.T) {
 	content := "@bot こんにちは"
 	messageID := "msg123"
 
-	mention := NewBotMention(channelID, userID, content, messageID)
+	mention := NewBotMention(channelID, "guild123", NewUser(userID, "user1", "User1", "", "", false), content, messageID)
 
 	if mention.ChannelID != channelID {
 		t.Errorf("期待されるChannelID: %v, 実際のChannelID: %v", channelID, mention.ChannelID)
 	}
-	if mention.UserID != userID {
-		t.Errorf("期待されるUserID: %v, 実際のUserID: %v", userID, mention.UserID)
+	if mention.User.ID != userID {
+		t.Errorf("期待されるUserID: %v, 実際のUserID: %v", userID, mention.User.ID)
 	}
 	if mention.Content != content {
 		t.Errorf("期待されるContent: %s, 実際のContent: %s", content, mention.Content)
@@ -124,7 +124,7 @@ func TestBotMention_IsThread(t *testing.T) {
 	content := "テスト"
 	messageID := "msg123"
 
-	mention := NewBotMention(channelID, userID, content, messageID)
+	mention := NewBotMention(channelID, "guild123", NewUser(userID, "user1", "User1", "", "", false), content, messageID)
 
 	// 現在の実装では常にfalseを返す
 	if mention.IsThread() {
@@ -138,7 +138,7 @@ func TestBotMention_String(t *testing.T) {
 	content := "テストメッセージ"
 	messageID := "msg123"
 
-	mention := NewBotMention(channelID, userID, content, messageID)
+	mention := NewBotMention(channelID, "guild123", NewUser(userID, "user1", "User1", "", "", false), content, messageID)
 	expected := "BotMention{ChannelID: channel123, UserID: user123, Content: テストメッセージ, MessageID: msg123}"
 
 	if mention.String() != expected {

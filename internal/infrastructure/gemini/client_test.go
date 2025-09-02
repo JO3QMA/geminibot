@@ -6,10 +6,11 @@ import (
 
 	"geminibot/internal/application"
 	"geminibot/internal/domain"
+	"geminibot/internal/infrastructure/config"
 )
 
 func TestDefaultConfig(t *testing.T) {
-	config := DefaultConfig()
+	config := config.DefaultGeminiConfig()
 
 	if config.ModelName != "gemini-pro" {
 		t.Errorf("期待されるModelName: gemini-pro, 実際: %s", config.ModelName)
@@ -33,7 +34,7 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestNewGeminiAPIClient_WithConfig(t *testing.T) {
-	config := &Config{
+	config := &config.GeminiConfig{
 		APIKey:      "test-api-key",
 		ModelName:   "gemini-pro",
 		MaxTokens:   500,
@@ -77,7 +78,7 @@ func TestGeminiAPIClient_Close(t *testing.T) {
 	// Closeメソッドが正常に動作することを確認
 	client := &GeminiAPIClient{
 		client: nil,
-		config: DefaultConfig(),
+		config: config.DefaultGeminiConfig(),
 	}
 
 	err := client.Close()
@@ -91,7 +92,7 @@ func TestGeminiAPIClient_GenerateText_Integration(t *testing.T) {
 	// このテストは実際のAPIキーがある環境でのみ実行されるべき
 	t.Skip("実際のAPIキーが必要なため、スキップします")
 
-	config := &Config{
+	config := &config.GeminiConfig{
 		APIKey:      "your-api-key-here",
 		ModelName:   "gemini-pro",
 		MaxTokens:   100,
@@ -127,7 +128,7 @@ func TestGeminiAPIClient_GenerateTextWithOptions_Integration(t *testing.T) {
 	// このテストは実際のAPIキーがある環境でのみ実行されるべき
 	t.Skip("実際のAPIキーが必要なため、スキップします")
 
-	config := &Config{
+	config := &config.GeminiConfig{
 		APIKey:      "your-api-key-here",
 		ModelName:   "gemini-pro",
 		MaxTokens:   100,
@@ -168,12 +169,12 @@ func TestGeminiAPIClient_GenerateTextWithOptions_Integration(t *testing.T) {
 func TestGeminiAPIClient_ConfigValidation(t *testing.T) {
 	tests := []struct {
 		name    string
-		config  *Config
+		config  *config.GeminiConfig
 		wantErr bool
 	}{
 		{
 			name: "有効な設定",
-			config: &Config{
+			config: &config.GeminiConfig{
 				APIKey:      "test-key",
 				ModelName:   "gemini-pro",
 				MaxTokens:   1000,
@@ -185,7 +186,7 @@ func TestGeminiAPIClient_ConfigValidation(t *testing.T) {
 		},
 		{
 			name: "空のAPIキー",
-			config: &Config{
+			config: &config.GeminiConfig{
 				APIKey:      "",
 				ModelName:   "gemini-pro",
 				MaxTokens:   1000,
@@ -197,7 +198,7 @@ func TestGeminiAPIClient_ConfigValidation(t *testing.T) {
 		},
 		{
 			name: "無効なTemperature",
-			config: &Config{
+			config: &config.GeminiConfig{
 				APIKey:      "test-key",
 				ModelName:   "gemini-pro",
 				MaxTokens:   1000,
@@ -212,7 +213,7 @@ func TestGeminiAPIClient_ConfigValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := NewGeminiAPIClient(tt.config.APIKey, tt.config)
-			
+
 			if tt.wantErr && err == nil {
 				t.Error("エラーが期待されましたが、発生しませんでした")
 			}

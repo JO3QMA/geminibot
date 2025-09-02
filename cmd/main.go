@@ -48,12 +48,23 @@ func main() {
 
 	// リポジトリを作成
 	conversationRepo := discordInfra.NewDiscordConversationRepository(session)
+	apiKeyRepo := discordInfra.NewDiscordGuildAPIKeyRepository()
 
 	// アプリケーションサービスを作成
+	apiKeyService := application.NewAPIKeyApplicationService(apiKeyRepo)
+
+	// Geminiクライアントファクトリー関数を作成
+	geminiClientFactory := func(apiKey string) (application.GeminiClient, error) {
+		return gemini.NewStructuredGeminiClientWithAPIKey(apiKey, &config.Gemini)
+	}
+
 	mentionService := application.NewMentionApplicationService(
 		conversationRepo,
 		geminiClient,
 		&config.Bot,
+		apiKeyService,
+		&config.Gemini,
+		geminiClientFactory,
 	)
 
 	// Discordハンドラを作成
@@ -66,7 +77,21 @@ func main() {
 		log.Fatalf("Discordへの接続に失敗: %v", err)
 	}
 
+	// スラッシュコマンドハンドラを作成
+	slashCommandHandler := discordPres.NewSlashCommandHandler(session, apiKeyService, config.Gemini.APIKey)
+
+	// スラッシュコマンドを設定
+	if err := slashCommandHandler.SetupSlashCommands(); err != nil {
+		log.Fatalf("スラッシュコマンドの設定に失敗: %v", err)
+	}
+
+	// スラッシュコマンドのイベントハンドラーを設定
+	slashCommandHandler.SetupSlashCommandHandlers()
+
 	log.Println("Discordに接続しました。Botが準備完了しました！")
+	log.Println("利用可能なスラッシュコマンド:")
+	log.Println("  /set-api - このサーバー用のGemini APIキーを設定")
+	log.Println("  /del-api - このサーバー用のGemini APIキーを削除")
 
 	// シグナルハンドリング
 	stop := make(chan os.Signal, 1)
