@@ -33,11 +33,6 @@ type User struct {
 	Discriminator string
 }
 
-// String はUserの文字列表現を返します
-func (u User) String() string {
-	return fmt.Sprintf("User{ID: %s, Username: %s, DisplayName: %s}", u.ID, u.Username, u.DisplayName)
-}
-
 // ChannelID は、DiscordのチャンネルIDを表現する値オブジェクトです
 type ChannelID string
 

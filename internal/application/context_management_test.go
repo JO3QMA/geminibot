@@ -32,7 +32,7 @@ func (m *ContextManagementMockConversationRepository) GetRecentMessages(ctx cont
 		{
 			ID: "msg1",
 			User: domain.User{
-				ID:          domain.NewUser("user1", "testuser1", "TestUser1", "", "", false),
+				ID:          "user1",
 				Username:    "testuser1",
 				DisplayName: "TestUser1",
 			},
@@ -76,7 +76,7 @@ func TestMentionApplicationService_ContextManagement(t *testing.T) {
 	// テスト用のメンションを作成
 	mention := domain.BotMention{
 		User: domain.User{
-			ID:            domain.NewUser("testuser", "testuser", "TestUser", "", "", false),
+			ID:            "testuser",
 			Username:      "testuser",
 			Avatar:        "",
 			Discriminator: "",
