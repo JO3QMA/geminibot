@@ -12,7 +12,7 @@ import (
 func TestGeminiAPIClient_GenerateTextWithStructuredContext(t *testing.T) {
 	// テスト用の設定
 	config := &config.GeminiConfig{
-		ModelName:   "gemini-pro",
+		ModelName:   "gemini-2.5-pro",
 		MaxTokens:   1000,
 		Temperature: 0.7,
 		TopP:        0.9,

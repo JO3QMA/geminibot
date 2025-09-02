@@ -106,7 +106,7 @@ func (s *MentionApplicationService) generateResponseWithGuildAPIKey(
 	guildModel, err := s.apiKeyService.GetGuildModel(ctx, guildID)
 	if err != nil {
 		log.Printf("ギルド %s のモデル設定取得に失敗: %v, デフォルト設定を使用", guildID, err)
-		guildModel = "gemini-pro" // デフォルト
+		guildModel = "gemini-2.5-pro" // デフォルト
 	}
 
 	// ギルド固有のAPIキーがあるかチェック
@@ -137,7 +137,7 @@ func (s *MentionApplicationService) generateResponseWithGuildAPIKey(
 	}
 
 	// デフォルトのAPIキーを使用、ただしモデル設定がある場合はそれを使用
-	if guildModel != "gemini-pro" && guildModel != "" {
+	if guildModel != "gemini-2.5-pro" && guildModel != "" {
 		log.Printf("デフォルトAPIキーとカスタムモデル %s を使用", guildModel)
 		// TODO: 将来的にモデル設定を反映したい場合は、ここでGeminiクライアントの設定を変更
 	} else {

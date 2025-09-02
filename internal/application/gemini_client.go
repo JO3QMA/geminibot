@@ -33,6 +33,6 @@ func DefaultTextGenerationOptions() TextGenerationOptions {
 		Temperature: 0.7,
 		TopP:        0.9,
 		TopK:        40,
-		Model:       "gemini-pro",
+		Model:       "gemini-2.5-pro",
 	}
 }

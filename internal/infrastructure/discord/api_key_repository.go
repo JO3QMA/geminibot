@@ -32,7 +32,7 @@ func (r *DiscordGuildAPIKeyRepository) SetAPIKey(ctx context.Context, guildID, a
 	defer r.mutex.Unlock()
 
 	// 既存の設定がある場合は、モデル設定を保持
-	model := "gemini-pro" // デフォルトモデル
+	model := "gemini-2.5-pro" // デフォルトモデル
 	if existing, exists := r.apiKeys[guildID]; exists {
 		model = existing.Model
 	}
@@ -145,7 +145,7 @@ func (r *DiscordGuildAPIKeyRepository) GetGuildModel(ctx context.Context, guildI
 
 	guildAPIKey, exists := r.apiKeys[guildID]
 	if !exists {
-		return "gemini-pro", nil // デフォルトモデルを返す
+		return "gemini-2.5-pro", nil // デフォルトモデルを返す
 	}
 
 	return guildAPIKey.Model, nil

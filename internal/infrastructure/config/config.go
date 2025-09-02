@@ -35,7 +35,7 @@ type AppConfig struct {
 // DefaultGeminiConfig は、デフォルトのGemini設定を返します
 func DefaultGeminiConfig() *GeminiConfig {
 	return &GeminiConfig{
-		ModelName:   "gemini-pro",
+		ModelName:   "gemini-2.5-pro",
 		MaxTokens:   1000,
 		Temperature: 0.7,
 		TopP:        0.9,
