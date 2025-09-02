@@ -26,6 +26,23 @@ func NewStructuredGeminiClient(client *genai.Client, geminiConfig *config.Gemini
 	}
 }
 
+// NewStructuredGeminiClientWithAPIKey は、指定されたAPIキーで新しいStructuredGeminiClientインスタンスを作成します
+func NewStructuredGeminiClientWithAPIKey(apiKey string, geminiConfig *config.GeminiConfig) (*StructuredGeminiClient, error) {
+	clientConfig := &genai.ClientConfig{
+		APIKey: apiKey,
+	}
+	
+	client, err := genai.NewClient(context.Background(), clientConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Geminiクライアントの作成に失敗: %w", err)
+	}
+
+	return &StructuredGeminiClient{
+		client: client,
+		config: geminiConfig,
+	}, nil
+}
+
 // GenerateTextWithStructuredContext は、構造化されたコンテキストを使用してテキストを生成します
 func (g *StructuredGeminiClient) GenerateTextWithStructuredContext(
 	ctx context.Context,

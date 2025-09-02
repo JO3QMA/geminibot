@@ -38,7 +38,7 @@
 			}
 		}
 	},
-	"postCreateCommand": "go clean -modcache && go mod download && go mod tidy && go install golang.org/x/tools/cmd/goimports@latest && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && go install golang.org/x/tools/gopls@latest",
+	"postCreateCommand": "go clean -modcache && go mod download && go mod tidy && go install golang.org/x/tools/cmd/goimports@latest && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && go install golang.org/x/tools/gopls@v0.20.0",
 	"remoteUser": "vscode",
 	"mounts": [
 		"source=${localWorkspaceFolder}/.devcontainer/cache,target=/go/pkg,type=bind,consistency=cached",
