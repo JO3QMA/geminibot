@@ -57,7 +57,7 @@ func (cm *ContextManager) TruncateSystemPrompt(systemPrompt string) string {
 		runes = runes[:cm.maxContextLength]
 		// 完全な文で終わるように調整
 		lastPeriod := strings.LastIndex(string(runes), "。")
-		if lastPeriod > 0 && lastPeriod > len(runes)-50 {
+		if lastPeriod > 0 && lastPeriod < len(runes)-50 {
 			runes = runes[:lastPeriod+1]
 		}
 	}
@@ -77,7 +77,7 @@ func (cm *ContextManager) TruncateUserQuestion(userQuestion string) string {
 		runes = runes[:cm.maxContextLength]
 		// 完全な文で終わるように調整
 		lastPeriod := strings.LastIndex(string(runes), "。")
-		if lastPeriod > 0 && lastPeriod > len(runes)-30 {
+		if lastPeriod > 0 && lastPeriod < len(runes)-30 {
 			runes = runes[:lastPeriod+1]
 		}
 	}

@@ -75,10 +75,10 @@ func TestPromptGenerator_GeneratePrompt_WithHistory(t *testing.T) {
 	}
 
 	// 履歴メッセージが含まれているかチェック
-	if !strings.Contains(content, "ユーザーuser1: こんにちは") {
+	if !strings.Contains(content, "User1: こんにちは") {
 		t.Error("生成されたプロンプトに最初の履歴メッセージが含まれていません")
 	}
-	if !strings.Contains(content, "ユーザーuser2: こんばんは") {
+	if !strings.Contains(content, "User2: こんばんは") {
 		t.Error("生成されたプロンプトに2番目の履歴メッセージが含まれていません")
 	}
 
@@ -160,10 +160,10 @@ func TestPromptGenerator_GeneratePromptWithContext_WithHistory(t *testing.T) {
 	}
 
 	// 履歴メッセージが含まれているかチェック
-	if !strings.Contains(content, "ユーザーuser1: こんにちは") {
+	if !strings.Contains(content, "User1: こんにちは") {
 		t.Error("生成されたプロンプトに最初の履歴メッセージが含まれていません")
 	}
-	if !strings.Contains(content, "ユーザーuser2: こんばんは") {
+	if !strings.Contains(content, "User2: こんばんは") {
 		t.Error("生成されたプロンプトに2番目の履歴メッセージが含まれていません")
 	}
 

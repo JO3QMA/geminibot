@@ -195,7 +195,7 @@ func TestMentionApplicationService_HandleMention_WithoutStructuredContext(t *tes
 		t.Errorf("メンション処理でエラーが発生しました: %v", err)
 	}
 
-	if response != "従来の方法での応答" {
-		t.Errorf("期待される応答: '従来の方法での応答', 実際の応答: %s", response)
+	if response != "構造化コンテキストでの応答" {
+		t.Errorf("期待される応答: '構造化コンテキストでの応答', 実際の応答: %s", response)
 	}
 }

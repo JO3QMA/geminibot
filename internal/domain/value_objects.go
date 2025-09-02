@@ -126,5 +126,5 @@ func (bm BotMention) IsThread() bool {
 // String はBotMentionの文字列表現を返します
 func (bm BotMention) String() string {
 	return fmt.Sprintf("BotMention{ChannelID: %s, GuildID: %s, User: %s, Content: %s, MessageID: %s}",
-		bm.ChannelID, bm.GuildID, bm.User, bm.Content, bm.MessageID)
+		bm.ChannelID, bm.GuildID, bm.User.Username, bm.Content, bm.MessageID)
 }
