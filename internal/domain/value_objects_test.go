@@ -16,7 +16,7 @@ func TestNewMessage(t *testing.T) {
 	}
 
 	now := time.Now()
-	message := NewMessage("msg123", user, "Hello, World!", now)
+	message := Message{ID: "msg123", User: user, Content: "Hello, World!", Timestamp: now}
 
 	if message.ID != "msg123" {
 		t.Errorf("Expected ID 'msg123', got '%s'", message.ID)
@@ -37,8 +37,8 @@ func TestNewMessage(t *testing.T) {
 
 func TestNewConversationHistory(t *testing.T) {
 	messages := []Message{
-		NewMessage("1", User{Username: "user1"}, "Hello", time.Now()),
-		NewMessage("2", User{Username: "user2"}, "Hi there", time.Now()),
+		Message{ID: "1", User: User{Username: "user1"}, Content: "Hello", Timestamp: time.Now()},
+		Message{ID: "2", User: User{Username: "user2"}, Content: "Hi there", Timestamp: time.Now()},
 	}
 
 	history := NewConversationHistory(messages)

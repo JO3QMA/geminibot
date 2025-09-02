@@ -55,8 +55,8 @@ func TestPromptGenerator_GeneratePrompt_WithHistory(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
 
 	messages := []Message{
-		NewMessage("msg1", User{ID: "user1", Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, "こんにちは", time.Now()),
-		NewMessage("msg2", User{ID: "user2", Username: "user2", DisplayName: "User2", Avatar: "", Discriminator: "", IsBot: false}, "こんばんは", time.Now()),
+		Message{ID: "msg1", User: User{ID: "user1", Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, Content: "こんにちは", Timestamp: time.Now()},
+		Message{ID: "msg2", User: User{ID: "user2", Username: "user2", DisplayName: "User2", Avatar: "", Discriminator: "", IsBot: false}, Content: "こんばんは", Timestamp: time.Now()},
 	}
 	history := NewConversationHistory(messages)
 	userQuestion := "今日の天気は？"
@@ -131,8 +131,8 @@ func TestPromptGenerator_GeneratePromptWithContext_WithHistory(t *testing.T) {
 	generator := NewPromptGenerator("テストシステムプロンプト")
 
 	messages := []Message{
-		NewMessage("msg1", User{ID: "user1", Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, "こんにちは", time.Now()),
-		NewMessage("msg2", User{ID: "user2", Username: "user2", DisplayName: "User2", Avatar: "", Discriminator: "", IsBot: false}, "こんばんは", time.Now()),
+		Message{ID: "msg1", User: User{ID: "user1", Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, Content: "こんにちは", Timestamp: time.Now()},
+		Message{ID: "msg2", User: User{ID: "user2", Username: "user2", DisplayName: "User2", Avatar: "", Discriminator: "", IsBot: false}, Content: "こんばんは", Timestamp: time.Now()},
 	}
 	history := NewConversationHistory(messages)
 	userQuestion := "今日の天気は？"

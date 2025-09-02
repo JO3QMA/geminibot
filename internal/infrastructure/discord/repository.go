@@ -53,12 +53,12 @@ func (r *DiscordConversationRepository) GetRecentMessages(ctx context.Context, c
 			IsBot:         msg.Author.Bot,
 		}
 
-		domainMessage := domain.NewMessage(
-			msg.ID,
-			user,
-			msg.Content,
-			timestamp,
-		)
+		domainMessage := domain.Message{
+			ID:        msg.ID,
+			User:      user,
+			Content:   msg.Content,
+			Timestamp: timestamp,
+		}
 		domainMessages = append(domainMessages, domainMessage)
 	}
 
@@ -105,12 +105,12 @@ func (r *DiscordConversationRepository) GetMessagesBefore(ctx context.Context, c
 			IsBot:         msg.Author.Bot,
 		}
 
-		domainMessage := domain.NewMessage(
-			msg.ID,
-			user,
-			msg.Content,
-			timestamp,
-		)
+		domainMessage := domain.Message{
+			ID:        msg.ID,
+			User:      user,
+			Content:   msg.Content,
+			Timestamp: timestamp,
+		}
 		domainMessages = append(domainMessages, domainMessage)
 	}
 

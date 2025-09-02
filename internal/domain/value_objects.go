@@ -13,16 +13,6 @@ type Message struct {
 	Timestamp time.Time
 }
 
-// NewMessage は新しいMessageインスタンスを作成します
-func NewMessage(id string, user User, content string, timestamp time.Time) Message {
-	return Message{
-		ID:        id,
-		User:      user,
-		Content:   content,
-		Timestamp: timestamp,
-	}
-}
-
 // User は、Discordのユーザー情報を表現する値オブジェクトです
 type User struct {
 	ID            string
