@@ -23,22 +23,9 @@ func NewMessage(id string, user User, content string, timestamp time.Time) Messa
 	}
 }
 
-// UserID は、DiscordのユーザーIDを表現する値オブジェクトです
-type UserID string
-
-// NewUserID は新しいUserIDインスタンスを作成します
-func NewUserID(id string) UserID {
-	return UserID(id)
-}
-
-// String はUserIDを文字列として返します
-func (u UserID) String() string {
-	return string(u)
-}
-
 // User は、Discordのユーザー情報を表現する値オブジェクトです
 type User struct {
-	ID            UserID
+	ID            string
 	Username      string
 	DisplayName   string
 	Avatar        string
@@ -46,29 +33,9 @@ type User struct {
 	Discriminator string
 }
 
-// NewUser は新しいUserインスタンスを作成します
-func NewUser(id UserID, username, displayName, avatar, discriminator string, isBot bool) User {
-	return User{
-		ID:            id,
-		Username:      username,
-		DisplayName:   displayName,
-		Avatar:        avatar,
-		IsBot:         isBot,
-		Discriminator: discriminator,
-	}
-}
-
-// GetDisplayName は、表示名を取得します（ニックネームがない場合はユーザー名を返します）
-func (u User) GetDisplayName() string {
-	if u.DisplayName != "" {
-		return u.DisplayName
-	}
-	return u.Username
-}
-
 // String はUserの文字列表現を返します
 func (u User) String() string {
-	return fmt.Sprintf("User{ID: %s, Username: %s, DisplayName: %s}", u.ID, u.Username, u.GetDisplayName())
+	return fmt.Sprintf("User{ID: %s, Username: %s, DisplayName: %s}", u.ID, u.Username, u.DisplayName)
 }
 
 // ChannelID は、DiscordのチャンネルIDを表現する値オブジェクトです

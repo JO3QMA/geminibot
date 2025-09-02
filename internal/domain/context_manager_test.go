@@ -36,7 +36,7 @@ func TestContextManager_TruncateConversationHistory_WithinLimit(t *testing.T) {
 		{
 			ID: "msg1",
 			User: User{
-				ID:          NewUserID("user1"),
+				ID:          "user1",
 				Username:    "testuser1",
 				DisplayName: "TestUser1",
 			},
@@ -46,7 +46,7 @@ func TestContextManager_TruncateConversationHistory_WithinLimit(t *testing.T) {
 		{
 			ID: "msg2",
 			User: User{
-				ID:          NewUserID("user2"),
+				ID:          "user2",
 				Username:    "testuser2",
 				DisplayName: "TestUser2",
 			},
@@ -73,7 +73,7 @@ func TestContextManager_TruncateConversationHistory_ExceedsLimit(t *testing.T) {
 		{
 			ID: "msg1",
 			User: User{
-				ID:          NewUserID("user1"),
+				ID:          "user1",
 				Username:    "testuser1",
 				DisplayName: "TestUser1",
 			},
@@ -83,7 +83,7 @@ func TestContextManager_TruncateConversationHistory_ExceedsLimit(t *testing.T) {
 		{
 			ID: "msg2",
 			User: User{
-				ID:          NewUserID("user2"),
+				ID:          "user2",
 				Username:    "testuser2",
 				DisplayName: "TestUser2",
 			},
@@ -150,7 +150,7 @@ func TestContextManager_GetContextStats(t *testing.T) {
 		{
 			ID: "msg1",
 			User: User{
-				ID:          NewUserID("user1"),
+				ID:          "user1",
 				Username:    "testuser1",
 				DisplayName: "TestUser1",
 			},
@@ -195,7 +195,7 @@ func TestContextManager_calculateHistoryLength(t *testing.T) {
 		{
 			ID: "msg1",
 			User: User{
-				ID:          NewUserID("user1"),
+				ID:          "user1",
 				Username:    "testuser1",
 				DisplayName: "TestUser1",
 			},

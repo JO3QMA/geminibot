@@ -94,14 +94,14 @@ func (h *DiscordHandler) createBotMention(m *discordgo.MessageCreate) domain.Bot
 	content := h.extractUserContent(m)
 
 	// ユーザー情報を作成
-	user := domain.NewUser(
-		domain.NewUserID(m.Author.ID),
-		m.Author.Username,
-		h.getDisplayName(m),
-		m.Author.Avatar,
-		m.Author.Discriminator,
-		m.Author.Bot,
-	)
+	user := domain.User{
+		ID:            m.Author.ID,
+		Username:      m.Author.Username,
+		DisplayName:   h.getDisplayName(m),
+		Avatar:        m.Author.Avatar,
+		Discriminator: m.Author.Discriminator,
+		IsBot:         m.Author.Bot,
+	}
 
 	return domain.NewBotMention(
 		domain.NewChannelID(m.ChannelID),

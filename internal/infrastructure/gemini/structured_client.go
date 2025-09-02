@@ -6,9 +6,9 @@ import (
 	"log"
 	"strings"
 
+	"geminibot/internal/application"
 	"geminibot/internal/domain"
 	"geminibot/internal/infrastructure/config"
-	"geminibot/internal/application"
 
 	"google.golang.org/genai"
 )
@@ -32,7 +32,7 @@ func NewStructuredGeminiClientWithAPIKey(apiKey string, geminiConfig *config.Gem
 	clientConfig := &genai.ClientConfig{
 		APIKey: apiKey,
 	}
-	
+
 	client, err := genai.NewClient(context.Background(), clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("Geminiクライアントの作成に失敗: %w", err)
@@ -188,7 +188,7 @@ func (g *StructuredGeminiClient) formatConversationHistory(messages []domain.Mes
 	builder.WriteString("## 会話履歴\n")
 
 	for _, msg := range messages {
-		displayName := msg.User.GetDisplayName()
+		displayName := msg.User.DisplayName
 		builder.WriteString(fmt.Sprintf("%s: %s\n", displayName, msg.Content))
 	}
 

@@ -6,11 +6,11 @@ import (
 )
 
 func TestNewMessage(t *testing.T) {
-	userID := NewUserID("123456789")
+	userID := "123456789"
 	timestamp := time.Now()
 	content := "テストメッセージ"
 
-	msg := NewMessage("msg123", NewUser(userID, "user1", "User1", "", "", false), content, timestamp)
+	msg := NewMessage("msg123", User{ID: userID, Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, content, timestamp)
 
 	if msg.ID != "msg123" {
 		t.Errorf("期待されるID: msg123, 実際のID: %s", msg.ID)
@@ -28,10 +28,10 @@ func TestNewMessage(t *testing.T) {
 
 func TestNewUserID(t *testing.T) {
 	id := "123456789"
-	userID := NewUserID(id)
+	userID := id
 
-	if userID.String() != id {
-		t.Errorf("期待されるID: %s, 実際のID: %s", id, userID.String())
+	if userID != id {
+		t.Errorf("期待されるID: %s, 実際のID: %s", id, userID)
 	}
 }
 
@@ -40,14 +40,14 @@ func TestNewChannelID(t *testing.T) {
 	channelID := NewChannelID(id)
 
 	if channelID.String() != id {
-		t.Errorf("期待されるID: %s, 実際のID: %s", id, channelID.String())
+		t.Errorf("期待されるID: %s, 実際のID: %s", id, channelID)
 	}
 }
 
 func TestNewConversationHistory(t *testing.T) {
 	messages := []Message{
-		NewMessage("msg1", NewUser(NewUserID("user1"), "user1", "User1", "", "", false), "こんにちは", time.Now()),
-		NewMessage("msg2", NewUser(NewUserID("user2"), "user2", "User2", "", "", false), "こんばんは", time.Now()),
+		NewMessage("msg1", User{ID: "user1", Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, "こんにちは", time.Now()),
+		NewMessage("msg2", User{ID: "user2", Username: "user2", DisplayName: "User2", Avatar: "", Discriminator: "", IsBot: false}, "こんばんは", time.Now()),
 	}
 
 	history := NewConversationHistory(messages)
@@ -75,7 +75,7 @@ func TestConversationHistory_IsEmpty(t *testing.T) {
 
 	// メッセージがある履歴
 	messages := []Message{
-		NewMessage("msg1", NewUser(NewUserID("user1"), "user1", "User1", "", "", false), "テスト", time.Now()),
+		NewMessage("msg1", User{ID: "user1", Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, "テスト", time.Now()),
 	}
 	nonEmptyHistory := NewConversationHistory(messages)
 	if nonEmptyHistory.IsEmpty() {
@@ -98,11 +98,11 @@ func TestNewPrompt(t *testing.T) {
 
 func TestNewBotMention(t *testing.T) {
 	channelID := NewChannelID("channel123")
-	userID := NewUserID("user123")
+	userID := "user123"
 	content := "@bot こんにちは"
 	messageID := "msg123"
 
-	mention := NewBotMention(channelID, "guild123", NewUser(userID, "user1", "User1", "", "", false), content, messageID)
+	mention := NewBotMention(channelID, "guild123", User{ID: userID, Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, content, messageID)
 
 	if mention.ChannelID != channelID {
 		t.Errorf("期待されるChannelID: %v, 実際のChannelID: %v", channelID, mention.ChannelID)
@@ -120,11 +120,11 @@ func TestNewBotMention(t *testing.T) {
 
 func TestBotMention_IsThread(t *testing.T) {
 	channelID := NewChannelID("channel123")
-	userID := NewUserID("user123")
+	userID := "user123"
 	content := "テスト"
 	messageID := "msg123"
 
-	mention := NewBotMention(channelID, "guild123", NewUser(userID, "user1", "User1", "", "", false), content, messageID)
+	mention := NewBotMention(channelID, "guild123", User{ID: userID, Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, content, messageID)
 
 	// 現在の実装では常にfalseを返す
 	if mention.IsThread() {
@@ -134,11 +134,11 @@ func TestBotMention_IsThread(t *testing.T) {
 
 func TestBotMention_String(t *testing.T) {
 	channelID := NewChannelID("channel123")
-	userID := NewUserID("user123")
+	userID := "user123"
 	content := "テストメッセージ"
 	messageID := "msg123"
 
-	mention := NewBotMention(channelID, "guild123", NewUser(userID, "user1", "User1", "", "", false), content, messageID)
+	mention := NewBotMention(channelID, "guild123", User{ID: userID, Username: "user1", DisplayName: "User1", Avatar: "", Discriminator: "", IsBot: false}, content, messageID)
 	expected := "BotMention{ChannelID: channel123, UserID: user123, Content: テストメッセージ, MessageID: msg123}"
 
 	if mention.String() != expected {

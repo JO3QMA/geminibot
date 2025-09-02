@@ -45,7 +45,7 @@ func (pg *PromptGenerator) GeneratePromptWithMention(history ConversationHistory
 	if !history.IsEmpty() {
 		builder.WriteString("## 会話履歴\n")
 		for _, msg := range history.Messages() {
-			displayName := msg.User.GetDisplayName()
+			displayName := msg.User.DisplayName
 			builder.WriteString(fmt.Sprintf("%s: %s\n", displayName, msg.Content))
 		}
 		builder.WriteString("\n")
@@ -89,7 +89,7 @@ func (pg *PromptGenerator) GeneratePromptWithContextAndMention(history Conversat
 	if !history.IsEmpty() {
 		builder.WriteString("## 会話履歴\n")
 		for _, msg := range history.Messages() {
-			displayName := msg.User.GetDisplayName()
+			displayName := msg.User.DisplayName
 			builder.WriteString(fmt.Sprintf("%s: %s\n", displayName, msg.Content))
 		}
 		builder.WriteString("\n")

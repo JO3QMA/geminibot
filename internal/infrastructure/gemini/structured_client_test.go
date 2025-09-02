@@ -31,7 +31,7 @@ func TestGeminiAPIClient_GenerateTextWithStructuredContext(t *testing.T) {
 		{
 			ID: "msg1",
 			User: domain.User{
-				ID:          domain.NewUserID("user1"),
+				ID:          "user1",
 				Username:    "testuser1",
 				DisplayName: "TestUser1",
 			},
@@ -41,7 +41,7 @@ func TestGeminiAPIClient_GenerateTextWithStructuredContext(t *testing.T) {
 		{
 			ID: "msg2",
 			User: domain.User{
-				ID:          domain.NewUserID("user2"),
+				ID:          "user2",
 				Username:    "testuser2",
 				DisplayName: "TestUser2",
 			},
@@ -119,7 +119,7 @@ func TestGeminiAPIClient_formatConversationHistory(t *testing.T) {
 		{
 			ID: "msg1",
 			User: domain.User{
-				ID:          domain.NewUserID("user1"),
+				ID:          "user1",
 				Username:    "testuser",
 				DisplayName: "TestUser",
 			},
@@ -139,7 +139,7 @@ func TestGeminiAPIClient_formatConversationHistory(t *testing.T) {
 		{
 			ID: "msg1",
 			User: domain.User{
-				ID:          domain.NewUserID("user1"),
+				ID:          "user1",
 				Username:    "user1",
 				DisplayName: "User1",
 			},
@@ -149,7 +149,7 @@ func TestGeminiAPIClient_formatConversationHistory(t *testing.T) {
 		{
 			ID: "msg2",
 			User: domain.User{
-				ID:          domain.NewUserID("user2"),
+				ID:          "user2",
 				Username:    "user2",
 				DisplayName: "User2",
 			},

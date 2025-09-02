@@ -32,7 +32,7 @@ func (m *ContextManagementMockConversationRepository) GetRecentMessages(ctx cont
 		{
 			ID: "msg1",
 			User: domain.User{
-				ID:          domain.NewUserID("user1"),
+				ID:          domain.NewUser("user1", "testuser1", "TestUser1", "", "", false),
 				Username:    "testuser1",
 				DisplayName: "TestUser1",
 			},
@@ -76,9 +76,12 @@ func TestMentionApplicationService_ContextManagement(t *testing.T) {
 	// テスト用のメンションを作成
 	mention := domain.BotMention{
 		User: domain.User{
-			ID:          domain.NewUserID("testuser"),
-			Username:    "testuser",
-			DisplayName: "TestUser",
+			ID:            domain.NewUser("testuser", "testuser", "TestUser", "", "", false),
+			Username:      "testuser",
+			Avatar:        "",
+			Discriminator: "",
+			IsBot:         false,
+			DisplayName:   "TestUser",
 		},
 		Content:   "テストメッセージ",
 		ChannelID: domain.NewChannelID("testchannel"),
@@ -120,9 +123,12 @@ func TestMentionApplicationService_GetConversationHistory(t *testing.T) {
 
 	mention := domain.BotMention{
 		User: domain.User{
-			ID:          domain.NewUserID("testuser"),
-			Username:    "testuser",
-			DisplayName: "TestUser",
+			ID:            "testuser",
+			Username:      "testuser",
+			DisplayName:   "TestUser",
+			Avatar:        "",
+			Discriminator: "",
+			IsBot:         false,
 		},
 		Content:   "テストメッセージ",
 		ChannelID: domain.NewChannelID("testchannel"),
@@ -170,7 +176,7 @@ func TestMentionApplicationService_ContextTruncation(t *testing.T) {
 
 	mention := domain.BotMention{
 		User: domain.User{
-			ID:          domain.NewUserID("testuser"),
+			ID:          "testuser",
 			Username:    "testuser",
 			DisplayName: "TestUser",
 		},

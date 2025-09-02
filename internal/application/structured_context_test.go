@@ -34,9 +34,12 @@ func (m *MockConversationRepository) GetRecentMessages(ctx context.Context, chan
 		{
 			ID: "msg1",
 			User: domain.User{
-				ID:          domain.NewUserID("user1"),
-				Username:    "testuser1",
-				DisplayName: "TestUser1",
+				ID:            "user1",
+				Username:      "testuser1",
+				DisplayName:   "TestUser1",
+				Avatar:        "",
+				Discriminator: "",
+				IsBot:         false,
 			},
 			Content:   "こんにちは",
 			Timestamp: time.Now(),
@@ -78,9 +81,12 @@ func TestMentionApplicationService_HandleMentionWithStructuredContext(t *testing
 	// テスト用のメンションを作成
 	mention := domain.BotMention{
 		User: domain.User{
-			ID:          domain.NewUserID("testuser"),
-			Username:    "testuser",
-			DisplayName: "TestUser",
+			ID:            "testuser",
+			Username:      "testuser",
+			DisplayName:   "TestUser",
+			Avatar:        "",
+			Discriminator: "",
+			IsBot:         false,
 		},
 		Content:   "テストメッセージ",
 		ChannelID: domain.NewChannelID("testchannel"),
@@ -122,9 +128,12 @@ func TestMentionApplicationService_HandleMention_WithStructuredContext(t *testin
 
 	mention := domain.BotMention{
 		User: domain.User{
-			ID:          domain.NewUserID("testuser"),
-			Username:    "testuser",
-			DisplayName: "TestUser",
+			ID:            "testuser",
+			Username:      "testuser",
+			DisplayName:   "TestUser",
+			Avatar:        "",
+			Discriminator: "",
+			IsBot:         false,
 		},
 		Content:   "テストメッセージ",
 		ChannelID: domain.NewChannelID("testchannel"),
@@ -166,9 +175,12 @@ func TestMentionApplicationService_HandleMention_WithoutStructuredContext(t *tes
 
 	mention := domain.BotMention{
 		User: domain.User{
-			ID:          domain.NewUserID("testuser"),
-			Username:    "testuser",
-			DisplayName: "TestUser",
+			ID:            "testuser",
+			Username:      "testuser",
+			DisplayName:   "TestUser",
+			Avatar:        "",
+			Discriminator: "",
+			IsBot:         false,
 		},
 		Content:   "テストメッセージ",
 		ChannelID: domain.NewChannelID("testchannel"),
