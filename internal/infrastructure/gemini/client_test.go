@@ -12,8 +12,8 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	config := config.DefaultGeminiConfig()
 
-	if config.ModelName != "gemini-pro" {
-		t.Errorf("期待されるModelName: gemini-pro, 実際: %s", config.ModelName)
+	if config.ModelName != "gemini-2.5-pro" {
+		t.Errorf("期待されるModelName: gemini-2.5-pro, 実際: %s", config.ModelName)
 	}
 
 	if config.MaxTokens != 1000 {
@@ -36,7 +36,7 @@ func TestDefaultConfig(t *testing.T) {
 func TestNewGeminiAPIClient_WithConfig(t *testing.T) {
 	config := &config.GeminiConfig{
 		APIKey:      "test-api-key",
-		ModelName:   "gemini-pro",
+		ModelName:   "gemini-2.5-pro",
 		MaxTokens:   500,
 		Temperature: 0.5,
 		TopP:        0.8,
@@ -94,7 +94,7 @@ func TestGeminiAPIClient_GenerateText_Integration(t *testing.T) {
 
 	config := &config.GeminiConfig{
 		APIKey:      "your-api-key-here",
-		ModelName:   "gemini-pro",
+		ModelName:   "gemini-2.5-pro",
 		MaxTokens:   100,
 		Temperature: 0.7,
 		TopP:        0.9,
@@ -130,7 +130,7 @@ func TestGeminiAPIClient_GenerateTextWithOptions_Integration(t *testing.T) {
 
 	config := &config.GeminiConfig{
 		APIKey:      "your-api-key-here",
-		ModelName:   "gemini-pro",
+		ModelName:   "gemini-2.5-pro",
 		MaxTokens:   100,
 		Temperature: 0.7,
 		TopP:        0.9,
@@ -149,7 +149,7 @@ func TestGeminiAPIClient_GenerateTextWithOptions_Integration(t *testing.T) {
 		Temperature: 0.5,
 		TopP:        0.8,
 		TopK:        20,
-		Model:       "gemini-pro",
+		Model:       "gemini-2.5-pro",
 	}
 
 	ctx := context.Background()
@@ -176,7 +176,7 @@ func TestGeminiAPIClient_ConfigValidation(t *testing.T) {
 			name: "有効な設定",
 			config: &config.GeminiConfig{
 				APIKey:      "test-key",
-				ModelName:   "gemini-pro",
+				ModelName:   "gemini-2.5-pro",
 				MaxTokens:   1000,
 				Temperature: 0.7,
 				TopP:        0.9,
@@ -188,7 +188,7 @@ func TestGeminiAPIClient_ConfigValidation(t *testing.T) {
 			name: "空のAPIキー",
 			config: &config.GeminiConfig{
 				APIKey:      "",
-				ModelName:   "gemini-pro",
+				ModelName:   "gemini-2.5-pro",
 				MaxTokens:   1000,
 				Temperature: 0.7,
 				TopP:        0.9,
@@ -200,7 +200,7 @@ func TestGeminiAPIClient_ConfigValidation(t *testing.T) {
 			name: "無効なTemperature",
 			config: &config.GeminiConfig{
 				APIKey:      "test-key",
-				ModelName:   "gemini-pro",
+				ModelName:   "gemini-2.5-pro",
 				MaxTokens:   1000,
 				Temperature: 2.0, // 範囲外
 				TopP:        0.9,

@@ -160,7 +160,7 @@ cp env.example .env
 |---------|------|-------------|
 | `DISCORD_BOT_TOKEN` | Discord Bot Token | - |
 | `GEMINI_API_KEY` | Gemini API Key | - |
-| `GEMINI_MODEL_NAME` | Geminiモデル名 | `gemini-pro` |
+| `GEMINI_MODEL_NAME` | Geminiモデル名 | `gemini-2.5-pro` |
 | `GEMINI_MAX_TOKENS` | 最大トークン数 | `1000` |
 | `GEMINI_TEMPERATURE` | 生成の温度パラメータ | `0.7` |
 | `GEMINI_TOP_P` | Top-Pサンプリング | `0.9` |

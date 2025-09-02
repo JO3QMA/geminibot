@@ -32,7 +32,7 @@ func LoadConfig() (*Config, error) {
 		},
 		Gemini: config.GeminiConfig{
 			APIKey:      getEnvOrDefault("GEMINI_API_KEY", ""),
-			ModelName:   getEnvOrDefault("GEMINI_MODEL_NAME", "gemini-pro"),
+			ModelName:   getEnvOrDefault("GEMINI_MODEL_NAME", "gemini-2.5-pro"),
 			MaxTokens:   int32(getEnvAsIntOrDefault("GEMINI_MAX_TOKENS", 1000)),
 			Temperature: float32(getEnvAsFloatOrDefault("GEMINI_TEMPERATURE", 0.7)),
 			TopP:        float32(getEnvAsFloatOrDefault("GEMINI_TOP_P", 0.9)),

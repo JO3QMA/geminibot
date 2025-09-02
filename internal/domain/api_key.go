@@ -17,7 +17,7 @@ type GuildAPIKey struct {
 // NewGuildAPIKey は新しいGuildAPIKeyインスタンスを作成します
 func NewGuildAPIKey(guildID, apiKey, setBy, model string) GuildAPIKey {
 	if model == "" {
-		model = "gemini-pro" // デフォルトモデル
+		model = "gemini-2.5-pro" // デフォルトモデル
 	}
 
 	return GuildAPIKey{

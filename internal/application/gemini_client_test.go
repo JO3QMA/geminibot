@@ -23,8 +23,8 @@ func TestDefaultTextGenerationOptions(t *testing.T) {
 		t.Errorf("期待されるTopK: 40, 実際: %d", options.TopK)
 	}
 
-	if options.Model != "gemini-pro" {
-		t.Errorf("期待されるModel: gemini-pro, 実際: %s", options.Model)
+	if options.Model != "gemini-2.5-pro" {
+		t.Errorf("期待されるModel: gemini-2.5-pro, 実際: %s", options.Model)
 	}
 }
 
@@ -34,7 +34,7 @@ func TestTextGenerationOptions_JSONTags(t *testing.T) {
 		Temperature: 0.7,
 		TopP:        0.9,
 		TopK:        40,
-		Model:       "gemini-pro",
+		Model:       "gemini-2.5-pro",
 	}
 
 	// JSONタグが正しく設定されているかを確認
@@ -51,7 +51,7 @@ func TestTextGenerationOptions_JSONTags(t *testing.T) {
 	if options.TopK != 40 {
 		t.Error("TopKが正しく設定されていません")
 	}
-	if options.Model != "gemini-pro" {
+	if options.Model != "gemini-2.5-pro" {
 		t.Error("Modelが正しく設定されていません")
 	}
 }

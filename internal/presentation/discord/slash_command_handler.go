@@ -66,10 +66,9 @@ func (h *SlashCommandHandler) SetupSlashCommands() error {
 					Description: "使用するAIモデル",
 					Required:    true,
 					Choices: []*discordgo.ApplicationCommandOptionChoice{
-						{Name: "Gemini Pro", Value: "gemini-pro"},
-						{Name: "Gemini 1.5 Flash", Value: "gemini-1.5-flash"},
-						{Name: "Gemini 1.5 Nano", Value: "gemini-1.5-nano"},
-						{Name: "Gemini Pro Vision", Value: "gemini-pro-vision"},
+						{Name: "Gemini 2.5 Pro", Value: "gemini-2.5-pro"},
+						{Name: "Gemini 2.0 Flash", Value: "gemini-2.0-flash"},
+						{Name: "Gemini 2.5 Flash Lite", Value: "gemini-2.5-flash-lite"},
 					},
 				},
 			},
@@ -248,7 +247,7 @@ func (h *SlashCommandHandler) handleStatusCommand(s *discordgo.Session, i *disco
 		// APIキーが未設定の場合
 		model, err := h.apiKeyService.GetGuildModel(ctx, guildID)
 		if err != nil {
-			model = "gemini-pro" // デフォルト
+			model = "gemini-2.5-pro" // デフォルト
 		}
 
 		statusMessage = fmt.Sprintf(`📊 **サーバー設定状況**
