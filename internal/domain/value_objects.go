@@ -25,24 +25,7 @@ type User struct {
 
 // Prompt は、Gemini APIに送信するために整形されたテキストを表現する値オブジェクトです
 type Prompt struct {
-	content string
-}
-
-// NewPrompt は新しいPromptインスタンスを作成します
-func NewPrompt(content string) Prompt {
-	return Prompt{
-		content: content,
-	}
-}
-
-// Content はプロンプトの内容を返します
-func (p Prompt) Content() string {
-	return p.content
-}
-
-// String はPromptを文字列として返します
-func (p Prompt) String() string {
-	return p.content
+	Content string
 }
 
 // BotMention は、Botへのメンション情報を表現する値オブジェクトです

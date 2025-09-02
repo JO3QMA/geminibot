@@ -4,19 +4,6 @@ import (
 	"testing"
 )
 
-func TestNewPrompt(t *testing.T) {
-	content := "This is a test prompt"
-	prompt := NewPrompt(content)
-
-	if prompt.Content() != content {
-		t.Errorf("Expected content '%s', got '%s'", content, prompt.Content())
-	}
-
-	if prompt.String() != content {
-		t.Errorf("Expected string '%s', got '%s'", content, prompt.String())
-	}
-}
-
 func TestNewBotMention(t *testing.T) {
 	channelID := "channel123"
 	user := User{Username: "testuser"}

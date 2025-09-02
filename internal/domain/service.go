@@ -55,7 +55,7 @@ func (pg *PromptGenerator) GeneratePromptWithMention(history []Message, userQues
 	builder.WriteString("## ユーザーのチャット内容\n")
 	builder.WriteString(userQuestion)
 
-	return NewPrompt(builder.String())
+	return Prompt{Content: builder.String()}
 }
 
 // GeneratePromptWithContext は、追加のコンテキスト情報を含めてプロンプトを生成します
@@ -99,5 +99,5 @@ func (pg *PromptGenerator) GeneratePromptWithContextAndMention(history []Message
 	builder.WriteString("## ユーザーのチャット内容\n")
 	builder.WriteString(userQuestion)
 
-	return NewPrompt(builder.String())
+	return Prompt{Content: builder.String()}
 }

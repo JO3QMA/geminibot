@@ -107,7 +107,7 @@ func TestGeminiAPIClient_GenerateText_Integration(t *testing.T) {
 	}
 	defer client.Close()
 
-	prompt := domain.NewPrompt("こんにちは、簡単な挨拶をしてください。")
+	prompt := domain.Prompt{Content: "こんにちは、簡単な挨拶をしてください。"}
 
 	ctx := context.Background()
 	response, err := client.GenerateText(ctx, prompt)
@@ -143,7 +143,7 @@ func TestGeminiAPIClient_GenerateTextWithOptions_Integration(t *testing.T) {
 	}
 	defer client.Close()
 
-	prompt := domain.NewPrompt("こんにちは、簡単な挨拶をしてください。")
+	prompt := domain.Prompt{Content: "こんにちは、簡単な挨拶をしてください。"}
 	options := application.TextGenerationOptions{
 		MaxTokens:   50,
 		Temperature: 0.5,
