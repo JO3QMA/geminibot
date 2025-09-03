@@ -166,10 +166,11 @@ func (g *GeminiAPIClient) GenerateTextWithOptions(ctx context.Context, prompt do
 
 // GenerateTextWithStructuredContext は、構造化されたコンテキストを使用してテキストを生成します
 func (g *GeminiAPIClient) GenerateTextWithStructuredContext(ctx context.Context, systemPrompt string, conversationHistory []domain.Message, userQuestion string) (string, error) {
+	// 統一されたログ出力メソッドを使用
+	g.logRequestDetails(len(userQuestion), userQuestion)
 	log.Printf("構造化コンテキストでGemini APIにテキスト生成をリクエスト中")
 	log.Printf("システムプロンプト: %d文字", len(systemPrompt))
 	log.Printf("会話履歴: %d件", len(conversationHistory))
-	log.Printf("ユーザー質問: %d文字", len(userQuestion))
 
 	// 構造化されたコンテンツを作成
 	var allContents []*genai.Content
@@ -194,6 +195,9 @@ func (g *GeminiAPIClient) GenerateTextWithStructuredContext(ctx context.Context,
 	if err != nil {
 		return "", g.handleAPIError(err, ctx)
 	}
+
+	// レスポンス詳細をログ出力
+	g.logResponseDetails(resp)
 
 	// レスポンス処理
 	return g.processResponse(resp)
