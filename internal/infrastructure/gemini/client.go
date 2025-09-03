@@ -41,31 +41,47 @@ func NewGeminiAPIClient(apiKey string, geminiConfig *config.GeminiConfig) (*Gemi
 	}, nil
 }
 
+// createSafetySettings は、安全フィルター設定を作成します
+func (g *GeminiAPIClient) createSafetySettings() []*genai.SafetySetting {
+	return []*genai.SafetySetting{
+		{
+			Category:  genai.HarmCategoryHarassment,
+			Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+		},
+		{
+			Category:  genai.HarmCategoryHateSpeech,
+			Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+		},
+		{
+			Category:  genai.HarmCategorySexuallyExplicit,
+			Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+		},
+		{
+			Category:  genai.HarmCategoryDangerousContent,
+			Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+		},
+	}
+}
+
 // createGenerateConfig は、生成設定を作成します
 func (g *GeminiAPIClient) createGenerateConfig() *genai.GenerateContentConfig {
 	return &genai.GenerateContentConfig{
 		MaxOutputTokens: g.config.MaxTokens,
 		Temperature:     &g.config.Temperature,
 		TopP:            &g.config.TopP,
-		// 安全フィルターの設定を調整（中程度の制限）
-		SafetySettings: []*genai.SafetySetting{
-			{
-				Category:  genai.HarmCategoryHarassment,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategoryHateSpeech,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategorySexuallyExplicit,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategoryDangerousContent,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-		},
+		SafetySettings:  g.createSafetySettings(),
+	}
+}
+
+// createGenerateConfigWithOptions は、オプション付きで生成設定を作成します
+func (g *GeminiAPIClient) createGenerateConfigWithOptions(options application.TextGenerationOptions) *genai.GenerateContentConfig {
+	temp := float32(options.Temperature)
+	topP := float32(options.TopP)
+	return &genai.GenerateContentConfig{
+		MaxOutputTokens: int32(options.MaxTokens),
+		Temperature:     &temp,
+		TopP:            &topP,
+		SafetySettings:  g.createSafetySettings(),
 	}
 }
 
@@ -141,32 +157,7 @@ func (g *GeminiAPIClient) GenerateTextWithOptions(ctx context.Context, prompt do
 	contents := genai.Text(prompt.Content)
 
 	// オプションに基づいて生成設定を作成
-	temp := float32(options.Temperature)
-	topP := float32(options.TopP)
-	config := &genai.GenerateContentConfig{
-		MaxOutputTokens: int32(options.MaxTokens),
-		Temperature:     &temp,
-		TopP:            &topP,
-		// 安全フィルターの設定を調整（中程度の制限）
-		SafetySettings: []*genai.SafetySetting{
-			{
-				Category:  genai.HarmCategoryHarassment,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategoryHateSpeech,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategorySexuallyExplicit,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategoryDangerousContent,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-		},
-	}
+	config := g.createGenerateConfigWithOptions(options)
 
 	// モデル名を決定（オプションで指定されていない場合はデフォルトを使用）
 	modelName := g.config.ModelName
