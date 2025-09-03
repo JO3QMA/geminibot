@@ -93,10 +93,30 @@ func (g *GeminiAPIClient) handleAPIError(err error, ctx context.Context) error {
 	return fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
 }
 
+// logRequestDetails は、リクエスト詳細をログ出力します
+func (g *GeminiAPIClient) logRequestDetails(promptLength int, promptContent string) {
+	log.Printf("Gemini APIにテキスト生成をリクエスト中: %d文字", promptLength)
+	log.Printf("プロンプト内容: %s", promptContent)
+}
+
+// logResponseDetails は、レスポンス詳細をログ出力します
+func (g *GeminiAPIClient) logResponseDetails(resp *genai.GenerateContentResponse) {
+	log.Printf("Gemini APIレスポンス: Candidates数=%d", len(resp.Candidates))
+	if len(resp.Candidates) > 0 {
+		candidate := resp.Candidates[0]
+		log.Printf("Candidate詳細: FinishReason=%s, Parts数=%d", candidate.FinishReason, len(candidate.Content.Parts))
+
+		if len(candidate.SafetyRatings) > 0 {
+			for i, rating := range candidate.SafetyRatings {
+				log.Printf("SafetyRating[%d]: Category=%s, Probability=%s", i, rating.Category, rating.Probability)
+			}
+		}
+	}
+}
+
 // GenerateText は、プロンプトを受け取ってGemini APIからテキストを生成します
 func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt) (string, error) {
-	log.Printf("Gemini APIにテキスト生成をリクエスト中: %d文字", len(prompt.Content))
-	log.Printf("プロンプト内容: %s", prompt)
+	g.logRequestDetails(len(prompt.Content), prompt.Content)
 
 	// 新しいGemini APIライブラリの仕様に合わせて実装
 	contents := genai.Text(prompt.Content)
@@ -109,19 +129,8 @@ func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt
 		return "", g.handleAPIError(err, ctx)
 	}
 
-	// デバッグ用：レスポンスの詳細をログ出力
-	log.Printf("Gemini APIレスポンス: Candidates数=%d", len(resp.Candidates))
-	if len(resp.Candidates) > 0 {
-		candidate := resp.Candidates[0]
-		log.Printf("Candidate詳細: FinishReason=%s, Parts数=%d", candidate.FinishReason, len(candidate.Content.Parts))
-
-		// SafetyRatingsがある場合はログ出力
-		if len(candidate.SafetyRatings) > 0 {
-			for i, rating := range candidate.SafetyRatings {
-				log.Printf("SafetyRating[%d]: Category=%s, Probability=%s", i, rating.Category, rating.Probability)
-			}
-		}
-	}
+	// レスポンス詳細をログ出力
+	g.logResponseDetails(resp)
 
 	if len(resp.Candidates) == 0 {
 		return "", fmt.Errorf("Gemini APIから有効な応答が得られませんでした")
@@ -156,7 +165,7 @@ func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt
 
 // GenerateTextWithOptions は、オプション付きでテキストを生成します
 func (g *GeminiAPIClient) GenerateTextWithOptions(ctx context.Context, prompt domain.Prompt, options application.TextGenerationOptions) (string, error) {
-	log.Printf("オプション付きでGemini APIにテキスト生成をリクエスト中: %d文字", len(prompt.Content))
+	g.logRequestDetails(len(prompt.Content), prompt.Content)
 
 	// 新しいGemini APIライブラリの仕様に合わせて実装
 	contents := genai.Text(prompt.Content)
@@ -174,6 +183,9 @@ func (g *GeminiAPIClient) GenerateTextWithOptions(ctx context.Context, prompt do
 	if err != nil {
 		return "", g.handleAPIError(err, ctx)
 	}
+
+	// レスポンス詳細をログ出力
+	g.logResponseDetails(resp)
 
 	// レスポンス処理
 	return g.processResponse(resp)
