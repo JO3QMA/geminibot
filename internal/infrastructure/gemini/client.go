@@ -272,9 +272,3 @@ func (g *GeminiAPIClient) processResponse(resp *genai.GenerateContentResponse) (
 	log.Printf("Gemini APIから応答を取得: %d文字", len(result))
 	return result, nil
 }
-
-// Close は、Gemini APIクライアントを閉じます
-func (g *GeminiAPIClient) Close() error {
-	// genai.ClientにはCloseメソッドがないため、何もしない
-	return nil
-}
