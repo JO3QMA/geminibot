@@ -132,35 +132,8 @@ func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt
 	// レスポンス詳細をログ出力
 	g.logResponseDetails(resp)
 
-	if len(resp.Candidates) == 0 {
-		return "", fmt.Errorf("Gemini APIから有効な応答が得られませんでした")
-	}
-
-	candidate := resp.Candidates[0]
-
-	// FinishReasonをチェックして安全フィルターによるブロックを検出
-	if candidate.FinishReason == "SAFETY" {
-		return "", fmt.Errorf("Gemini APIの安全フィルターによって応答がブロックされました")
-	}
-
-	if candidate.FinishReason == "RECITATION" {
-		return "", fmt.Errorf("Gemini APIが著作権保護された内容を検出しました")
-	}
-
-	if len(candidate.Content.Parts) == 0 {
-		return "", fmt.Errorf("Gemini APIの応答にコンテンツが含まれていません")
-	}
-
-	// テキスト部分を抽出
-	var result string
-	for _, part := range candidate.Content.Parts {
-		if part.Text != "" {
-			result += part.Text
-		}
-	}
-
-	log.Printf("Gemini APIから応答を取得: %d文字", len(result))
-	return result, nil
+	// 統一されたレスポンス処理を使用
+	return g.processResponse(resp)
 }
 
 // GenerateTextWithOptions は、オプション付きでテキストを生成します
