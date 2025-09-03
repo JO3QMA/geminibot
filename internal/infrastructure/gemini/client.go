@@ -85,6 +85,14 @@ func (g *GeminiAPIClient) createGenerateConfigWithOptions(options application.Te
 	}
 }
 
+// handleAPIError は、APIエラーを統一して処理します
+func (g *GeminiAPIClient) handleAPIError(err error, ctx context.Context) error {
+	if ctx.Err() == context.DeadlineExceeded {
+		return fmt.Errorf("Gemini APIへのリクエストがタイムアウトしました: %w", err)
+	}
+	return fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
+}
+
 // GenerateText は、プロンプトを受け取ってGemini APIからテキストを生成します
 func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt) (string, error) {
 	log.Printf("Gemini APIにテキスト生成をリクエスト中: %d文字", len(prompt.Content))
@@ -98,10 +106,7 @@ func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt
 
 	resp, err := g.client.Models.GenerateContent(ctx, g.config.ModelName, contents, config)
 	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			return "", fmt.Errorf("Gemini APIへのリクエストがタイムアウトしました: %w", err)
-		}
-		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
+		return "", g.handleAPIError(err, ctx)
 	}
 
 	// デバッグ用：レスポンスの詳細をログ出力
@@ -167,10 +172,7 @@ func (g *GeminiAPIClient) GenerateTextWithOptions(ctx context.Context, prompt do
 
 	resp, err := g.client.Models.GenerateContent(ctx, modelName, contents, config)
 	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			return "", fmt.Errorf("Gemini APIへのリクエストがタイムアウトしました: %w", err)
-		}
-		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
+		return "", g.handleAPIError(err, ctx)
 	}
 
 	// レスポンス処理
@@ -205,7 +207,7 @@ func (g *GeminiAPIClient) GenerateTextWithStructuredContext(ctx context.Context,
 
 	resp, err := g.client.Models.GenerateContent(ctx, g.config.ModelName, allContents, config)
 	if err != nil {
-		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
+		return "", g.handleAPIError(err, ctx)
 	}
 
 	// レスポンス処理
