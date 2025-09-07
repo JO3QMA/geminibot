@@ -44,7 +44,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Gemini APIクライアントの作成に失敗: %v", err)
 	}
-	defer geminiClient.Close()
 
 	// リポジトリを作成
 	conversationRepo := discordInfra.NewDiscordConversationRepository(session)

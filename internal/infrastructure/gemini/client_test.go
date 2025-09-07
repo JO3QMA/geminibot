@@ -44,13 +44,7 @@ func TestNewGeminiAPIClient_WithConfig(t *testing.T) {
 	}
 
 	// 実際のAPIキーがないため、エラーが発生することを期待
-	client, err := NewGeminiAPIClient("invalid-api-key", config)
-
-	// 現在の実装では、無効なAPIキーでもクライアントが作成される可能性がある
-	// そのため、クライアントが作成された場合はクリーンアップ
-	if client != nil {
-		client.Close()
-	}
+	_, err := NewGeminiAPIClient("invalid-api-key", config)
 
 	// エラーが発生しない場合でも、テストは成功とする（実装の仕様による）
 	if err != nil {
@@ -60,30 +54,11 @@ func TestNewGeminiAPIClient_WithConfig(t *testing.T) {
 
 func TestNewGeminiAPIClient_WithNilConfig(t *testing.T) {
 	// 設定がnilの場合、デフォルト設定が使用されることを確認
-	client, err := NewGeminiAPIClient("invalid-api-key", nil)
-
-	// 現在の実装では、無効なAPIキーでもクライアントが作成される可能性がある
-	// そのため、クライアントが作成された場合はクリーンアップ
-	if client != nil {
-		client.Close()
-	}
+	_, err := NewGeminiAPIClient("invalid-api-key", nil)
 
 	// エラーが発生しない場合でも、テストは成功とする（実装の仕様による）
 	if err != nil {
 		t.Logf("APIキーが無効でエラーが発生: %v", err)
-	}
-}
-
-func TestGeminiAPIClient_Close(t *testing.T) {
-	// Closeメソッドが正常に動作することを確認
-	client := &GeminiAPIClient{
-		client: nil,
-		config: config.DefaultGeminiConfig(),
-	}
-
-	err := client.Close()
-	if err != nil {
-		t.Errorf("Closeメソッドでエラーが発生しました: %v", err)
 	}
 }
 
@@ -105,7 +80,6 @@ func TestGeminiAPIClient_GenerateText_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("クライアントの作成に失敗: %v", err)
 	}
-	defer client.Close()
 
 	prompt := domain.Prompt{Content: "こんにちは、簡単な挨拶をしてください。"}
 
@@ -141,7 +115,6 @@ func TestGeminiAPIClient_GenerateTextWithOptions_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("クライアントの作成に失敗: %v", err)
 	}
-	defer client.Close()
 
 	prompt := domain.Prompt{Content: "こんにちは、簡単な挨拶をしてください。"}
 	options := application.TextGenerationOptions{

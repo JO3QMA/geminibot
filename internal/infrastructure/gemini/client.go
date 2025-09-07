@@ -41,38 +41,82 @@ func NewGeminiAPIClient(apiKey string, geminiConfig *config.GeminiConfig) (*Gemi
 	}, nil
 }
 
+// createSafetySettings は、安全フィルター設定を作成します
+func (g *GeminiAPIClient) createSafetySettings() []*genai.SafetySetting {
+	return []*genai.SafetySetting{
+		{
+			Category:  genai.HarmCategoryHarassment,
+			Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+		},
+		{
+			Category:  genai.HarmCategoryHateSpeech,
+			Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+		},
+		{
+			Category:  genai.HarmCategorySexuallyExplicit,
+			Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+		},
+		{
+			Category:  genai.HarmCategoryDangerousContent,
+			Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+		},
+	}
+}
+
 // createGenerateConfig は、生成設定を作成します
 func (g *GeminiAPIClient) createGenerateConfig() *genai.GenerateContentConfig {
 	return &genai.GenerateContentConfig{
 		MaxOutputTokens: g.config.MaxTokens,
 		Temperature:     &g.config.Temperature,
 		TopP:            &g.config.TopP,
-		// 安全フィルターの設定を調整（中程度の制限）
-		SafetySettings: []*genai.SafetySetting{
-			{
-				Category:  genai.HarmCategoryHarassment,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategoryHateSpeech,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategorySexuallyExplicit,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategoryDangerousContent,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-		},
+		SafetySettings:  g.createSafetySettings(),
+	}
+}
+
+// createGenerateConfigWithOptions は、オプション付きで生成設定を作成します
+func (g *GeminiAPIClient) createGenerateConfigWithOptions(options application.TextGenerationOptions) *genai.GenerateContentConfig {
+	temp := float32(options.Temperature)
+	topP := float32(options.TopP)
+	return &genai.GenerateContentConfig{
+		MaxOutputTokens: int32(options.MaxTokens),
+		Temperature:     &temp,
+		TopP:            &topP,
+		SafetySettings:  g.createSafetySettings(),
+	}
+}
+
+// handleAPIError は、APIエラーを統一して処理します
+func (g *GeminiAPIClient) handleAPIError(err error, ctx context.Context) error {
+	if ctx.Err() == context.DeadlineExceeded {
+		return fmt.Errorf("Gemini APIへのリクエストがタイムアウトしました: %w", err)
+	}
+	return fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
+}
+
+// logRequestDetails は、リクエスト詳細をログ出力します
+func (g *GeminiAPIClient) logRequestDetails(promptLength int, promptContent string) {
+	log.Printf("Gemini APIにテキスト生成をリクエスト中: %d文字", promptLength)
+	log.Printf("プロンプト内容: %s", promptContent)
+}
+
+// logResponseDetails は、レスポンス詳細をログ出力します
+func (g *GeminiAPIClient) logResponseDetails(resp *genai.GenerateContentResponse) {
+	log.Printf("Gemini APIレスポンス: Candidates数=%d", len(resp.Candidates))
+	if len(resp.Candidates) > 0 {
+		candidate := resp.Candidates[0]
+		log.Printf("Candidate詳細: FinishReason=%s, Parts数=%d", candidate.FinishReason, len(candidate.Content.Parts))
+
+		if len(candidate.SafetyRatings) > 0 {
+			for i, rating := range candidate.SafetyRatings {
+				log.Printf("SafetyRating[%d]: Category=%s, Probability=%s", i, rating.Category, rating.Probability)
+			}
+		}
 	}
 }
 
 // GenerateText は、プロンプトを受け取ってGemini APIからテキストを生成します
 func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt) (string, error) {
-	log.Printf("Gemini APIにテキスト生成をリクエスト中: %d文字", len(prompt.Content))
-	log.Printf("プロンプト内容: %s", prompt)
+	g.logRequestDetails(len(prompt.Content), prompt.Content)
 
 	// 新しいGemini APIライブラリの仕様に合わせて実装
 	contents := genai.Text(prompt.Content)
@@ -82,91 +126,25 @@ func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt
 
 	resp, err := g.client.Models.GenerateContent(ctx, g.config.ModelName, contents, config)
 	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			return "", fmt.Errorf("Gemini APIへのリクエストがタイムアウトしました: %w", err)
-		}
-		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
+		return "", g.handleAPIError(err, ctx)
 	}
 
-	// デバッグ用：レスポンスの詳細をログ出力
-	log.Printf("Gemini APIレスポンス: Candidates数=%d", len(resp.Candidates))
-	if len(resp.Candidates) > 0 {
-		candidate := resp.Candidates[0]
-		log.Printf("Candidate詳細: FinishReason=%s, Parts数=%d", candidate.FinishReason, len(candidate.Content.Parts))
+	// レスポンス詳細をログ出力
+	g.logResponseDetails(resp)
 
-		// SafetyRatingsがある場合はログ出力
-		if len(candidate.SafetyRatings) > 0 {
-			for i, rating := range candidate.SafetyRatings {
-				log.Printf("SafetyRating[%d]: Category=%s, Probability=%s", i, rating.Category, rating.Probability)
-			}
-		}
-	}
-
-	if len(resp.Candidates) == 0 {
-		return "", fmt.Errorf("Gemini APIから有効な応答が得られませんでした")
-	}
-
-	candidate := resp.Candidates[0]
-
-	// FinishReasonをチェックして安全フィルターによるブロックを検出
-	if candidate.FinishReason == "SAFETY" {
-		return "", fmt.Errorf("Gemini APIの安全フィルターによって応答がブロックされました")
-	}
-
-	if candidate.FinishReason == "RECITATION" {
-		return "", fmt.Errorf("Gemini APIが著作権保護された内容を検出しました")
-	}
-
-	if len(candidate.Content.Parts) == 0 {
-		return "", fmt.Errorf("Gemini APIの応答にコンテンツが含まれていません")
-	}
-
-	// テキスト部分を抽出
-	var result string
-	for _, part := range candidate.Content.Parts {
-		if part.Text != "" {
-			result += part.Text
-		}
-	}
-
-	log.Printf("Gemini APIから応答を取得: %d文字", len(result))
-	return result, nil
+	// 統一されたレスポンス処理を使用
+	return g.processResponse(resp)
 }
 
 // GenerateTextWithOptions は、オプション付きでテキストを生成します
 func (g *GeminiAPIClient) GenerateTextWithOptions(ctx context.Context, prompt domain.Prompt, options application.TextGenerationOptions) (string, error) {
-	log.Printf("オプション付きでGemini APIにテキスト生成をリクエスト中: %d文字", len(prompt.Content))
+	g.logRequestDetails(len(prompt.Content), prompt.Content)
 
 	// 新しいGemini APIライブラリの仕様に合わせて実装
 	contents := genai.Text(prompt.Content)
 
 	// オプションに基づいて生成設定を作成
-	temp := float32(options.Temperature)
-	topP := float32(options.TopP)
-	config := &genai.GenerateContentConfig{
-		MaxOutputTokens: int32(options.MaxTokens),
-		Temperature:     &temp,
-		TopP:            &topP,
-		// 安全フィルターの設定を調整（中程度の制限）
-		SafetySettings: []*genai.SafetySetting{
-			{
-				Category:  genai.HarmCategoryHarassment,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategoryHateSpeech,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategorySexuallyExplicit,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategoryDangerousContent,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-		},
-	}
+	config := g.createGenerateConfigWithOptions(options)
 
 	// モデル名を決定（オプションで指定されていない場合はデフォルトを使用）
 	modelName := g.config.ModelName
@@ -176,11 +154,11 @@ func (g *GeminiAPIClient) GenerateTextWithOptions(ctx context.Context, prompt do
 
 	resp, err := g.client.Models.GenerateContent(ctx, modelName, contents, config)
 	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			return "", fmt.Errorf("Gemini APIへのリクエストがタイムアウトしました: %w", err)
-		}
-		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
+		return "", g.handleAPIError(err, ctx)
 	}
+
+	// レスポンス詳細をログ出力
+	g.logResponseDetails(resp)
 
 	// レスポンス処理
 	return g.processResponse(resp)
@@ -188,10 +166,11 @@ func (g *GeminiAPIClient) GenerateTextWithOptions(ctx context.Context, prompt do
 
 // GenerateTextWithStructuredContext は、構造化されたコンテキストを使用してテキストを生成します
 func (g *GeminiAPIClient) GenerateTextWithStructuredContext(ctx context.Context, systemPrompt string, conversationHistory []domain.Message, userQuestion string) (string, error) {
+	// 統一されたログ出力メソッドを使用
+	g.logRequestDetails(len(userQuestion), userQuestion)
 	log.Printf("構造化コンテキストでGemini APIにテキスト生成をリクエスト中")
 	log.Printf("システムプロンプト: %d文字", len(systemPrompt))
 	log.Printf("会話履歴: %d件", len(conversationHistory))
-	log.Printf("ユーザー質問: %d文字", len(userQuestion))
 
 	// 構造化されたコンテンツを作成
 	var allContents []*genai.Content
@@ -214,8 +193,11 @@ func (g *GeminiAPIClient) GenerateTextWithStructuredContext(ctx context.Context,
 
 	resp, err := g.client.Models.GenerateContent(ctx, g.config.ModelName, allContents, config)
 	if err != nil {
-		return "", fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
+		return "", g.handleAPIError(err, ctx)
 	}
+
+	// レスポンス詳細をログ出力
+	g.logResponseDetails(resp)
 
 	// レスポンス処理
 	return g.processResponse(resp)
@@ -271,10 +253,4 @@ func (g *GeminiAPIClient) processResponse(resp *genai.GenerateContentResponse) (
 
 	log.Printf("Gemini APIから応答を取得: %d文字", len(result))
 	return result, nil
-}
-
-// Close は、Gemini APIクライアントを閉じます
-func (g *GeminiAPIClient) Close() error {
-	// genai.ClientにはCloseメソッドがないため、何もしない
-	return nil
 }
