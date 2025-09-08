@@ -103,7 +103,14 @@ func TestGeminiAPIClient_GenerateTextWithStructuredContext(t *testing.T) {
 func TestGeminiAPIClient_formatConversationHistory(t *testing.T) {
 	client := &GeminiAPIClient{
 		client: nil,
-		config: config.DefaultGeminiConfig(),
+		config: &config.GeminiConfig{
+			ModelName:   "gemini-2.5-pro",
+			MaxTokens:   1000,
+			Temperature: 0.7,
+			TopP:        0.9,
+			TopK:        40,
+			MaxRetries:  3,
+		},
 	}
 
 	// 空の履歴をテスト

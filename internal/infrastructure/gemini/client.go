@@ -23,7 +23,7 @@ type GeminiAPIClient struct {
 // NewGeminiAPIClient は新しいGeminiAPIClientインスタンスを作成します
 func NewGeminiAPIClient(apiKey string, geminiConfig *config.GeminiConfig) (*GeminiAPIClient, error) {
 	if geminiConfig == nil {
-		geminiConfig = config.DefaultGeminiConfig()
+		return nil, fmt.Errorf("GeminiConfigが指定されていません")
 	}
 
 	ctx := context.Background()

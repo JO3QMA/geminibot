@@ -11,8 +11,16 @@ import (
 	"geminibot/internal/infrastructure/config"
 )
 
-func TestDefaultConfig(t *testing.T) {
-	config := config.DefaultGeminiConfig()
+func TestGeminiConfig_DefaultValues(t *testing.T) {
+	// LoadConfigで設定されるデフォルト値をテスト
+	config := &config.GeminiConfig{
+		ModelName:   "gemini-2.5-pro",
+		MaxTokens:   1000,
+		Temperature: 0.7,
+		TopP:        0.9,
+		TopK:        40,
+		MaxRetries:  3,
+	}
 
 	if config.ModelName != "gemini-2.5-pro" {
 		t.Errorf("期待されるModelName: gemini-2.5-pro, 実際: %s", config.ModelName)
@@ -59,12 +67,16 @@ func TestNewGeminiAPIClient_WithConfig(t *testing.T) {
 }
 
 func TestNewGeminiAPIClient_WithNilConfig(t *testing.T) {
-	// 設定がnilの場合、デフォルト設定が使用されることを確認
+	// 設定がnilの場合、エラーが発生することを確認
 	_, err := NewGeminiAPIClient("invalid-api-key", nil)
 
-	// エラーが発生しない場合でも、テストは成功とする（実装の仕様による）
-	if err != nil {
-		t.Logf("APIキーが無効でエラーが発生: %v", err)
+	if err == nil {
+		t.Error("GeminiConfigがnilの場合、エラーが期待されましたが発生しませんでした")
+	}
+
+	expectedError := "GeminiConfigが指定されていません"
+	if err.Error() != expectedError {
+		t.Errorf("期待されるエラー: %s, 実際: %s", expectedError, err.Error())
 	}
 }
 

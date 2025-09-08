@@ -33,17 +33,6 @@ type AppConfig struct {
 	Bot     BotConfig
 }
 
-// DefaultGeminiConfig は、デフォルトのGemini設定を返します
-func DefaultGeminiConfig() *GeminiConfig {
-	return &GeminiConfig{
-		ModelName:   "gemini-2.5-pro",
-		MaxTokens:   1000,
-		Temperature: 0.7,
-		TopP:        0.9,
-		TopK:        40,
-		MaxRetries:  3, // デフォルトで3回リトライ
-	}
-}
 
 // DefaultBotConfig は、デフォルトのBot設定を返します
 func DefaultBotConfig() *BotConfig {
