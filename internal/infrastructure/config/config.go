@@ -10,6 +10,7 @@ type GeminiConfig struct {
 	Temperature float32
 	TopP        float32
 	TopK        int32
+	MaxRetries  int // 最大リトライ回数
 }
 
 // BotConfig は、Bot関連の設定を定義します
@@ -40,6 +41,7 @@ func DefaultGeminiConfig() *GeminiConfig {
 		Temperature: 0.7,
 		TopP:        0.9,
 		TopK:        40,
+		MaxRetries:  3, // デフォルトで3回リトライ
 	}
 }
 

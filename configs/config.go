@@ -37,6 +37,7 @@ func LoadConfig() (*Config, error) {
 			Temperature: float32(getEnvAsFloatOrDefault("GEMINI_TEMPERATURE", 0.7)),
 			TopP:        float32(getEnvAsFloatOrDefault("GEMINI_TOP_P", 0.9)),
 			TopK:        int32(getEnvAsIntOrDefault("GEMINI_TOP_K", 40)),
+			MaxRetries:  getEnvAsIntOrDefault("GEMINI_MAX_RETRIES", 3),
 		},
 		Bot: config.BotConfig{
 			MaxContextLength: getEnvAsIntOrDefault("MAX_CONTEXT_LENGTH", 8000),
