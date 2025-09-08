@@ -367,7 +367,7 @@ func TestRetryWithBackoff_ContextCancellation(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	// すぐにキャンセル
 	cancel()
 

@@ -33,7 +33,6 @@ type AppConfig struct {
 	Bot     BotConfig
 }
 
-
 // DefaultBotConfig は、デフォルトのBot設定を返します
 func DefaultBotConfig() *BotConfig {
 	return &BotConfig{
