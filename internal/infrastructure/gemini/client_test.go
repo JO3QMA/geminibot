@@ -9,6 +9,8 @@ import (
 	"geminibot/internal/application"
 	"geminibot/internal/domain"
 	"geminibot/internal/infrastructure/config"
+
+	"google.golang.org/genai"
 )
 
 func TestGeminiConfig_DefaultValues(t *testing.T) {
@@ -383,5 +385,142 @@ func TestRetryWithBackoff_ContextCancellation(t *testing.T) {
 
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("期待されるエラー: context.Canceled, 実際: %v", err)
+	}
+}
+
+// TestFormatSafetyRatings は、formatSafetyRatingsメソッドのテストです
+func TestFormatSafetyRatings(t *testing.T) {
+	client := &GeminiAPIClient{}
+
+	tests := []struct {
+		name     string
+		ratings  []*genai.SafetyRating
+		expected string
+	}{
+		{
+			name:     "空のSafetyRatings",
+			ratings:  []*genai.SafetyRating{},
+			expected: "詳細情報なし",
+		},
+		{
+			name:     "nilのSafetyRatings",
+			ratings:  nil,
+			expected: "詳細情報なし",
+		},
+		{
+			name: "単一のSafetyRating",
+			ratings: []*genai.SafetyRating{
+				{
+					Category:    genai.HarmCategoryHarassment,
+					Probability: genai.HarmProbabilityMedium,
+				},
+			},
+			expected: "ハラスメント: 中レベル",
+		},
+		{
+			name: "複数のSafetyRating",
+			ratings: []*genai.SafetyRating{
+				{
+					Category:    genai.HarmCategoryHarassment,
+					Probability: genai.HarmProbabilityMedium,
+				},
+				{
+					Category:    genai.HarmCategoryHateSpeech,
+					Probability: genai.HarmProbabilityLow,
+				},
+			},
+			expected: "ハラスメント: 中レベル, ヘイトスピーチ: 低レベル",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := client.formatSafetyRatings(tt.ratings)
+			if result != tt.expected {
+				t.Errorf("formatSafetyRatings() = %s, expected %s", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestTranslateSafetyCategory は、translateSafetyCategoryメソッドのテストです
+func TestTranslateSafetyCategory(t *testing.T) {
+	client := &GeminiAPIClient{}
+
+	tests := []struct {
+		name     string
+		category genai.HarmCategory
+		expected string
+	}{
+		{
+			name:     "ハラスメント",
+			category: genai.HarmCategoryHarassment,
+			expected: "ハラスメント",
+		},
+		{
+			name:     "ヘイトスピーチ",
+			category: genai.HarmCategoryHateSpeech,
+			expected: "ヘイトスピーチ",
+		},
+		{
+			name:     "性的表現",
+			category: genai.HarmCategorySexuallyExplicit,
+			expected: "性的表現",
+		},
+		{
+			name:     "危険なコンテンツ",
+			category: genai.HarmCategoryDangerousContent,
+			expected: "危険なコンテンツ",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := client.translateSafetyCategory(tt.category)
+			if result != tt.expected {
+				t.Errorf("translateSafetyCategory() = %s, expected %s", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestTranslateSafetyProbability は、translateSafetyProbabilityメソッドのテストです
+func TestTranslateSafetyProbability(t *testing.T) {
+	client := &GeminiAPIClient{}
+
+	tests := []struct {
+		name       string
+		probability genai.HarmProbability
+		expected   string
+	}{
+		{
+			name:       "無視できるレベル",
+			probability: genai.HarmProbabilityNegligible,
+			expected:   "無視できるレベル",
+		},
+		{
+			name:       "低レベル",
+			probability: genai.HarmProbabilityLow,
+			expected:   "低レベル",
+		},
+		{
+			name:       "中レベル",
+			probability: genai.HarmProbabilityMedium,
+			expected:   "中レベル",
+		},
+		{
+			name:       "高レベル",
+			probability: genai.HarmProbabilityHigh,
+			expected:   "高レベル",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := client.translateSafetyProbability(tt.probability)
+			if result != tt.expected {
+				t.Errorf("translateSafetyProbability() = %s, expected %s", result, tt.expected)
+			}
+		})
 	}
 }

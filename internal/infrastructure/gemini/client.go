@@ -89,9 +89,22 @@ func (g *GeminiAPIClient) createGenerateConfigWithOptions(options application.Te
 // handleAPIError は、APIエラーを統一して処理します
 func (g *GeminiAPIClient) handleAPIError(err error, ctx context.Context) error {
 	if ctx.Err() == context.DeadlineExceeded {
-		return fmt.Errorf("Gemini APIへのリクエストがタイムアウトしました: %w", err)
+		return fmt.Errorf("Gemini APIへのリクエストがタイムアウトしました。時間を置いて再度お試しください: %w", err)
 	}
-	return fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
+
+	// エラーメッセージをより詳細に
+	errStr := err.Error()
+	if strings.Contains(errStr, "quota") || strings.Contains(errStr, "limit") {
+		return fmt.Errorf("Gemini APIの利用制限に達しました。しばらく時間を置いてから再度お試しください: %w", err)
+	}
+	if strings.Contains(errStr, "permission") || strings.Contains(errStr, "unauthorized") {
+		return fmt.Errorf("Gemini APIへのアクセス権限がありません。APIキーを確認してください: %w", err)
+	}
+	if strings.Contains(errStr, "network") || strings.Contains(errStr, "connection") {
+		return fmt.Errorf("ネットワークエラーが発生しました。接続を確認して再度お試しください: %w", err)
+	}
+
+	return fmt.Errorf("Gemini APIからの応答取得に失敗しました: %w", err)
 }
 
 // logRequestDetails は、リクエスト詳細をログ出力します
@@ -284,6 +297,60 @@ func (g *GeminiAPIClient) formatConversationHistory(messages []domain.Message) s
 	return builder.String()
 }
 
+// formatSafetyRatings は、SafetyRatingsの詳細情報をフォーマットします
+func (g *GeminiAPIClient) formatSafetyRatings(ratings []*genai.SafetyRating) string {
+	if len(ratings) == 0 {
+		return "詳細情報なし"
+	}
+
+	var details []string
+	for _, rating := range ratings {
+		if rating != nil {
+			category := g.translateSafetyCategory(rating.Category)
+			probability := g.translateSafetyProbability(rating.Probability)
+			details = append(details, fmt.Sprintf("%s: %s", category, probability))
+		}
+	}
+
+	if len(details) == 0 {
+		return "詳細情報なし"
+	}
+
+	return strings.Join(details, ", ")
+}
+
+// translateSafetyCategory は、SafetyCategoryを日本語に翻訳します
+func (g *GeminiAPIClient) translateSafetyCategory(category genai.HarmCategory) string {
+	switch category {
+	case genai.HarmCategoryHarassment:
+		return "ハラスメント"
+	case genai.HarmCategoryHateSpeech:
+		return "ヘイトスピーチ"
+	case genai.HarmCategorySexuallyExplicit:
+		return "性的表現"
+	case genai.HarmCategoryDangerousContent:
+		return "危険なコンテンツ"
+	default:
+		return string(category)
+	}
+}
+
+// translateSafetyProbability は、SafetyProbabilityを日本語に翻訳します
+func (g *GeminiAPIClient) translateSafetyProbability(probability genai.HarmProbability) string {
+	switch probability {
+	case genai.HarmProbabilityNegligible:
+		return "無視できるレベル"
+	case genai.HarmProbabilityLow:
+		return "低レベル"
+	case genai.HarmProbabilityMedium:
+		return "中レベル"
+	case genai.HarmProbabilityHigh:
+		return "高レベル"
+	default:
+		return string(probability)
+	}
+}
+
 // processResponse は、Gemini APIのレスポンスを処理します
 func (g *GeminiAPIClient) processResponse(resp *genai.GenerateContentResponse) (string, error) {
 	if len(resp.Candidates) == 0 {
@@ -294,20 +361,31 @@ func (g *GeminiAPIClient) processResponse(resp *genai.GenerateContentResponse) (
 
 	// FinishReasonをチェックして安全フィルターによるブロックを検出
 	if candidate.FinishReason == "SAFETY" {
-		return "", fmt.Errorf("Gemini APIの安全フィルターによって応答がブロックされました")
+		safetyDetails := g.formatSafetyRatings(candidate.SafetyRatings)
+		return "", fmt.Errorf("Gemini APIの安全フィルターによって応答がブロックされました。詳細: %s", safetyDetails)
 	}
 
 	if candidate.FinishReason == "RECITATION" {
-		return "", fmt.Errorf("Gemini APIが著作権保護された内容を検出しました")
+		return "", fmt.Errorf("Gemini APIが著作権保護された内容を検出しました。著作権で保護されたコンテンツが含まれている可能性があります")
+	}
+
+	if candidate.FinishReason == "MAX_TOKENS" {
+		return "", fmt.Errorf("Gemini APIの応答が最大トークン数に達しました。より短い質問を試してください")
+	}
+
+	if candidate.FinishReason == "STOP" {
+		// STOPは正常な終了なので、そのまま処理を続行
+	} else if candidate.FinishReason != "" && candidate.FinishReason != "STOP" {
+		return "", fmt.Errorf("Gemini APIで予期しない終了理由が発生しました: %s", candidate.FinishReason)
 	}
 
 	// Contentがnilの場合のチェックを追加
 	if candidate.Content == nil {
-		return "", fmt.Errorf("Gemini APIの応答にContentが含まれていません")
+		return "", fmt.Errorf("Gemini APIの応答にContentが含まれていません。FinishReason: %s", candidate.FinishReason)
 	}
 
 	if len(candidate.Content.Parts) == 0 {
-		return "", fmt.Errorf("Gemini APIの応答にコンテンツが含まれていません")
+		return "", fmt.Errorf("Gemini APIの応答にコンテンツが含まれていません。FinishReason: %s", candidate.FinishReason)
 	}
 
 	// テキスト部分を抽出
