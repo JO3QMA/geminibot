@@ -30,9 +30,9 @@ func NewMentionApplicationService(
 	apiKeyService *APIKeyApplicationService,
 	defaultGeminiConfig *config.GeminiConfig,
 	geminiClientFactory func(apiKey string) (GeminiClient, error),
-) *MentionApplicationService {
+) (*MentionApplicationService, error) {
 	if botConfig == nil {
-		botConfig = config.DefaultBotConfig()
+		return nil, fmt.Errorf("BotConfigが指定されていません")
 	}
 
 	return &MentionApplicationService{
@@ -44,7 +44,7 @@ func NewMentionApplicationService(
 		apiKeyService:       apiKeyService,
 		defaultGeminiConfig: defaultGeminiConfig,
 		geminiClientFactory: geminiClientFactory,
-	}
+	}, nil
 }
 
 // HandleMention は、Botへのメンションを処理します

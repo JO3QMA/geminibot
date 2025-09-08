@@ -32,13 +32,3 @@ type AppConfig struct {
 	Gemini  GeminiConfig
 	Bot     BotConfig
 }
-
-// DefaultBotConfig は、デフォルトのBot設定を返します
-func DefaultBotConfig() *BotConfig {
-	return &BotConfig{
-		MaxContextLength: 8000,
-		MaxHistoryLength: 4000,
-		RequestTimeout:   30 * time.Second,
-		SystemPrompt:     "あなたは親切で役立つAIアシスタントです。最も重要なのは、ユーザーが今送信した質問やリクエストに直接答えることです。会話履歴は参考情報として使用し、ユーザーの現在の質問を最優先で回答してください。",
-	}
-}
