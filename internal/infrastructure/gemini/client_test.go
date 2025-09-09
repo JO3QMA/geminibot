@@ -489,29 +489,29 @@ func TestTranslateSafetyProbability(t *testing.T) {
 	client := &GeminiAPIClient{}
 
 	tests := []struct {
-		name       string
+		name        string
 		probability genai.HarmProbability
-		expected   string
+		expected    string
 	}{
 		{
-			name:       "無視できるレベル",
+			name:        "無視できるレベル",
 			probability: genai.HarmProbabilityNegligible,
-			expected:   "無視できるレベル",
+			expected:    "無視できるレベル",
 		},
 		{
-			name:       "低レベル",
+			name:        "低レベル",
 			probability: genai.HarmProbabilityLow,
-			expected:   "低レベル",
+			expected:    "低レベル",
 		},
 		{
-			name:       "中レベル",
+			name:        "中レベル",
 			probability: genai.HarmProbabilityMedium,
-			expected:   "中レベル",
+			expected:    "中レベル",
 		},
 		{
-			name:       "高レベル",
+			name:        "高レベル",
 			probability: genai.HarmProbabilityHigh,
-			expected:   "高レベル",
+			expected:    "高レベル",
 		},
 	}
 
