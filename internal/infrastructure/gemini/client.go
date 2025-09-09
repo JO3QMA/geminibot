@@ -21,14 +21,18 @@ type GeminiAPIClient struct {
 }
 
 // NewGeminiAPIClient は新しいGeminiAPIClientインスタンスを作成します
-func NewGeminiAPIClient(apiKey string, geminiConfig *config.GeminiConfig) (*GeminiAPIClient, error) {
+func NewGeminiAPIClient(geminiConfig *config.GeminiConfig) (*GeminiAPIClient, error) {
 	if geminiConfig == nil {
 		return nil, fmt.Errorf("GeminiConfigが指定されていません")
 	}
 
+	if geminiConfig.APIKey == "" {
+		return nil, fmt.Errorf("APIKeyが設定されていません")
+	}
+
 	ctx := context.Background()
 	clientConfig := &genai.ClientConfig{
-		APIKey: apiKey,
+		APIKey: geminiConfig.APIKey,
 	}
 
 	client, err := genai.NewClient(ctx, clientConfig)

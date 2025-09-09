@@ -60,7 +60,7 @@ func TestNewGeminiAPIClient_WithConfig(t *testing.T) {
 	}
 
 	// 実際のAPIキーがないため、エラーが発生することを期待
-	_, err := NewGeminiAPIClient("invalid-api-key", config)
+	_, err := NewGeminiAPIClient(config)
 
 	// エラーが発生しない場合でも、テストは成功とする（実装の仕様による）
 	if err != nil {
@@ -70,7 +70,7 @@ func TestNewGeminiAPIClient_WithConfig(t *testing.T) {
 
 func TestNewGeminiAPIClient_WithNilConfig(t *testing.T) {
 	// 設定がnilの場合、エラーが発生することを確認
-	_, err := NewGeminiAPIClient("invalid-api-key", nil)
+	_, err := NewGeminiAPIClient(nil)
 
 	if err == nil {
 		t.Error("GeminiConfigがnilの場合、エラーが期待されましたが発生しませんでした")
@@ -96,7 +96,7 @@ func TestGeminiAPIClient_GenerateText_Integration(t *testing.T) {
 		TopK:        40,
 	}
 
-	client, err := NewGeminiAPIClient(config.APIKey, config)
+	client, err := NewGeminiAPIClient(config)
 	if err != nil {
 		t.Fatalf("クライアントの作成に失敗: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestGeminiAPIClient_GenerateTextWithOptions_Integration(t *testing.T) {
 		TopK:        40,
 	}
 
-	client, err := NewGeminiAPIClient(config.APIKey, config)
+	client, err := NewGeminiAPIClient(config)
 	if err != nil {
 		t.Fatalf("クライアントの作成に失敗: %v", err)
 	}
@@ -205,7 +205,7 @@ func TestGeminiAPIClient_ConfigValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewGeminiAPIClient(tt.config.APIKey, tt.config)
+			_, err := NewGeminiAPIClient(tt.config)
 
 			if tt.wantErr && err == nil {
 				t.Error("エラーが期待されましたが、発生しませんでした")

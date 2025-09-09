@@ -19,7 +19,6 @@ import (
 type SlashCommandHandler struct {
 	session             *discordgo.Session
 	apiKeyService       *application.APIKeyApplicationService
-	defaultAPIKey       string
 	defaultGeminiConfig *config.GeminiConfig
 }
 
@@ -27,13 +26,11 @@ type SlashCommandHandler struct {
 func NewSlashCommandHandler(
 	session *discordgo.Session,
 	apiKeyService *application.APIKeyApplicationService,
-	defaultAPIKey string,
 	defaultGeminiConfig *config.GeminiConfig,
 ) *SlashCommandHandler {
 	return &SlashCommandHandler{
 		session:             session,
 		apiKeyService:       apiKeyService,
-		defaultAPIKey:       defaultAPIKey,
 		defaultGeminiConfig: defaultGeminiConfig,
 	}
 }
@@ -391,20 +388,20 @@ func (h *SlashCommandHandler) handleGenerateImageCommand(s *discordgo.Session, i
 	hasCustomAPIKey, err := h.apiKeyService.HasGuildAPIKey(ctx, i.GuildID)
 	if err != nil {
 		log.Printf("ギルド %s のAPIキー確認に失敗: %v, デフォルトのAPIキーを使用", i.GuildID, err)
-		apiKey = h.defaultAPIKey
+		apiKey = h.defaultGeminiConfig.APIKey
 	} else if hasCustomAPIKey {
 		// カスタムAPIキーを取得
 		customAPIKey, err := h.apiKeyService.GetGuildAPIKey(ctx, i.GuildID)
 		if err != nil {
 			log.Printf("ギルド %s のカスタムAPIキー取得に失敗: %v, デフォルトのAPIキーを使用", i.GuildID, err)
-			apiKey = h.defaultAPIKey
+			apiKey = h.defaultGeminiConfig.APIKey
 		} else {
 			apiKey = customAPIKey
 			log.Printf("ギルド %s 用のカスタムAPIキーを使用", i.GuildID)
 		}
 	} else {
 		// デフォルトのAPIキーを使用
-		apiKey = h.defaultAPIKey
+		apiKey = h.defaultGeminiConfig.APIKey
 		log.Printf("ギルド %s のAPIキーが設定されていないため、デフォルトのAPIキーを使用", i.GuildID)
 	}
 

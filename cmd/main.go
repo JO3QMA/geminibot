@@ -40,7 +40,7 @@ func main() {
 	log.Printf("Bot情報: %s#%s (ID: %s)", user.Username, user.Discriminator, user.ID)
 
 	// Gemini APIクライアントを作成
-	geminiClient, err := gemini.NewGeminiAPIClient(config.Gemini.APIKey, &config.Gemini)
+	geminiClient, err := gemini.NewGeminiAPIClient(&config.Gemini)
 	if err != nil {
 		log.Fatalf("Gemini APIクライアントの作成に失敗: %v", err)
 	}
@@ -80,7 +80,7 @@ func main() {
 	}
 
 	// スラッシュコマンドハンドラを作成
-	slashCommandHandler := discordPres.NewSlashCommandHandler(session, apiKeyService, config.Gemini.APIKey, &config.Gemini)
+	slashCommandHandler := discordPres.NewSlashCommandHandler(session, apiKeyService, &config.Gemini)
 
 	// スラッシュコマンドを設定
 	if err := slashCommandHandler.SetupSlashCommands(); err != nil {
