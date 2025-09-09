@@ -52,15 +52,8 @@ func (g *GeminiAPIClient) retryWithBackoffForImage(ctx context.Context, operatio
 	return nil, fmt.Errorf("画像生成で最大リトライ回数 (%d) に達しました。最後のエラー: %w", g.config.MaxRetries, lastErr)
 }
 
-// createImageGenerateConfig は、画像生成用の設定を作成します
-func (g *GeminiAPIClient) createImageGenerateConfig() *genai.GenerateContentConfig {
-	return &genai.GenerateContentConfig{
-		SafetySettings: g.createSafetySettings(),
-	}
-}
-
-// createImageGenerateConfigWithOptions は、オプション付きで画像生成設定を作成します
-func (g *GeminiAPIClient) createImageGenerateConfigWithOptions(options domain.ImageGenerationOptions) *genai.GenerateContentConfig {
+// createImageConfig は、画像生成設定を作成します
+func (g *GeminiAPIClient) createImageConfig(options domain.ImageGenerationOptions) *genai.GenerateContentConfig {
 	config := &genai.GenerateContentConfig{
 		SafetySettings: g.createSafetySettings(),
 	}
@@ -138,7 +131,7 @@ func (g *GeminiAPIClient) processImageResponse(resp *genai.GenerateContentRespon
 	}
 
 	log.Printf("Gemini APIから画像を生成: %d枚", len(images))
-	
+
 	return &domain.ImageGenerationResponse{
 		Images:      images,
 		Prompt:      prompt,

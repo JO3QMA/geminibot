@@ -17,10 +17,8 @@ type GeminiClient interface {
 	GenerateTextWithStructuredContext(ctx context.Context, systemPrompt string, conversationHistory []domain.Message, userQuestion string) (string, error)
 
 	// GenerateImage は、プロンプトを受け取ってGemini APIから画像を生成します
-	GenerateImage(ctx context.Context, prompt string) (*domain.ImageGenerationResponse, error)
-
-	// GenerateImageWithOptions は、オプション付きで画像を生成します
-	GenerateImageWithOptions(ctx context.Context, prompt string, options domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error)
+	// optionsが空の場合はデフォルト設定を使用します
+	GenerateImage(ctx context.Context, prompt string, options ...domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error)
 }
 
 // TextGenerationOptions は、テキスト生成時のオプションを定義します

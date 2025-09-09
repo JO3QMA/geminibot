@@ -21,7 +21,7 @@ func NewImageGenerationService(geminiClient GeminiClient) *ImageGenerationServic
 }
 
 // GenerateImage は、プロンプトから画像を生成します
-func (s *ImageGenerationService) GenerateImage(ctx context.Context, prompt string) (*domain.ImageGenerationResponse, error) {
+func (s *ImageGenerationService) GenerateImage(ctx context.Context, prompt string, options ...domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error) {
 	log.Printf("画像生成サービス: プロンプト=%s", prompt)
 
 	// プロンプトの検証
@@ -29,31 +29,8 @@ func (s *ImageGenerationService) GenerateImage(ctx context.Context, prompt strin
 		return nil, fmt.Errorf("プロンプトの検証に失敗: %w", err)
 	}
 
-	// デフォルトオプションで画像生成
-	options := domain.DefaultImageGenerationOptions()
-	response, err := s.geminiClient.GenerateImageWithOptions(ctx, prompt, options)
-	if err != nil {
-		return nil, fmt.Errorf("画像生成に失敗: %w", err)
-	}
-
-	log.Printf("画像生成サービス: 生成完了, 画像数=%d", len(response.Images))
-	return response, nil
-}
-
-// GenerateImageWithOptions は、オプション付きで画像を生成します
-func (s *ImageGenerationService) GenerateImageWithOptions(ctx context.Context, prompt string, options domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error) {
-	log.Printf("画像生成サービス: プロンプト=%s, オプション=%+v", prompt, options)
-
-	// プロンプトの検証
-	if err := s.validatePrompt(prompt); err != nil {
-		return nil, fmt.Errorf("プロンプトの検証に失敗: %w", err)
-	}
-
-	// オプションの検証と正規化
-	normalizedOptions := s.normalizeOptions(options)
-
 	// 画像生成
-	response, err := s.geminiClient.GenerateImageWithOptions(ctx, prompt, normalizedOptions)
+	response, err := s.geminiClient.GenerateImage(ctx, prompt, options...)
 	if err != nil {
 		return nil, fmt.Errorf("画像生成に失敗: %w", err)
 	}

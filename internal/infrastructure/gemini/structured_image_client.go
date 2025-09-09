@@ -12,18 +12,20 @@ import (
 )
 
 // GenerateImage は、プロンプトを受け取ってGemini APIから画像を生成します
-func (g *StructuredGeminiClient) GenerateImage(ctx context.Context, prompt string) (*domain.ImageGenerationResponse, error) {
-	log.Printf("構造化Geminiクライアントで画像生成をリクエスト中: %d文字", len(prompt))
-	log.Printf("プロンプト内容: %s", prompt)
-
-	// デフォルトオプションで画像生成
-	options := domain.DefaultImageGenerationOptions()
-	return g.GenerateImageWithOptions(ctx, prompt, options)
+// optionsが空の場合はデフォルト設定を使用します
+func (g *StructuredGeminiClient) GenerateImage(ctx context.Context, prompt string, options ...domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error) {
+	var opts domain.ImageGenerationOptions
+	if len(options) > 0 {
+		opts = options[0]
+	} else {
+		opts = domain.DefaultImageGenerationOptions()
+	}
+	return g.generateImageWithOptions(ctx, prompt, opts)
 }
 
-// GenerateImageWithOptions は、オプション付きで画像を生成します
-func (g *StructuredGeminiClient) GenerateImageWithOptions(ctx context.Context, prompt string, options domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error) {
-	log.Printf("構造化Geminiクライアントでオプション付き画像生成をリクエスト中: %d文字", len(prompt))
+// generateImageWithOptions は、オプション付きで画像を生成する内部実装です
+func (g *StructuredGeminiClient) generateImageWithOptions(ctx context.Context, prompt string, options domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error) {
+	log.Printf("構造化Geminiクライアントで画像生成をリクエスト中: %d文字", len(prompt))
 	log.Printf("プロンプト内容: %s", prompt)
 	log.Printf("オプション: %+v", options)
 
@@ -31,7 +33,7 @@ func (g *StructuredGeminiClient) GenerateImageWithOptions(ctx context.Context, p
 	contents := genai.Text(prompt)
 
 	// オプションに基づいて画像生成設定を作成
-	config := g.createImageGenerateConfigWithOptions(options)
+	config := g.createImageConfig(options)
 
 	// モデル名を決定
 	modelName := options.Model
@@ -48,8 +50,8 @@ func (g *StructuredGeminiClient) GenerateImageWithOptions(ctx context.Context, p
 	return g.processImageResponse(resp, prompt, modelName)
 }
 
-// createImageGenerateConfigWithOptions は、オプション付きで画像生成設定を作成します
-func (g *StructuredGeminiClient) createImageGenerateConfigWithOptions(options domain.ImageGenerationOptions) *genai.GenerateContentConfig {
+// createImageConfig は、画像生成設定を作成します
+func (g *StructuredGeminiClient) createImageConfig(options domain.ImageGenerationOptions) *genai.GenerateContentConfig {
 	config := &genai.GenerateContentConfig{
 		SafetySettings: g.createSafetySettings(),
 	}
@@ -127,7 +129,7 @@ func (g *StructuredGeminiClient) processImageResponse(resp *genai.GenerateConten
 	}
 
 	log.Printf("Gemini APIから画像を生成: %d枚", len(images))
-	
+
 	return &domain.ImageGenerationResponse{
 		Images:      images,
 		Prompt:      prompt,

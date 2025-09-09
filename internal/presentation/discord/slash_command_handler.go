@@ -411,7 +411,7 @@ func (h *SlashCommandHandler) handleGenerateImageCommand(s *discordgo.Session, i
 	}
 
 	// 画像を生成
-	response, err := geminiClient.GenerateImageWithOptions(ctx, prompt, imageOptions)
+	response, err := geminiClient.GenerateImage(ctx, prompt, imageOptions)
 	if err != nil {
 		log.Printf("画像生成に失敗: %v", err)
 		h.followUpInteraction(s, i, fmt.Sprintf("❌ 画像生成に失敗しました: %v", err), true)
