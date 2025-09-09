@@ -17,9 +17,10 @@ import (
 
 // SlashCommandHandler は、Discordのスラッシュコマンドを処理するハンドラーです
 type SlashCommandHandler struct {
-	session       *discordgo.Session
-	apiKeyService *application.APIKeyApplicationService
-	defaultAPIKey string
+	session             *discordgo.Session
+	apiKeyService       *application.APIKeyApplicationService
+	defaultAPIKey       string
+	defaultGeminiConfig *config.GeminiConfig
 }
 
 // NewSlashCommandHandler は新しいSlashCommandHandlerインスタンスを作成します
@@ -27,11 +28,13 @@ func NewSlashCommandHandler(
 	session *discordgo.Session,
 	apiKeyService *application.APIKeyApplicationService,
 	defaultAPIKey string,
+	defaultGeminiConfig *config.GeminiConfig,
 ) *SlashCommandHandler {
 	return &SlashCommandHandler{
-		session:       session,
-		apiKeyService: apiKeyService,
-		defaultAPIKey: defaultAPIKey,
+		session:             session,
+		apiKeyService:       apiKeyService,
+		defaultAPIKey:       defaultAPIKey,
+		defaultGeminiConfig: defaultGeminiConfig,
 	}
 }
 
@@ -374,23 +377,33 @@ func (h *SlashCommandHandler) handleGenerateImageCommand(s *discordgo.Session, i
 		quality = "standard"
 	}
 
-	// APIキーを取得
+	// APIキーを取得（ギルド固有のAPIキーがない場合はデフォルトを使用）
 	ctx := context.Background()
-	apiKey, err := h.apiKeyService.GetGuildAPIKey(ctx, i.GuildID)
+	var apiKey string
+
+	// ギルド固有のAPIキーがあるかチェック
+	hasCustomAPIKey, err := h.apiKeyService.HasGuildAPIKey(ctx, i.GuildID)
 	if err != nil {
-		log.Printf("APIキーの取得に失敗: %v", err)
-		h.followUpInteraction(s, i, "❌ このサーバーのAPIキーが見つかりません。管理者に `/set-api` コマンドでAPIキーを設定してもらってください。", true)
-		return
+		log.Printf("ギルド %s のAPIキー確認に失敗: %v, デフォルトのAPIキーを使用", i.GuildID, err)
+		apiKey = h.defaultAPIKey
+	} else if hasCustomAPIKey {
+		// カスタムAPIキーを取得
+		customAPIKey, err := h.apiKeyService.GetGuildAPIKey(ctx, i.GuildID)
+		if err != nil {
+			log.Printf("ギルド %s のカスタムAPIキー取得に失敗: %v, デフォルトのAPIキーを使用", i.GuildID, err)
+			apiKey = h.defaultAPIKey
+		} else {
+			apiKey = customAPIKey
+			log.Printf("ギルド %s 用のカスタムAPIキーを使用", i.GuildID)
+		}
+	} else {
+		// デフォルトのAPIキーを使用
+		apiKey = h.defaultAPIKey
+		log.Printf("ギルド %s のAPIキーが設定されていないため、デフォルトのAPIキーを使用", i.GuildID)
 	}
 
 	// Geminiクライアントを作成
-	geminiClient, err := gemini.NewStructuredGeminiClientWithAPIKey(apiKey, &config.GeminiConfig{
-		ModelName:   "gemini-2.5-flash-image-preview",
-		MaxTokens:   1000,
-		Temperature: 0.7,
-		TopP:        0.9,
-		MaxRetries:  3,
-	})
+	geminiClient, err := gemini.NewStructuredGeminiClientWithAPIKey(apiKey, h.defaultGeminiConfig)
 	if err != nil {
 		log.Printf("Geminiクライアントの作成に失敗: %v", err)
 		h.followUpInteraction(s, i, "❌ Gemini APIクライアントの作成に失敗しました。", true)

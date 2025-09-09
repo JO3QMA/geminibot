@@ -80,7 +80,7 @@ func main() {
 	}
 
 	// スラッシュコマンドハンドラを作成
-	slashCommandHandler := discordPres.NewSlashCommandHandler(session, apiKeyService, config.Gemini.APIKey)
+	slashCommandHandler := discordPres.NewSlashCommandHandler(session, apiKeyService, config.Gemini.APIKey, &config.Gemini)
 
 	// スラッシュコマンドを設定
 	if err := slashCommandHandler.SetupSlashCommands(); err != nil {
