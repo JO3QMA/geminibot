@@ -87,9 +87,6 @@ func main() {
 		log.Fatalf("スラッシュコマンドの設定に失敗: %v", err)
 	}
 
-	// スラッシュコマンドのイベントハンドラーを設定
-	slashCommandHandler.SetupSlashCommandHandlers()
-
 	log.Println("Discordに接続しました。Botが準備完了しました！")
 	log.Println("利用可能なスラッシュコマンド:")
 	log.Println("  /set-api - このサーバー用のGemini APIキーを設定")
