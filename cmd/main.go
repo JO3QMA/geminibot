@@ -69,8 +69,11 @@ func main() {
 		log.Fatalf("MentionApplicationServiceの作成に失敗: %v", err)
 	}
 
+	// スラッシュコマンドハンドラを作成
+	slashCommandHandler := discordPres.NewSlashCommandHandler(session, apiKeyService, &config.Gemini)
+
 	// Discordハンドラを作成
-	handler := discordPres.NewDiscordHandler(session, mentionService, user.ID)
+	handler := discordPres.NewDiscordHandler(session, mentionService, user.ID, slashCommandHandler)
 	handler.SetupHandlers()
 
 	// Discordに接続
@@ -78,9 +81,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Discordへの接続に失敗: %v", err)
 	}
-
-	// スラッシュコマンドハンドラを作成
-	slashCommandHandler := discordPres.NewSlashCommandHandler(session, apiKeyService, &config.Gemini)
 
 	// スラッシュコマンドを設定
 	if err := slashCommandHandler.SetupSlashCommands(); err != nil {

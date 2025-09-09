@@ -6,7 +6,7 @@ import (
 )
 
 func TestDiscordHandler_IsTimeoutError(t *testing.T) {
-	handler := &DiscordHandler{}
+	handler := NewResponseHandler()
 
 	// タイムアウトエラーのテストケース
 	timeoutErrors := []string{
@@ -51,7 +51,7 @@ func TestDiscordHandler_IsTimeoutError(t *testing.T) {
 }
 
 func TestDiscordHandler_FormatError(t *testing.T) {
-	handler := &DiscordHandler{}
+	handler := NewResponseHandler()
 
 	// タイムアウトエラーのフォーマットテスト
 	timeoutErr := &timeoutError{message: "context deadline exceeded"}
