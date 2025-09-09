@@ -863,20 +863,33 @@ func (h *DiscordHandler) sendImageGenerationResult(s *discordgo.Session, threadI
 		return
 	}
 
-	// 画像生成成功メッセージを作成
-	message := fmt.Sprintf("🎨 **画像生成完了！**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s", 
-		result.Prompt, result.Model, result.GeneratedAt)
+	// 画像URLかテキストかを判定
+	if h.isImageURL(result.ImageURL) {
+		// 実際の画像URLの場合
+		message := fmt.Sprintf("🎨 **画像生成完了！**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s", 
+			result.Prompt, result.Model, result.GeneratedAt)
 
-	// 画像URLを送信
-	_, err := s.ChannelMessageSend(threadID, message)
-	if err != nil {
-		log.Printf("画像生成結果メッセージの送信に失敗: %v", err)
-	}
+		// 画像生成結果メッセージを送信
+		_, err := s.ChannelMessageSend(threadID, message)
+		if err != nil {
+			log.Printf("画像生成結果メッセージの送信に失敗: %v", err)
+		}
 
-	// 画像URLを別途送信（Discordが自動的に画像を表示）
-	_, err = s.ChannelMessageSend(threadID, result.ImageURL)
-	if err != nil {
-		log.Printf("画像URLの送信に失敗: %v", err)
+		// 画像URLを別途送信（Discordが自動的に画像を表示）
+		_, err = s.ChannelMessageSend(threadID, result.ImageURL)
+		if err != nil {
+			log.Printf("画像URLの送信に失敗: %v", err)
+		}
+	} else {
+		// テキストレスポンスの場合（nano bananaの説明文など）
+		message := fmt.Sprintf("🎨 **画像生成レスポンス**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s\n\n**レスポンス:**\n%s", 
+			result.Prompt, result.Model, result.GeneratedAt, result.ImageURL)
+
+		// テキストレスポンスを送信
+		_, err := s.ChannelMessageSend(threadID, message)
+		if err != nil {
+			log.Printf("画像生成テキストレスポンスの送信に失敗: %v", err)
+		}
 	}
 }
 
@@ -892,28 +905,45 @@ func (h *DiscordHandler) sendImageGenerationResultToChannel(s *discordgo.Session
 		return
 	}
 
-	// 画像生成成功メッセージを作成
-	message := fmt.Sprintf("🎨 **画像生成完了！**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s", 
-		result.Prompt, result.Model, result.GeneratedAt)
+	// 画像URLかテキストかを判定
+	if h.isImageURL(result.ImageURL) {
+		// 実際の画像URLの場合
+		message := fmt.Sprintf("🎨 **画像生成完了！**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s", 
+			result.Prompt, result.Model, result.GeneratedAt)
 
-	// 画像生成結果メッセージを送信
-	_, err := s.ChannelMessageSendReply(m.ChannelID, message, &discordgo.MessageReference{
-		MessageID: m.ID,
-		ChannelID: m.ChannelID,
-		GuildID:   m.GuildID,
-	})
-	if err != nil {
-		log.Printf("画像生成結果メッセージの送信に失敗: %v", err)
-	}
+		// 画像生成結果メッセージを送信
+		_, err := s.ChannelMessageSendReply(m.ChannelID, message, &discordgo.MessageReference{
+			MessageID: m.ID,
+			ChannelID: m.ChannelID,
+			GuildID:   m.GuildID,
+		})
+		if err != nil {
+			log.Printf("画像生成結果メッセージの送信に失敗: %v", err)
+		}
 
-	// 画像URLを別途送信（Discordが自動的に画像を表示）
-	_, err = s.ChannelMessageSendReply(m.ChannelID, result.ImageURL, &discordgo.MessageReference{
-		MessageID: m.ID,
-		ChannelID: m.ChannelID,
-		GuildID:   m.GuildID,
-	})
-	if err != nil {
-		log.Printf("画像URLの送信に失敗: %v", err)
+		// 画像URLを別途送信（Discordが自動的に画像を表示）
+		_, err = s.ChannelMessageSendReply(m.ChannelID, result.ImageURL, &discordgo.MessageReference{
+			MessageID: m.ID,
+			ChannelID: m.ChannelID,
+			GuildID:   m.GuildID,
+		})
+		if err != nil {
+			log.Printf("画像URLの送信に失敗: %v", err)
+		}
+	} else {
+		// テキストレスポンスの場合（nano bananaの説明文など）
+		message := fmt.Sprintf("🎨 **画像生成レスポンス**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s\n\n**レスポンス:**\n%s", 
+			result.Prompt, result.Model, result.GeneratedAt, result.ImageURL)
+
+		// テキストレスポンスを送信
+		_, err := s.ChannelMessageSendReply(m.ChannelID, message, &discordgo.MessageReference{
+			MessageID: m.ID,
+			ChannelID: m.ChannelID,
+			GuildID:   m.GuildID,
+		})
+		if err != nil {
+			log.Printf("画像生成テキストレスポンスの送信に失敗: %v", err)
+		}
 	}
 }
 
@@ -943,4 +973,29 @@ func (h *DiscordHandler) formatImageGenerationError(err error) string {
 	
 	// その他のエラー
 	return fmt.Sprintf("❌ **画像生成エラー**\n%s", err.Error())
+}
+
+// isImageURL は、文字列が画像URLかどうかを判定します
+func (h *DiscordHandler) isImageURL(text string) bool {
+	// HTTP/HTTPSで始まるかチェック
+	if !strings.HasPrefix(text, "http://") && !strings.HasPrefix(text, "https://") {
+		return false
+	}
+	
+	// 画像ファイル拡張子をチェック
+	lowerText := strings.ToLower(text)
+	if strings.Contains(lowerText, ".jpg") || strings.Contains(lowerText, ".png") || 
+	   strings.Contains(lowerText, ".jpeg") || strings.Contains(lowerText, ".gif") ||
+	   strings.Contains(lowerText, ".webp") || strings.Contains(lowerText, ".bmp") {
+		return true
+	}
+	
+	// 画像ホスティングサービスのURLパターンをチェック
+	if strings.Contains(lowerText, "imgur.com") || strings.Contains(lowerText, "i.imgur.com") ||
+	   strings.Contains(lowerText, "drive.google.com") || strings.Contains(lowerText, "photos.google.com") ||
+	   strings.Contains(lowerText, "cloudinary.com") || strings.Contains(lowerText, "unsplash.com") {
+		return true
+	}
+	
+	return false
 }
