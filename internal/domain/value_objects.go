@@ -110,7 +110,7 @@ func NewImagePrompt(content string) string {
 // DefaultImageGenerationOptions は、デフォルトの画像生成オプションを返します
 func DefaultImageGenerationOptions() ImageGenerationOptions {
 	return ImageGenerationOptions{
-		Model:       "gemini-2.5-flash-image-preview",
+		Model:       "gemini-2.5-flash-image",
 		Style:       "photographic",
 		Quality:     "standard",
 		Size:        "1024x1024",

@@ -38,7 +38,7 @@ func (g *StructuredGeminiClient) generateImageWithOptions(ctx context.Context, p
 	// モデル名を決定
 	modelName := options.Model
 	if modelName == "" {
-		modelName = "gemini-2.5-flash-image-preview"
+		modelName = "gemini-2.5-flash-image"
 	}
 
 	resp, err := g.client.Models.GenerateContent(ctx, modelName, contents, config)

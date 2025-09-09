@@ -412,7 +412,7 @@ func (h *SlashCommandHandler) handleGenerateImageCommand(s *discordgo.Session, i
 
 	// 画像生成オプションを作成
 	imageOptions := domain.ImageGenerationOptions{
-		Model:       "gemini-2.5-flash-image-preview",
+		Model:       "gemini-2.5-flash-image",
 		Style:       style,
 		Quality:     quality,
 		Size:        "1024x1024",
