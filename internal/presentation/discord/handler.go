@@ -62,6 +62,14 @@ func (h *DiscordHandler) handleMessageCreate(s *discordgo.Session, m *discordgo.
 
 	log.Printf("Botへのメンションを検出: %s", m.Content)
 
+	// 画像生成リクエストかどうかをチェック
+	if h.isImageGenerationRequest(m.Content) {
+		log.Printf("画像生成リクエストを検出: %s", m.Content)
+		// 非同期で画像生成を処理
+		go h.processImageGenerationAsync(s, m)
+		return
+	}
+
 	// メンション情報を作成
 	mention := h.createBotMention(m)
 
@@ -744,4 +752,195 @@ func (h *DiscordHandler) splitMessage(message string) []string {
 	}
 
 	return chunks
+}
+
+// isImageGenerationRequest は、メッセージが画像生成リクエストかどうかを判定します
+func (h *DiscordHandler) isImageGenerationRequest(content string) bool {
+	keywords := []string{
+		"画像生成", "画像作成", "絵を描いて", "イラスト作成", "画像を作って",
+		"generate image", "create image", "draw", "illustration", "picture",
+		"画像", "絵", "イラスト", "ピクチャー", "写真",
+	}
+	
+	content = strings.ToLower(content)
+	
+	for _, keyword := range keywords {
+		if strings.Contains(content, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+// processImageGenerationAsync は、画像生成を非同期で処理します
+func (h *DiscordHandler) processImageGenerationAsync(s *discordgo.Session, m *discordgo.MessageCreate) {
+	// メッセージからスレッドを作成
+	thread, err := s.MessageThreadStart(m.ChannelID, m.ID, "画像生成中...", 60) // 60分後にアーカイブ
+	if err != nil {
+		log.Printf("スレッド作成に失敗: %v", err)
+		// スレッド作成に失敗した場合は通常のリプライとして送信
+		h.sendImageGenerationNormalReply(s, m)
+		return
+	}
+
+	// 処理中メッセージをスレッド内に送信
+	thinkingMsg, err := s.ChannelMessageSend(thread.ID, "🎨 画像を生成中...")
+	if err != nil {
+		log.Printf("処理中メッセージの送信に失敗: %v", err)
+		return
+	}
+
+	// 画像生成を処理
+	ctx := context.Background()
+	imageResult, err := h.generateImage(ctx, m)
+
+	// 処理中メッセージを削除
+	s.ChannelMessageDelete(thread.ID, thinkingMsg.ID)
+
+	if err != nil {
+		log.Printf("画像生成に失敗: %v", err)
+		errorMsg := h.formatImageGenerationError(err)
+		s.ChannelMessageSend(thread.ID, errorMsg)
+		return
+	}
+
+	// 画像生成結果をスレッド内に送信
+	h.sendImageGenerationResult(s, thread.ID, imageResult)
+}
+
+// generateImage は、画像生成を実行します
+func (h *DiscordHandler) generateImage(ctx context.Context, m *discordgo.MessageCreate) (*domain.ImageGenerationResult, error) {
+	// メンション部分を除去したコンテンツを取得
+	content := h.extractUserContent(m)
+	
+	// 画像生成用のプロンプトを作成
+	prompt := domain.NewImagePrompt(content)
+	
+	// Geminiクライアントを使用して画像生成
+	return h.mentionService.GenerateImage(ctx, prompt)
+}
+
+// sendImageGenerationNormalReply は、スレッド作成に失敗した場合の通常のリプライ送信を行います
+func (h *DiscordHandler) sendImageGenerationNormalReply(s *discordgo.Session, m *discordgo.MessageCreate) {
+	// 処理中メッセージを送信
+	thinkingMsg, err := s.ChannelMessageSendReply(m.ChannelID, "🎨 画像を生成中...", &discordgo.MessageReference{
+		MessageID: m.ID,
+		ChannelID: m.ChannelID,
+		GuildID:   m.GuildID,
+	})
+	if err != nil {
+		log.Printf("処理中メッセージの送信に失敗: %v", err)
+		return
+	}
+
+	// 画像生成を処理
+	ctx := context.Background()
+	imageResult, err := h.generateImage(ctx, m)
+
+	// 処理中メッセージを削除
+	s.ChannelMessageDelete(m.ChannelID, thinkingMsg.ID)
+
+	if err != nil {
+		log.Printf("画像生成に失敗: %v", err)
+		errorMsg := h.formatImageGenerationError(err)
+		s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
+			MessageID: m.ID,
+			ChannelID: m.ChannelID,
+			GuildID:   m.GuildID,
+		})
+		return
+	}
+
+	// 画像生成結果を送信
+	h.sendImageGenerationResultToChannel(s, m, imageResult)
+}
+
+// sendImageGenerationResult は、画像生成結果をスレッド内に送信します
+func (h *DiscordHandler) sendImageGenerationResult(s *discordgo.Session, threadID string, result *domain.ImageGenerationResult) {
+	if !result.Success {
+		errorMsg := h.formatImageGenerationError(fmt.Errorf(result.Error))
+		s.ChannelMessageSend(threadID, errorMsg)
+		return
+	}
+
+	// 画像生成成功メッセージを作成
+	message := fmt.Sprintf("🎨 **画像生成完了！**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s", 
+		result.Prompt, result.Model, result.GeneratedAt)
+
+	// 画像URLを送信
+	_, err := s.ChannelMessageSend(threadID, message)
+	if err != nil {
+		log.Printf("画像生成結果メッセージの送信に失敗: %v", err)
+	}
+
+	// 画像URLを別途送信（Discordが自動的に画像を表示）
+	_, err = s.ChannelMessageSend(threadID, result.ImageURL)
+	if err != nil {
+		log.Printf("画像URLの送信に失敗: %v", err)
+	}
+}
+
+// sendImageGenerationResultToChannel は、画像生成結果をチャンネルに送信します
+func (h *DiscordHandler) sendImageGenerationResultToChannel(s *discordgo.Session, m *discordgo.MessageCreate, result *domain.ImageGenerationResult) {
+	if !result.Success {
+		errorMsg := h.formatImageGenerationError(fmt.Errorf(result.Error))
+		s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
+			MessageID: m.ID,
+			ChannelID: m.ChannelID,
+			GuildID:   m.GuildID,
+		})
+		return
+	}
+
+	// 画像生成成功メッセージを作成
+	message := fmt.Sprintf("🎨 **画像生成完了！**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s", 
+		result.Prompt, result.Model, result.GeneratedAt)
+
+	// 画像生成結果メッセージを送信
+	_, err := s.ChannelMessageSendReply(m.ChannelID, message, &discordgo.MessageReference{
+		MessageID: m.ID,
+		ChannelID: m.ChannelID,
+		GuildID:   m.GuildID,
+	})
+	if err != nil {
+		log.Printf("画像生成結果メッセージの送信に失敗: %v", err)
+	}
+
+	// 画像URLを別途送信（Discordが自動的に画像を表示）
+	_, err = s.ChannelMessageSendReply(m.ChannelID, result.ImageURL, &discordgo.MessageReference{
+		MessageID: m.ID,
+		ChannelID: m.ChannelID,
+		GuildID:   m.GuildID,
+	})
+	if err != nil {
+		log.Printf("画像URLの送信に失敗: %v", err)
+	}
+}
+
+// formatImageGenerationError は、画像生成エラーを適切なメッセージにフォーマットします
+func (h *DiscordHandler) formatImageGenerationError(err error) string {
+	if err == nil {
+		return "❌ **不明なエラーが発生しました**"
+	}
+
+	errorMsg := err.Error()
+	
+	// 安全フィルターエラーの場合
+	if strings.Contains(errorMsg, "安全フィルター") {
+		return "🚫 **安全フィルターにより画像生成がブロックされました**\n\n" +
+			"プロンプトに不適切な内容が含まれている可能性があります。\n" +
+			"より適切な表現で再度お試しください。"
+	}
+	
+	// タイムアウトエラーの場合
+	if h.isTimeoutError(err) {
+		return "⏰ **画像生成がタイムアウトしました**\n\n" +
+			"処理に時間がかかりすぎました。以下の対処法をお試しください：\n\n" +
+			"• プロンプトを短くしてみる\n" +
+			"• しばらく待ってから再度お試しください\n\n" +
+			"ご不便をおかけして申し訳ございません。"
+	}
+	
+	// その他のエラー
+	return fmt.Sprintf("❌ **画像生成エラー**\n%s", err.Error())
 }

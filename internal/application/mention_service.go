@@ -86,6 +86,39 @@ func (s *MentionApplicationService) HandleMention(ctx context.Context, mention d
 	return response, nil
 }
 
+// GenerateImage は、画像生成を実行します
+func (s *MentionApplicationService) GenerateImage(ctx context.Context, prompt domain.ImagePrompt) (*domain.ImageGenerationResult, error) {
+	log.Printf("MentionApplicationService: 画像生成を開始")
+	log.Printf("プロンプト: %s", prompt.Content)
+
+	// デフォルトのGeminiクライアントを使用して画像生成
+	result, err := s.geminiClient.GenerateImage(ctx, prompt)
+	if err != nil {
+		log.Printf("画像生成に失敗: %v", err)
+		return nil, fmt.Errorf("画像生成に失敗: %w", err)
+	}
+
+	log.Printf("画像生成完了: %+v", result)
+	return result, nil
+}
+
+// GenerateImageWithOptions は、オプション付きで画像生成を実行します
+func (s *MentionApplicationService) GenerateImageWithOptions(ctx context.Context, prompt domain.ImagePrompt, options domain.ImageGenerationOptions) (*domain.ImageGenerationResult, error) {
+	log.Printf("MentionApplicationService: オプション付き画像生成を開始")
+	log.Printf("プロンプト: %s", prompt.Content)
+	log.Printf("オプション: %+v", options)
+
+	// デフォルトのGeminiクライアントを使用して画像生成
+	result, err := s.geminiClient.GenerateImageWithOptions(ctx, prompt, options)
+	if err != nil {
+		log.Printf("オプション付き画像生成に失敗: %v", err)
+		return nil, fmt.Errorf("オプション付き画像生成に失敗: %w", err)
+	}
+
+	log.Printf("オプション付き画像生成完了: %+v", result)
+	return result, nil
+}
+
 // generateResponseWithGuildAPIKey は、サーバー別のAPIキーを使用してGemini APIにリクエストを送信します
 func (s *MentionApplicationService) generateResponseWithGuildAPIKey(
 	ctx context.Context,

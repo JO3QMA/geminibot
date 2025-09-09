@@ -4,13 +4,15 @@ import "time"
 
 // GeminiConfig は、Gemini API関連の設定を定義します
 type GeminiConfig struct {
-	APIKey      string
-	ModelName   string
-	MaxTokens   int32
-	Temperature float32
-	TopP        float32
-	TopK        int32
-	MaxRetries  int // 最大リトライ回数
+	APIKey           string
+	ModelName        string
+	ImageModelName   string  // 画像生成用モデル名
+	MaxTokens        int32
+	Temperature      float32
+	TopP             float32
+	TopK             int32
+	MaxRetries       int     // 最大リトライ回数
+	EnableImageGen   bool    // 画像生成機能の有効/無効
 }
 
 // BotConfig は、Bot関連の設定を定義します

@@ -400,3 +400,72 @@ func (g *GeminiAPIClient) processResponse(resp *genai.GenerateContentResponse) (
 	log.Printf("Gemini APIから応答を取得: %d文字", len(result))
 	return result, nil
 }
+
+// GenerateImage は、プロンプトを受け取ってGemini APIから画像を生成します
+func (g *GeminiAPIClient) GenerateImage(ctx context.Context, prompt domain.ImagePrompt) (*domain.ImageGenerationResult, error) {
+	log.Printf("Gemini APIに画像生成をリクエスト中: %d文字", len(prompt.Content))
+	log.Printf("プロンプト内容: %s", prompt.Content)
+
+	// リトライ機能付きで画像生成を実行
+	return g.retryWithBackoffForImage(ctx, func() (*domain.ImageGenerationResult, error) {
+		// 画像生成用のコンテンツを作成
+		contents := genai.Text(prompt.Content)
+
+		// 画像生成用の設定を作成
+		config := g.createImageGenerateConfig()
+
+		// nano bananaモデルを使用
+		modelName := "gemini-2.5-flash-image"
+		if g.config.ModelName != "" {
+			// 設定でモデル名が指定されている場合はそれを使用
+			modelName = g.config.ModelName
+		}
+
+		resp, err := g.client.Models.GenerateContent(ctx, modelName, contents, config)
+		if err != nil {
+			return nil, g.handleAPIError(err, ctx)
+		}
+
+		// レスポンス詳細をログ出力
+		g.logResponseDetails(resp)
+
+		// 画像生成結果を処理
+		return g.processImageResponse(resp, prompt.Content, modelName)
+	})
+}
+
+// GenerateImageWithOptions は、オプション付きで画像を生成します
+func (g *GeminiAPIClient) GenerateImageWithOptions(ctx context.Context, prompt domain.ImagePrompt, options domain.ImageGenerationOptions) (*domain.ImageGenerationResult, error) {
+	log.Printf("Gemini APIにオプション付き画像生成をリクエスト中: %d文字", len(prompt.Content))
+	log.Printf("プロンプト内容: %s", prompt.Content)
+	log.Printf("オプション: %+v", options)
+
+	// リトライ機能付きで画像生成を実行
+	return g.retryWithBackoffForImage(ctx, func() (*domain.ImageGenerationResult, error) {
+		// 画像生成用のコンテンツを作成
+		contents := genai.Text(prompt.Content)
+
+		// オプションに基づいて画像生成設定を作成
+		config := g.createImageGenerateConfigWithOptions(options)
+
+		// モデル名を決定
+		modelName := options.Model
+		if modelName == "" {
+			modelName = "gemini-2.5-flash-image"
+		}
+		if g.config.ModelName != "" {
+			modelName = g.config.ModelName
+		}
+
+		resp, err := g.client.Models.GenerateContent(ctx, modelName, contents, config)
+		if err != nil {
+			return nil, g.handleAPIError(err, ctx)
+		}
+
+		// レスポンス詳細をログ出力
+		g.logResponseDetails(resp)
+
+		// 画像生成結果を処理
+		return g.processImageResponse(resp, prompt.Content, modelName)
+	})
+}
