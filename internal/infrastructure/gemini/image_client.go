@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 	"time"
 
@@ -14,8 +15,14 @@ import (
 
 // createImageGenerateConfig は、画像生成用の設定を作成します
 func (g *GeminiAPIClient) createImageGenerateConfig() *genai.GenerateContentConfig {
+	// 画像生成用はMaxTokensを増加（複数画像生成に対応）
+	maxTokens := g.config.MaxTokens * 2
+	if maxTokens < 2000 {
+		maxTokens = 2000
+	}
+
 	return &genai.GenerateContentConfig{
-		MaxOutputTokens: g.config.MaxTokens,
+		MaxOutputTokens: maxTokens,
 		Temperature:     &g.config.Temperature,
 		TopP:            &g.config.TopP,
 		SafetySettings:  g.createSafetySettings(),
@@ -187,7 +194,20 @@ func (g *GeminiAPIClient) processImageResponse(resp *genai.GenerateContentRespon
 func (g *GeminiAPIClient) extractImageURLFromText(text string) string {
 	log.Printf("テキストから画像URLを抽出中: %s", text)
 
-	// より柔軟なURL抽出ロジック
+	// Markdown形式の画像URLを抽出: ![alt](url)
+	markdownPattern := `!\[.*?\]\((https?://[^)]+)\)`
+	re := regexp.MustCompile(markdownPattern)
+	matches := re.FindAllStringSubmatch(text, -1)
+
+	for _, match := range matches {
+		if len(match) > 1 {
+			url := match[1]
+			log.Printf("Markdown形式の画像URLを発見: %s", url)
+			return url
+		}
+	}
+
+	// 通常のURL抽出ロジック
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -206,7 +226,8 @@ func (g *GeminiAPIClient) extractImageURLFromText(text string) string {
 			// 画像ホスティングサービスのURLパターンをチェック
 			if strings.Contains(lowerLine, "imgur.com") || strings.Contains(lowerLine, "i.imgur.com") ||
 				strings.Contains(lowerLine, "drive.google.com") || strings.Contains(lowerLine, "photos.google.com") ||
-				strings.Contains(lowerLine, "cloudinary.com") || strings.Contains(lowerLine, "unsplash.com") {
+				strings.Contains(lowerLine, "cloudinary.com") || strings.Contains(lowerLine, "unsplash.com") ||
+				strings.Contains(lowerLine, "files.oaiusercontent.com") {
 				log.Printf("画像ホスティングサービスURLを発見: %s", line)
 				return line
 			}
@@ -215,6 +236,55 @@ func (g *GeminiAPIClient) extractImageURLFromText(text string) string {
 
 	log.Printf("画像URLが見つかりませんでした")
 	return ""
+}
+
+// extractAllImageURLsFromText は、テキストからすべての画像URLを抽出します
+func (g *GeminiAPIClient) extractAllImageURLsFromText(text string) []string {
+	var urls []string
+	log.Printf("テキストからすべての画像URLを抽出中: %s", text)
+
+	// Markdown形式の画像URLを抽出: ![alt](url)
+	markdownPattern := `!\[.*?\]\((https?://[^)]+)\)`
+	re := regexp.MustCompile(markdownPattern)
+	matches := re.FindAllStringSubmatch(text, -1)
+
+	for _, match := range matches {
+		if len(match) > 1 {
+			url := match[1]
+			urls = append(urls, url)
+			log.Printf("Markdown形式の画像URLを発見: %s", url)
+		}
+	}
+
+	// 通常のURL抽出ロジック
+	lines := strings.Split(text, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// HTTP/HTTPSで始まるURLを探す
+		if strings.HasPrefix(line, "http://") || strings.HasPrefix(line, "https://") {
+			// 画像ファイル拡張子をチェック
+			lowerLine := strings.ToLower(line)
+			if strings.Contains(lowerLine, ".jpg") || strings.Contains(lowerLine, ".png") ||
+				strings.Contains(lowerLine, ".jpeg") || strings.Contains(lowerLine, ".gif") ||
+				strings.Contains(lowerLine, ".webp") || strings.Contains(lowerLine, ".bmp") {
+				urls = append(urls, line)
+				log.Printf("画像URLを発見: %s", line)
+			}
+
+			// 画像ホスティングサービスのURLパターンをチェック
+			if strings.Contains(lowerLine, "imgur.com") || strings.Contains(lowerLine, "i.imgur.com") ||
+				strings.Contains(lowerLine, "drive.google.com") || strings.Contains(lowerLine, "photos.google.com") ||
+				strings.Contains(lowerLine, "cloudinary.com") || strings.Contains(lowerLine, "unsplash.com") ||
+				strings.Contains(lowerLine, "files.oaiusercontent.com") {
+				urls = append(urls, line)
+				log.Printf("画像ホスティングサービスURLを発見: %s", line)
+			}
+		}
+	}
+
+	log.Printf("合計 %d 個の画像URLを発見", len(urls))
+	return urls
 }
 
 // isFatalErrorForImage は、画像生成で致命的なエラーかどうかを判定します

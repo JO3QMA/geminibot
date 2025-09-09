@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 	"time"
 
@@ -70,8 +71,14 @@ func (g *StructuredGeminiClient) GenerateImageWithOptions(ctx context.Context, p
 
 // createImageGenerateConfig は、画像生成用の設定を作成します
 func (g *StructuredGeminiClient) createImageGenerateConfig() *genai.GenerateContentConfig {
+	// 画像生成用はMaxTokensを増加（複数画像生成に対応）
+	maxTokens := g.config.MaxTokens * 2
+	if maxTokens < 2000 {
+		maxTokens = 2000
+	}
+	
 	return &genai.GenerateContentConfig{
-		MaxOutputTokens: g.config.MaxTokens,
+		MaxOutputTokens: maxTokens,
 		Temperature:     &g.config.Temperature,
 		TopP:            &g.config.TopP,
 		SafetySettings: []*genai.SafetySetting{
@@ -291,7 +298,20 @@ func (g *StructuredGeminiClient) translateSafetyProbability(probability genai.Ha
 func (g *StructuredGeminiClient) extractImageURLFromText(text string) string {
 	log.Printf("テキストから画像URLを抽出中: %s", text)
 	
-	// より柔軟なURL抽出ロジック
+	// Markdown形式の画像URLを抽出: ![alt](url)
+	markdownPattern := `!\[.*?\]\((https?://[^)]+)\)`
+	re := regexp.MustCompile(markdownPattern)
+	matches := re.FindAllStringSubmatch(text, -1)
+	
+	for _, match := range matches {
+		if len(match) > 1 {
+			url := match[1]
+			log.Printf("Markdown形式の画像URLを発見: %s", url)
+			return url
+		}
+	}
+	
+	// 通常のURL抽出ロジック
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -310,7 +330,8 @@ func (g *StructuredGeminiClient) extractImageURLFromText(text string) string {
 			// 画像ホスティングサービスのURLパターンをチェック
 			if strings.Contains(lowerLine, "imgur.com") || strings.Contains(lowerLine, "i.imgur.com") ||
 			   strings.Contains(lowerLine, "drive.google.com") || strings.Contains(lowerLine, "photos.google.com") ||
-			   strings.Contains(lowerLine, "cloudinary.com") || strings.Contains(lowerLine, "unsplash.com") {
+			   strings.Contains(lowerLine, "cloudinary.com") || strings.Contains(lowerLine, "unsplash.com") ||
+			   strings.Contains(lowerLine, "files.oaiusercontent.com") {
 				log.Printf("画像ホスティングサービスURLを発見: %s", line)
 				return line
 			}

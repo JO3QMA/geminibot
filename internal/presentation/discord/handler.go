@@ -993,7 +993,8 @@ func (h *DiscordHandler) isImageURL(text string) bool {
 	// 画像ホスティングサービスのURLパターンをチェック
 	if strings.Contains(lowerText, "imgur.com") || strings.Contains(lowerText, "i.imgur.com") ||
 	   strings.Contains(lowerText, "drive.google.com") || strings.Contains(lowerText, "photos.google.com") ||
-	   strings.Contains(lowerText, "cloudinary.com") || strings.Contains(lowerText, "unsplash.com") {
+	   strings.Contains(lowerText, "cloudinary.com") || strings.Contains(lowerText, "unsplash.com") ||
+	   strings.Contains(lowerText, "files.oaiusercontent.com") {
 		return true
 	}
 	
