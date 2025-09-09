@@ -402,14 +402,14 @@ func (g *GeminiAPIClient) processResponse(resp *genai.GenerateContentResponse) (
 }
 
 // GenerateImage は、プロンプトを受け取ってGemini APIから画像を生成します
-func (g *GeminiAPIClient) GenerateImage(ctx context.Context, prompt domain.ImagePrompt) (*domain.ImageGenerationResult, error) {
-	log.Printf("Gemini APIに画像生成をリクエスト中: %d文字", len(prompt.Content))
-	log.Printf("プロンプト内容: %s", prompt.Content)
+func (g *GeminiAPIClient) GenerateImage(ctx context.Context, prompt string) (*domain.ImageGenerationResponse, error) {
+	log.Printf("Gemini APIに画像生成をリクエスト中: %d文字", len(prompt))
+	log.Printf("プロンプト内容: %s", prompt)
 
 	// リトライ機能付きで画像生成を実行
-	return g.retryWithBackoffForImage(ctx, func() (*domain.ImageGenerationResult, error) {
+	return g.retryWithBackoffForImage(ctx, func() (*domain.ImageGenerationResponse, error) {
 		// 画像生成用のコンテンツを作成
-		contents := genai.Text(prompt.Content)
+		contents := genai.Text(prompt)
 
 		// 画像生成用の設定を作成
 		config := g.createImageGenerateConfig()
@@ -430,20 +430,20 @@ func (g *GeminiAPIClient) GenerateImage(ctx context.Context, prompt domain.Image
 		g.logResponseDetails(resp)
 
 		// 画像生成結果を処理
-		return g.processImageResponse(resp, prompt.Content, modelName)
+		return g.processImageResponse(resp, prompt, modelName)
 	})
 }
 
 // GenerateImageWithOptions は、オプション付きで画像を生成します
-func (g *GeminiAPIClient) GenerateImageWithOptions(ctx context.Context, prompt domain.ImagePrompt, options domain.ImageGenerationOptions) (*domain.ImageGenerationResult, error) {
-	log.Printf("Gemini APIにオプション付き画像生成をリクエスト中: %d文字", len(prompt.Content))
-	log.Printf("プロンプト内容: %s", prompt.Content)
+func (g *GeminiAPIClient) GenerateImageWithOptions(ctx context.Context, prompt string, options domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error) {
+	log.Printf("Gemini APIにオプション付き画像生成をリクエスト中: %d文字", len(prompt))
+	log.Printf("プロンプト内容: %s", prompt)
 	log.Printf("オプション: %+v", options)
 
 	// リトライ機能付きで画像生成を実行
-	return g.retryWithBackoffForImage(ctx, func() (*domain.ImageGenerationResult, error) {
+	return g.retryWithBackoffForImage(ctx, func() (*domain.ImageGenerationResponse, error) {
 		// 画像生成用のコンテンツを作成
-		contents := genai.Text(prompt.Content)
+		contents := genai.Text(prompt)
 
 		// オプションに基づいて画像生成設定を作成
 		config := g.createImageGenerateConfigWithOptions(options)
@@ -466,6 +466,6 @@ func (g *GeminiAPIClient) GenerateImageWithOptions(ctx context.Context, prompt d
 		g.logResponseDetails(resp)
 
 		// 画像生成結果を処理
-		return g.processImageResponse(resp, prompt.Content, modelName)
+		return g.processImageResponse(resp, prompt, modelName)
 	})
 }

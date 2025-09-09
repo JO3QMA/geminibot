@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"regexp"
-	"strings"
 	"time"
 
 	"geminibot/internal/domain"
@@ -14,39 +12,23 @@ import (
 )
 
 // GenerateImage は、プロンプトを受け取ってGemini APIから画像を生成します
-func (g *StructuredGeminiClient) GenerateImage(ctx context.Context, prompt domain.ImagePrompt) (*domain.ImageGenerationResult, error) {
-	log.Printf("構造化Geminiクライアントで画像生成をリクエスト中: %d文字", len(prompt.Content))
-	log.Printf("プロンプト内容: %s", prompt.Content)
+func (g *StructuredGeminiClient) GenerateImage(ctx context.Context, prompt string) (*domain.ImageGenerationResponse, error) {
+	log.Printf("構造化Geminiクライアントで画像生成をリクエスト中: %d文字", len(prompt))
+	log.Printf("プロンプト内容: %s", prompt)
 
-	// 画像生成用のコンテンツを作成
-	contents := genai.Text(prompt.Content)
-
-	// 画像生成用の設定を作成
-	config := g.createImageGenerateConfig()
-
-	// nano bananaモデルを使用
-	modelName := "gemini-2.5-flash-image"
-	if g.config.ModelName != "" {
-		modelName = g.config.ModelName
-	}
-
-	resp, err := g.client.Models.GenerateContent(ctx, modelName, contents, config)
-	if err != nil {
-		return nil, fmt.Errorf("Gemini APIからの画像生成応答取得に失敗: %w", err)
-	}
-
-	// 画像生成結果を処理（複数画像対応）
-	return g.processImageResponseWithMultipleImages(resp, prompt.Content, modelName)
+	// デフォルトオプションで画像生成
+	options := domain.DefaultImageGenerationOptions()
+	return g.GenerateImageWithOptions(ctx, prompt, options)
 }
 
 // GenerateImageWithOptions は、オプション付きで画像を生成します
-func (g *StructuredGeminiClient) GenerateImageWithOptions(ctx context.Context, prompt domain.ImagePrompt, options domain.ImageGenerationOptions) (*domain.ImageGenerationResult, error) {
-	log.Printf("構造化Geminiクライアントでオプション付き画像生成をリクエスト中: %d文字", len(prompt.Content))
-	log.Printf("プロンプト内容: %s", prompt.Content)
+func (g *StructuredGeminiClient) GenerateImageWithOptions(ctx context.Context, prompt string, options domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error) {
+	log.Printf("構造化Geminiクライアントでオプション付き画像生成をリクエスト中: %d文字", len(prompt))
+	log.Printf("プロンプト内容: %s", prompt)
 	log.Printf("オプション: %+v", options)
 
 	// 画像生成用のコンテンツを作成
-	contents := genai.Text(prompt.Content)
+	contents := genai.Text(prompt)
 
 	// オプションに基づいて画像生成設定を作成
 	config := g.createImageGenerateConfigWithOptions(options)
@@ -54,10 +36,7 @@ func (g *StructuredGeminiClient) GenerateImageWithOptions(ctx context.Context, p
 	// モデル名を決定
 	modelName := options.Model
 	if modelName == "" {
-		modelName = "gemini-2.5-flash-image"
-	}
-	if g.config.ModelName != "" {
-		modelName = g.config.ModelName
+		modelName = "gemini-2.5-flash-image-preview"
 	}
 
 	resp, err := g.client.Models.GenerateContent(ctx, modelName, contents, config)
@@ -65,64 +44,14 @@ func (g *StructuredGeminiClient) GenerateImageWithOptions(ctx context.Context, p
 		return nil, fmt.Errorf("Gemini APIからの画像生成応答取得に失敗: %w", err)
 	}
 
-	// 画像生成結果を処理（複数画像対応）
-	return g.processImageResponseWithMultipleImages(resp, prompt.Content, modelName)
-}
-
-// createImageGenerateConfig は、画像生成用の設定を作成します
-func (g *StructuredGeminiClient) createImageGenerateConfig() *genai.GenerateContentConfig {
-	// 画像生成用はMaxTokensを増加（複数画像生成に対応）
-	maxTokens := g.config.MaxTokens * 2
-	if maxTokens < 2000 {
-		maxTokens = 2000
-	}
-
-	return &genai.GenerateContentConfig{
-		MaxOutputTokens: maxTokens,
-		Temperature:     &g.config.Temperature,
-		TopP:            &g.config.TopP,
-		SafetySettings: []*genai.SafetySetting{
-			{
-				Category:  genai.HarmCategoryHarassment,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategoryHateSpeech,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategorySexuallyExplicit,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategoryDangerousContent,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-		},
-	}
+	// 画像生成結果を処理
+	return g.processImageResponse(resp, prompt, modelName)
 }
 
 // createImageGenerateConfigWithOptions は、オプション付きで画像生成設定を作成します
 func (g *StructuredGeminiClient) createImageGenerateConfigWithOptions(options domain.ImageGenerationOptions) *genai.GenerateContentConfig {
 	config := &genai.GenerateContentConfig{
-		SafetySettings: []*genai.SafetySetting{
-			{
-				Category:  genai.HarmCategoryHarassment,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategoryHateSpeech,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategorySexuallyExplicit,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-			{
-				Category:  genai.HarmCategoryDangerousContent,
-				Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
-			},
-		},
+		SafetySettings: g.createSafetySettings(),
 	}
 
 	// オプションから設定値を適用
@@ -148,186 +77,110 @@ func (g *StructuredGeminiClient) createImageGenerateConfigWithOptions(options do
 }
 
 // processImageResponse は、画像生成レスポンスを処理します
-func (g *StructuredGeminiClient) processImageResponse(resp *genai.GenerateContentResponse, prompt, modelName string) (*domain.ImageGenerationResult, error) {
-	if resp == nil {
-		return &domain.ImageGenerationResult{
-			Success: false,
-			Error:   "レスポンスが空です",
-		}, fmt.Errorf("レスポンスが空です")
-	}
-
-	// 安全フィルターのチェック
+func (g *StructuredGeminiClient) processImageResponse(resp *genai.GenerateContentResponse, prompt string, modelName string) (*domain.ImageGenerationResponse, error) {
 	if len(resp.Candidates) == 0 {
-		return &domain.ImageGenerationResult{
-			Success: false,
-			Error:   "安全フィルターにより生成がブロックされました",
-		}, fmt.Errorf("安全フィルターにより生成がブロックされました")
+		return nil, fmt.Errorf("Gemini APIから有効な画像生成応答が得られませんでした")
 	}
 
 	candidate := resp.Candidates[0]
 
-	// 詳細なログ出力
-	log.Printf("構造化画像生成レスポンス詳細:")
-	log.Printf("  FinishReason: %v", candidate.FinishReason)
-	log.Printf("  Parts数: %d", len(candidate.Content.Parts))
+	// FinishReasonをチェックして安全フィルターによるブロックを検出
+	if candidate.FinishReason == "SAFETY" {
+		safetyDetails := g.formatSafetyRatings(candidate.SafetyRatings)
+		return nil, fmt.Errorf("Gemini APIの安全フィルターによって画像生成がブロックされました。詳細: %s", safetyDetails)
+	}
 
+	if candidate.FinishReason == "RECITATION" {
+		return nil, fmt.Errorf("Gemini APIが著作権保護された内容を検出しました。著作権で保護されたコンテンツが含まれている可能性があります")
+	}
+
+	if candidate.FinishReason == "MAX_TOKENS" {
+		return nil, fmt.Errorf("Gemini APIの応答が最大トークン数に達しました。より短いプロンプトを試してください")
+	}
+
+	// Contentがnilの場合のチェック
+	if candidate.Content == nil {
+		return nil, fmt.Errorf("Gemini APIの画像生成応答にContentが含まれていません。FinishReason: %s", candidate.FinishReason)
+	}
+
+	if len(candidate.Content.Parts) == 0 {
+		return nil, fmt.Errorf("Gemini APIの画像生成応答にコンテンツが含まれていません。FinishReason: %s", candidate.FinishReason)
+	}
+
+	// 画像データを抽出
+	var images []domain.GeneratedImage
 	for i, part := range candidate.Content.Parts {
-		log.Printf("  Part[%d]: Text長=%d", i, len(part.Text))
-		if len(part.Text) > 0 {
-			log.Printf("  Part[%d]内容: %s", i, part.Text)
-		}
-	}
-
-	// 安全フィルターの詳細チェック
-	if candidate.FinishReason == genai.FinishReasonSafety {
-		safetyRatings := g.formatSafetyRatings(candidate.SafetyRatings)
-		return &domain.ImageGenerationResult{
-			Success: false,
-			Error:   fmt.Sprintf("安全フィルターにより生成がブロックされました: %s", safetyRatings),
-		}, fmt.Errorf("安全フィルターにより生成がブロックされました: %s", safetyRatings)
-	}
-
-	// MAX_TOKENSの場合は、生成されたテキストをそのまま返す
-	if candidate.FinishReason == genai.FinishReasonMaxTokens {
-		log.Printf("MAX_TOKENSで終了 - 生成されたテキストを返します")
-		if len(candidate.Content.Parts) > 0 && candidate.Content.Parts[0].Text != "" {
-			// テキスト生成として処理
-			return &domain.ImageGenerationResult{
-				ImageURL:    candidate.Content.Parts[0].Text,
-				Prompt:      prompt,
-				Model:       modelName,
-				GeneratedAt: time.Now().Format(time.RFC3339),
-				Success:     true,
-			}, nil
-		}
-	}
-
-	// 画像URLを抽出
-	var imageURL string
-	if len(candidate.Content.Parts) > 0 {
-		for i, part := range candidate.Content.Parts {
-			if part.Text != "" {
-				log.Printf("Part[%d]から画像URLを抽出中: %s", i, part.Text)
-				// テキストから画像URLを抽出する処理
-				imageURL = g.extractImageURLFromText(part.Text)
-				if imageURL != "" {
-					log.Printf("画像URLを発見: %s", imageURL)
-					break
-				}
+		if part != nil && part.InlineData != nil {
+			image := domain.GeneratedImage{
+				Data:        part.InlineData.Data,
+				MimeType:    part.InlineData.MIMEType,
+				Filename:    fmt.Sprintf("generated_image_%d.png", i+1),
+				Size:        int64(len(part.InlineData.Data)),
+				GeneratedAt: time.Now(),
 			}
+			images = append(images, image)
 		}
 	}
 
-	if imageURL == "" {
-		// 画像URLが見つからない場合、生成されたテキストをそのまま返す
-		if len(candidate.Content.Parts) > 0 && candidate.Content.Parts[0].Text != "" {
-			log.Printf("画像URLが見つからないため、生成されたテキストを返します: %s", candidate.Content.Parts[0].Text)
-			return &domain.ImageGenerationResult{
-				ImageURL:    candidate.Content.Parts[0].Text,
-				Prompt:      prompt,
-				Model:       modelName,
-				GeneratedAt: time.Now().Format(time.RFC3339),
-				Success:     true,
-			}, nil
-		}
-
-		return &domain.ImageGenerationResult{
-			Success: false,
-			Error:   "画像URLが見つかりませんでした",
-		}, fmt.Errorf("画像URLが見つかりませんでした")
+	if len(images) == 0 {
+		return nil, fmt.Errorf("Gemini APIから画像データが取得できませんでした")
 	}
 
-	return &domain.ImageGenerationResult{
-		ImageURL:    imageURL,
+	log.Printf("Gemini APIから画像を生成: %d枚", len(images))
+	
+	return &domain.ImageGenerationResponse{
+		Images:      images,
 		Prompt:      prompt,
 		Model:       modelName,
-		GeneratedAt: time.Now().Format(time.RFC3339),
-		Success:     true,
+		GeneratedAt: time.Now(),
 	}, nil
 }
 
-// processImageResponseWithMultipleImages は、複数画像生成レスポンスを処理します
-func (g *StructuredGeminiClient) processImageResponseWithMultipleImages(resp *genai.GenerateContentResponse, prompt, modelName string) (*domain.ImageGenerationResult, error) {
-	if resp == nil {
-		return &domain.ImageGenerationResult{
-			Success: false,
-			Error:   "レスポンスが空です",
-		}, nil
+// createSafetySettings は、安全フィルター設定を作成します
+func (g *StructuredGeminiClient) createSafetySettings() []*genai.SafetySetting {
+	return []*genai.SafetySetting{
+		{
+			Category:  genai.HarmCategoryHarassment,
+			Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+		},
+		{
+			Category:  genai.HarmCategoryHateSpeech,
+			Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+		},
+		{
+			Category:  genai.HarmCategorySexuallyExplicit,
+			Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+		},
+		{
+			Category:  genai.HarmCategoryDangerousContent,
+			Threshold: genai.HarmBlockThresholdBlockMediumAndAbove,
+		},
 	}
-
-	if len(resp.Candidates) == 0 {
-		return &domain.ImageGenerationResult{
-			Success: false,
-			Error:   "候補がありません",
-		}, nil
-	}
-
-	candidate := resp.Candidates[0]
-	log.Printf("画像生成レスポンス詳細:")
-	log.Printf("  FinishReason: %s", candidate.FinishReason)
-	log.Printf("  Parts数: %d", len(candidate.Content.Parts))
-
-	// すべての画像URLを抽出
-	var allImageURLs []string
-	var fullText strings.Builder
-
-	for i, part := range candidate.Content.Parts {
-		if part.Text != "" {
-			log.Printf("  Part[%d]: Text長=%d", i, len(part.Text))
-			log.Printf("  Part[%d]内容: %s", i, part.Text)
-			
-			fullText.WriteString(part.Text)
-			fullText.WriteString("\n")
-			
-			// このPartから画像URLを抽出
-			imageURLs := g.extractAllImageURLsFromText(part.Text)
-			allImageURLs = append(allImageURLs, imageURLs...)
-		}
-	}
-
-	// 画像URLが見つからない場合
-	if len(allImageURLs) == 0 {
-		log.Printf("画像URLが見つかりませんでした。テキストレスポンスを返します。")
-		return &domain.ImageGenerationResult{
-			ImageURL:    fullText.String(),
-			Prompt:      prompt,
-			Model:       modelName,
-			GeneratedAt: time.Now().Format(time.RFC3339),
-			Success:     true,
-		}, nil
-	}
-
-	// 最初の画像URLを返す（後で複数対応を拡張可能）
-	firstImageURL := allImageURLs[0]
-	log.Printf("複数画像から最初の画像URLを選択: %s", firstImageURL)
-	log.Printf("合計 %d 個の画像URLを発見", len(allImageURLs))
-
-	return &domain.ImageGenerationResult{
-		ImageURL:    firstImageURL,
-		Prompt:      prompt,
-		Model:       modelName,
-		GeneratedAt: time.Now().Format(time.RFC3339),
-		Success:     true,
-	}, nil
 }
 
-// formatSafetyRatings は、安全フィルターの評価をフォーマットします
+// formatSafetyRatings は、SafetyRatingsの詳細情報をフォーマットします
 func (g *StructuredGeminiClient) formatSafetyRatings(ratings []*genai.SafetyRating) string {
 	if len(ratings) == 0 {
-		return "評価なし"
+		return "詳細情報なし"
 	}
 
-	var result []string
+	var details []string
 	for _, rating := range ratings {
-		category := g.translateSafetyCategory(rating.Category)
-		probability := g.translateSafetyProbability(rating.Probability)
-		result = append(result, fmt.Sprintf("%s: %s", category, probability))
+		if rating != nil {
+			category := g.translateSafetyCategory(rating.Category)
+			probability := g.translateSafetyProbability(rating.Probability)
+			details = append(details, fmt.Sprintf("%s: %s", category, probability))
+		}
 	}
 
-	return strings.Join(result, ", ")
+	if len(details) == 0 {
+		return "詳細情報なし"
+	}
+
+	return fmt.Sprintf("%s", details)
 }
 
-// translateSafetyCategory は、安全フィルターのカテゴリを日本語に翻訳します
+// translateSafetyCategory は、SafetyCategoryを日本語に翻訳します
 func (g *StructuredGeminiClient) translateSafetyCategory(category genai.HarmCategory) string {
 	switch category {
 	case genai.HarmCategoryHarassment:
@@ -339,119 +192,22 @@ func (g *StructuredGeminiClient) translateSafetyCategory(category genai.HarmCate
 	case genai.HarmCategoryDangerousContent:
 		return "危険なコンテンツ"
 	default:
-		return "不明"
+		return string(category)
 	}
 }
 
-// translateSafetyProbability は、安全フィルターの確率を日本語に翻訳します
+// translateSafetyProbability は、SafetyProbabilityを日本語に翻訳します
 func (g *StructuredGeminiClient) translateSafetyProbability(probability genai.HarmProbability) string {
 	switch probability {
 	case genai.HarmProbabilityNegligible:
-		return "無視できる"
+		return "無視できるレベル"
 	case genai.HarmProbabilityLow:
-		return "低"
+		return "低レベル"
 	case genai.HarmProbabilityMedium:
-		return "中"
+		return "中レベル"
 	case genai.HarmProbabilityHigh:
-		return "高"
+		return "高レベル"
 	default:
-		return "不明"
+		return string(probability)
 	}
-}
-
-// extractImageURLFromText は、テキストから画像URLを抽出します
-func (g *StructuredGeminiClient) extractImageURLFromText(text string) string {
-	log.Printf("テキストから画像URLを抽出中: %s", text)
-
-	// Markdown形式の画像URLを抽出: ![alt](url)
-	markdownPattern := `!\[.*?\]\((https?://[^)]+)\)`
-	re := regexp.MustCompile(markdownPattern)
-	matches := re.FindAllStringSubmatch(text, -1)
-
-	for _, match := range matches {
-		if len(match) > 1 {
-			url := match[1]
-			log.Printf("Markdown形式の画像URLを発見: %s", url)
-			return url
-		}
-	}
-
-	// 通常のURL抽出ロジック
-	lines := strings.Split(text, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-
-		// HTTP/HTTPSで始まるURLを探す
-		if strings.HasPrefix(line, "http://") || strings.HasPrefix(line, "https://") {
-			// 画像ファイル拡張子をチェック
-			lowerLine := strings.ToLower(line)
-			if strings.Contains(lowerLine, ".jpg") || strings.Contains(lowerLine, ".png") ||
-				strings.Contains(lowerLine, ".jpeg") || strings.Contains(lowerLine, ".gif") ||
-				strings.Contains(lowerLine, ".webp") || strings.Contains(lowerLine, ".bmp") {
-				log.Printf("画像URLを発見: %s", line)
-				return line
-			}
-
-			// 画像ホスティングサービスのURLパターンをチェック
-			if strings.Contains(lowerLine, "imgur.com") || strings.Contains(lowerLine, "i.imgur.com") ||
-				strings.Contains(lowerLine, "drive.google.com") || strings.Contains(lowerLine, "photos.google.com") ||
-				strings.Contains(lowerLine, "cloudinary.com") || strings.Contains(lowerLine, "unsplash.com") ||
-				strings.Contains(lowerLine, "files.oaiusercontent.com") {
-				log.Printf("画像ホスティングサービスURLを発見: %s", line)
-				return line
-			}
-		}
-	}
-
-	log.Printf("画像URLが見つかりませんでした")
-	return ""
-}
-
-// extractAllImageURLsFromText は、テキストからすべての画像URLを抽出します
-func (g *StructuredGeminiClient) extractAllImageURLsFromText(text string) []string {
-	var urls []string
-	log.Printf("テキストからすべての画像URLを抽出中: %s", text)
-	
-	// Markdown形式の画像URLを抽出: ![alt](url)
-	markdownPattern := `!\[.*?\]\((https?://[^)]+)\)`
-	re := regexp.MustCompile(markdownPattern)
-	matches := re.FindAllStringSubmatch(text, -1)
-	
-	for _, match := range matches {
-		if len(match) > 1 {
-			url := match[1]
-			urls = append(urls, url)
-			log.Printf("Markdown形式の画像URLを発見: %s", url)
-		}
-	}
-	
-	// 通常のURL抽出ロジック
-	lines := strings.Split(text, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		
-		// HTTP/HTTPSで始まるURLを探す
-		if strings.HasPrefix(line, "http://") || strings.HasPrefix(line, "https://") {
-			// 画像ファイル拡張子をチェック
-			lowerLine := strings.ToLower(line)
-			if strings.Contains(lowerLine, ".jpg") || strings.Contains(lowerLine, ".png") || 
-			   strings.Contains(lowerLine, ".jpeg") || strings.Contains(lowerLine, ".gif") ||
-			   strings.Contains(lowerLine, ".webp") || strings.Contains(lowerLine, ".bmp") {
-				urls = append(urls, line)
-				log.Printf("画像URLを発見: %s", line)
-			}
-			
-			// 画像ホスティングサービスのURLパターンをチェック
-			if strings.Contains(lowerLine, "imgur.com") || strings.Contains(lowerLine, "i.imgur.com") ||
-			   strings.Contains(lowerLine, "drive.google.com") || strings.Contains(lowerLine, "photos.google.com") ||
-			   strings.Contains(lowerLine, "cloudinary.com") || strings.Contains(lowerLine, "unsplash.com") ||
-			   strings.Contains(lowerLine, "files.oaiusercontent.com") {
-				urls = append(urls, line)
-				log.Printf("画像ホスティングサービスURLを発見: %s", line)
-			}
-		}
-	}
-	
-	log.Printf("合計 %d 個の画像URLを発見", len(urls))
-	return urls
 }

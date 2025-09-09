@@ -94,6 +94,9 @@ func main() {
 	log.Println("利用可能なスラッシュコマンド:")
 	log.Println("  /set-api - このサーバー用のGemini APIキーを設定")
 	log.Println("  /del-api - このサーバー用のGemini APIキーを削除")
+	log.Println("  /set-model - このサーバーで使用するAIモデルを設定")
+	log.Println("  /status - このサーバーのGemini APIキー設定状況を表示")
+	log.Println("  /generate-image - Nano Bananaを使って画像を生成")
 
 	// シグナルハンドリング
 	stop := make(chan os.Signal, 1)

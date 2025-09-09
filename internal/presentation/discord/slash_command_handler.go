@@ -1,11 +1,16 @@
 package discord
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"geminibot/internal/application"
+	"geminibot/internal/domain"
+	"geminibot/internal/infrastructure/config"
+	"geminibot/internal/infrastructure/gemini"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -77,6 +82,41 @@ func (h *SlashCommandHandler) SetupSlashCommands() error {
 			Name:        "status",
 			Description: "このサーバーのGemini APIキー設定状況を表示します",
 		},
+		{
+			Name:        "generate-image",
+			Description: "Nano Bananaを使って画像を生成します",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "prompt",
+					Description: "画像生成用のプロンプト",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "style",
+					Description: "画像のスタイル",
+					Required:    false,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "写真風", Value: "photographic"},
+						{Name: "アニメ風", Value: "anime"},
+						{Name: "イラスト風", Value: "illustration"},
+						{Name: "油絵風", Value: "oil_painting"},
+						{Name: "水彩画風", Value: "watercolor"},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "quality",
+					Description: "画像の品質",
+					Required:    false,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "標準", Value: "standard"},
+						{Name: "高品質", Value: "high"},
+					},
+				},
+			},
+		},
 	}
 
 	// グローバルコマンドとして登録
@@ -112,6 +152,8 @@ func (h *SlashCommandHandler) handleInteractionCreate(s *discordgo.Session, i *d
 		h.handleSetModelCommand(s, i)
 	case "status":
 		h.handleStatusCommand(s, i)
+	case "generate-image":
+		h.handleGenerateImageCommand(s, i)
 	default:
 		log.Printf("未知のスラッシュコマンド: %s", i.ApplicationCommandData().Name)
 	}
@@ -286,5 +328,142 @@ func (h *SlashCommandHandler) respondToInteraction(s *discordgo.Session, i *disc
 	err := s.InteractionRespond(i.Interaction, response)
 	if err != nil {
 		log.Printf("インタラクションへの応答に失敗: %v", err)
+	}
+}
+
+// handleGenerateImageCommand は、/generate-imageコマンドを処理します
+func (h *SlashCommandHandler) handleGenerateImageCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// まず処理中メッセージを送信
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+	})
+	if err != nil {
+		log.Printf("画像生成コマンドの応答に失敗: %v", err)
+		return
+	}
+
+	// オプションを取得
+	options := i.ApplicationCommandData().Options
+	if len(options) == 0 {
+		h.followUpInteraction(s, i, "❌ プロンプトが指定されていません。", true)
+		return
+	}
+
+	var prompt, style, quality string
+	for _, option := range options {
+		switch option.Name {
+		case "prompt":
+			prompt = option.StringValue()
+		case "style":
+			style = option.StringValue()
+		case "quality":
+			quality = option.StringValue()
+		}
+	}
+
+	if prompt == "" {
+		h.followUpInteraction(s, i, "❌ プロンプトが指定されていません。", true)
+		return
+	}
+
+	// デフォルト値を設定
+	if style == "" {
+		style = "photographic"
+	}
+	if quality == "" {
+		quality = "standard"
+	}
+
+	// APIキーを取得
+	ctx := context.Background()
+	apiKey, err := h.apiKeyService.GetGuildAPIKey(ctx, i.GuildID)
+	if err != nil {
+		log.Printf("APIキーの取得に失敗: %v", err)
+		h.followUpInteraction(s, i, "❌ このサーバーのAPIキーが見つかりません。管理者に `/set-api` コマンドでAPIキーを設定してもらってください。", true)
+		return
+	}
+
+	// Geminiクライアントを作成
+	geminiClient, err := gemini.NewStructuredGeminiClientWithAPIKey(apiKey, &config.GeminiConfig{
+		ModelName:   "gemini-2.5-flash-image-preview",
+		MaxTokens:   1000,
+		Temperature: 0.7,
+		TopP:        0.9,
+		MaxRetries:  3,
+	})
+	if err != nil {
+		log.Printf("Geminiクライアントの作成に失敗: %v", err)
+		h.followUpInteraction(s, i, "❌ Gemini APIクライアントの作成に失敗しました。", true)
+		return
+	}
+
+	// 画像生成オプションを作成
+	imageOptions := domain.ImageGenerationOptions{
+		Model:       "gemini-2.5-flash-image-preview",
+		Style:       style,
+		Quality:     quality,
+		Size:        "1024x1024",
+		Count:       1,
+		MaxTokens:   1000,
+		Temperature: 0.7,
+		TopP:        0.9,
+		TopK:        40,
+	}
+
+	// 画像を生成
+	response, err := geminiClient.GenerateImageWithOptions(ctx, prompt, imageOptions)
+	if err != nil {
+		log.Printf("画像生成に失敗: %v", err)
+		h.followUpInteraction(s, i, fmt.Sprintf("❌ 画像生成に失敗しました: %v", err), true)
+		return
+	}
+
+	if len(response.Images) == 0 {
+		h.followUpInteraction(s, i, "❌ 画像が生成されませんでした。", true)
+		return
+	}
+
+	// 生成された画像をDiscordに送信
+	image := response.Images[0]
+	file := &discordgo.File{
+		Name:        image.Filename,
+		ContentType: image.MimeType,
+		Reader:      bytes.NewReader(image.Data),
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Title:       "🎨 画像生成完了",
+		Description: fmt.Sprintf("**プロンプト:** %s\n**スタイル:** %s\n**品質:** %s", prompt, style, quality),
+		Color:       0x00ff00,
+		Timestamp:   response.GeneratedAt.Format(time.RFC3339),
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: fmt.Sprintf("生成者: %s | モデル: %s", i.Member.User.Username, response.Model),
+		},
+	}
+
+	_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+		Embeds: []*discordgo.MessageEmbed{embed},
+		Files:  []*discordgo.File{file},
+	})
+	if err != nil {
+		log.Printf("画像の送信に失敗: %v", err)
+		h.followUpInteraction(s, i, "❌ 画像の送信に失敗しました。", true)
+		return
+	}
+}
+
+// followUpInteraction は、フォローアップメッセージを送信します
+func (h *SlashCommandHandler) followUpInteraction(s *discordgo.Session, i *discordgo.InteractionCreate, content string, ephemeral bool) {
+	var flags discordgo.MessageFlags
+	if ephemeral {
+		flags = discordgo.MessageFlagsEphemeral
+	}
+
+	_, err := s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+		Content: content,
+		Flags:   flags,
+	})
+	if err != nil {
+		log.Printf("フォローアップメッセージの送信に失敗: %v", err)
 	}
 }
