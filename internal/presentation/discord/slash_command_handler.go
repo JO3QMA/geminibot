@@ -369,9 +369,9 @@ func (h *SlashCommandHandler) handleGenerateImageCommand(s *discordgo.Session, i
 		case "prompt":
 			request.Prompt = option.StringValue()
 		case "style":
-			request.Options.Style = option.StringValue()
+			request.Options.Style = domain.ImageStyleFromString(option.StringValue())
 		case "quality":
-			request.Options.Quality = option.StringValue()
+			request.Options.Quality = domain.ImageQualityFromString(option.StringValue())
 		}
 	}
 

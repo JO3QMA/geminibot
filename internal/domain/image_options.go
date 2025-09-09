@@ -143,3 +143,33 @@ func AllImageSizes() []ImageSize {
 		ImageSize768x1024,
 	}
 }
+
+// ImageStyleFromString は文字列からImageStyleを取得します
+func ImageStyleFromString(s string) ImageStyle {
+	for i, style := range imageStyles {
+		if style.Value == s {
+			return ImageStyle(i)
+		}
+	}
+	return ImageStylePhotographic // デフォルト値
+}
+
+// ImageQualityFromString は文字列からImageQualityを取得します
+func ImageQualityFromString(s string) ImageQuality {
+	for i, quality := range imageQualities {
+		if quality.Value == s {
+			return ImageQuality(i)
+		}
+	}
+	return ImageQualityStandard // デフォルト値
+}
+
+// ImageSizeFromString は文字列からImageSizeを取得します
+func ImageSizeFromString(s string) ImageSize {
+	for i, size := range imageSizes {
+		if size.Value == s {
+			return ImageSize(i)
+		}
+	}
+	return ImageSize512x512 // デフォルト値
+}

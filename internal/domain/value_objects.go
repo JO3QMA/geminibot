@@ -78,15 +78,15 @@ type GeneratedImage struct {
 
 // ImageGenerationOptions は、画像生成時のオプションを定義します
 type ImageGenerationOptions struct {
-	Model       string  `json:"model,omitempty"`
-	Style       string  `json:"style,omitempty"`
-	Quality     string  `json:"quality,omitempty"`
-	Size        string  `json:"size,omitempty"`
-	Count       int     `json:"count,omitempty"`
-	MaxTokens   int32   `json:"max_tokens,omitempty"`
-	Temperature float32 `json:"temperature,omitempty"`
-	TopP        float32 `json:"top_p,omitempty"`
-	TopK        int32   `json:"top_k,omitempty"`
+	Model       string       `json:"model,omitempty"`
+	Style       ImageStyle   `json:"style,omitempty"`
+	Quality     ImageQuality `json:"quality,omitempty"`
+	Size        ImageSize    `json:"size,omitempty"`
+	Count       int          `json:"count,omitempty"`
+	MaxTokens   int32        `json:"max_tokens,omitempty"`
+	Temperature float32      `json:"temperature,omitempty"`
+	TopP        float32      `json:"top_p,omitempty"`
+	TopK        int32        `json:"top_k,omitempty"`
 }
 
 // ImageGenerationResult は、画像生成の結果を表現する値オブジェクトです
@@ -110,9 +110,9 @@ func DefaultImageGenerationOptions() ImageGenerationOptions {
 	}
 	return ImageGenerationOptions{
 		Model:       geminiConfig.Gemini.ImageModelName,
-		Style:       geminiConfig.Gemini.ImageStyle,
-		Quality:     geminiConfig.Gemini.ImageQuality,
-		Size:        geminiConfig.Gemini.ImageSize,
+		Style:       ImageStyleFromString(geminiConfig.Gemini.ImageStyle),
+		Quality:     ImageQualityFromString(geminiConfig.Gemini.ImageQuality),
+		Size:        ImageSizeFromString(geminiConfig.Gemini.ImageSize),
 		Count:       geminiConfig.Gemini.ImageCount,
 		MaxTokens:   geminiConfig.Gemini.MaxTokens,
 		Temperature: geminiConfig.Gemini.Temperature,
