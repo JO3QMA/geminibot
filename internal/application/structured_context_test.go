@@ -26,6 +26,20 @@ func (m *MockGeminiClient) GenerateTextWithStructuredContext(ctx context.Context
 	return "構造化コンテキストでの応答", nil
 }
 
+func (m *MockGeminiClient) GenerateImage(ctx context.Context, request domain.ImageGenerationRequest) (*domain.ImageGenerationResponse, error) {
+	return &domain.ImageGenerationResponse{
+		Images: []domain.GeneratedImage{
+			{
+				Data:        []byte("mock-image-data"),
+				MimeType:    "image/jpeg",
+				Filename:    "mock-image.jpg",
+				Size:        1024,
+				GeneratedAt: time.Now(),
+			},
+		},
+	}, nil
+}
+
 // MockConversationRepository は、テスト用のConversationRepositoryモックです
 type MockConversationRepository struct{}
 

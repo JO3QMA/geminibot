@@ -31,13 +31,21 @@ func LoadConfig() (*Config, error) {
 			BotToken: getEnvOrDefault("DISCORD_BOT_TOKEN", ""),
 		},
 		Gemini: config.GeminiConfig{
-			APIKey:      getEnvOrDefault("GEMINI_API_KEY", ""),
-			ModelName:   getEnvOrDefault("GEMINI_MODEL_NAME", "gemini-2.5-pro"),
-			MaxTokens:   int32(getEnvAsIntOrDefault("GEMINI_MAX_TOKENS", 1000)),
-			Temperature: float32(getEnvAsFloatOrDefault("GEMINI_TEMPERATURE", 0.7)),
-			TopP:        float32(getEnvAsFloatOrDefault("GEMINI_TOP_P", 0.9)),
-			TopK:        int32(getEnvAsIntOrDefault("GEMINI_TOP_K", 40)),
-			MaxRetries:  getEnvAsIntOrDefault("GEMINI_MAX_RETRIES", 3),
+			APIKey:         getEnvOrDefault("GEMINI_API_KEY", ""),
+			ModelName:      getEnvOrDefault("GEMINI_MODEL_NAME", "gemini-2.5-pro"),
+			MaxTokens:      int32(getEnvAsIntOrDefault("GEMINI_MAX_TOKENS", 1000)),
+			Temperature:    float32(getEnvAsFloatOrDefault("GEMINI_TEMPERATURE", 0.7)),
+			TopP:           float32(getEnvAsFloatOrDefault("GEMINI_TOP_P", 0.9)),
+			TopK:           int32(getEnvAsIntOrDefault("GEMINI_TOP_K", 40)),
+			MaxRetries:     getEnvAsIntOrDefault("GEMINI_MAX_RETRIES", 3),
+			EnableImageGen: getEnvAsBoolOrDefault("GEMINI_ENABLE_IMAGE_GEN", true),
+
+			// 画像生成関連の設定
+			ImageModelName: getEnvOrDefault("GEMINI_IMAGE_MODEL_NAME", "gemini-2.5-flash-image-preview"),
+			ImageStyle:     getEnvOrDefault("GEMINI_IMAGE_STYLE", "photographic"),
+			ImageQuality:   getEnvOrDefault("GEMINI_IMAGE_QUALITY", "standard"),
+			ImageSize:      getEnvOrDefault("GEMINI_IMAGE_SIZE", "1024x1024"),
+			ImageCount:     getEnvAsIntOrDefault("GEMINI_IMAGE_COUNT", 1),
 		},
 		Bot: config.BotConfig{
 			MaxContextLength: getEnvAsIntOrDefault("MAX_CONTEXT_LENGTH", 8000),

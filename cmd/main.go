@@ -40,7 +40,7 @@ func main() {
 	log.Printf("Bot情報: %s#%s (ID: %s)", user.Username, user.Discriminator, user.ID)
 
 	// Gemini APIクライアントを作成
-	geminiClient, err := gemini.NewGeminiAPIClient(config.Gemini.APIKey, &config.Gemini)
+	geminiClient, err := gemini.NewGeminiAPIClient(&config.Gemini)
 	if err != nil {
 		log.Fatalf("Gemini APIクライアントの作成に失敗: %v", err)
 	}
@@ -80,7 +80,7 @@ func main() {
 	}
 
 	// スラッシュコマンドハンドラを作成
-	slashCommandHandler := discordPres.NewSlashCommandHandler(session, apiKeyService, config.Gemini.APIKey)
+	slashCommandHandler := discordPres.NewSlashCommandHandler(session, apiKeyService, &config.Gemini)
 
 	// スラッシュコマンドを設定
 	if err := slashCommandHandler.SetupSlashCommands(); err != nil {
@@ -94,6 +94,9 @@ func main() {
 	log.Println("利用可能なスラッシュコマンド:")
 	log.Println("  /set-api - このサーバー用のGemini APIキーを設定")
 	log.Println("  /del-api - このサーバー用のGemini APIキーを削除")
+	log.Println("  /set-model - このサーバーで使用するAIモデルを設定")
+	log.Println("  /status - このサーバーのGemini APIキー設定状況を表示")
+	log.Println("  /generate-image - Nano Bananaを使って画像を生成")
 
 	// シグナルハンドリング
 	stop := make(chan os.Signal, 1)

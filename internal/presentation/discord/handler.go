@@ -3,8 +3,11 @@ package discord
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"strings"
+	"time"
 
 	"geminibot/internal/application"
 	"geminibot/internal/domain"
@@ -61,6 +64,14 @@ func (h *DiscordHandler) handleMessageCreate(s *discordgo.Session, m *discordgo.
 	}
 
 	log.Printf("Botへのメンションを検出: %s", m.Content)
+
+	// 画像生成リクエストかどうかをチェック
+	if h.isImageGenerationRequest(m.Content) {
+		log.Printf("画像生成リクエストを検出: %s", m.Content)
+		// 非同期で画像生成を処理
+		go h.processImageGenerationAsync(s, m)
+		return
+	}
 
 	// メンション情報を作成
 	mention := h.createBotMention(m)
@@ -744,4 +755,402 @@ func (h *DiscordHandler) splitMessage(message string) []string {
 	}
 
 	return chunks
+}
+
+// isImageGenerationRequest は、メッセージが画像生成リクエストかどうかを判定します
+func (h *DiscordHandler) isImageGenerationRequest(content string) bool {
+	keywords := []string{
+		"画像生成", "画像作成", "絵を描いて", "イラスト作成", "画像を作って",
+		"generate image", "create image", "draw", "illustration", "picture",
+		"画像", "絵", "イラスト", "ピクチャー", "写真",
+	}
+
+	content = strings.ToLower(content)
+
+	for _, keyword := range keywords {
+		if strings.Contains(content, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+// processImageGenerationAsync は、画像生成を非同期で処理します
+func (h *DiscordHandler) processImageGenerationAsync(s *discordgo.Session, m *discordgo.MessageCreate) {
+	// メッセージからスレッドを作成
+	thread, err := s.MessageThreadStart(m.ChannelID, m.ID, "画像生成中...", 60) // 60分後にアーカイブ
+	if err != nil {
+		log.Printf("スレッド作成に失敗: %v", err)
+		// スレッド作成に失敗した場合は通常のリプライとして送信
+		h.sendImageGenerationNormalReply(s, m)
+		return
+	}
+
+	// 処理中メッセージをスレッド内に送信
+	thinkingMsg, err := s.ChannelMessageSend(thread.ID, "🎨 画像を生成中...")
+	if err != nil {
+		log.Printf("処理中メッセージの送信に失敗: %v", err)
+		return
+	}
+
+	// 画像生成を処理
+	ctx := context.Background()
+	imageResult, err := h.generateImage(ctx, m)
+
+	// 処理中メッセージを削除
+	s.ChannelMessageDelete(thread.ID, thinkingMsg.ID)
+
+	if err != nil {
+		log.Printf("画像生成に失敗: %v", err)
+		errorMsg := h.formatImageGenerationError(err)
+		s.ChannelMessageSend(thread.ID, errorMsg)
+		return
+	}
+
+	// 画像生成結果をスレッド内に送信
+	h.sendImageGenerationResult(s, thread.ID, imageResult)
+}
+
+// generateImage は、画像生成を実行します
+func (h *DiscordHandler) generateImage(ctx context.Context, m *discordgo.MessageCreate) (*domain.ImageGenerationResult, error) {
+	// メンション部分を除去したコンテンツを取得
+	content := h.extractUserContent(m)
+
+	// 画像生成用のプロンプトを作成
+	prompt := domain.NewImagePrompt(content)
+
+	// Geminiクライアントを使用して画像生成
+	response, err := h.mentionService.GenerateImage(ctx, domain.ImageGenerationRequest{
+		Prompt:  prompt,
+		Options: domain.DefaultImageGenerationOptions(),
+	})
+	if err != nil {
+		return &domain.ImageGenerationResult{
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+
+	// ImageGenerationResponseをImageGenerationResultに変換
+	result := &domain.ImageGenerationResult{
+		Response: response,
+		Success:  true,
+		Error:    "",
+		ImageURL: "", // 必要に応じて設定
+	}
+
+	return result, nil
+}
+
+// sendImageGenerationNormalReply は、スレッド作成に失敗した場合の通常のリプライ送信を行います
+func (h *DiscordHandler) sendImageGenerationNormalReply(s *discordgo.Session, m *discordgo.MessageCreate) {
+	// 処理中メッセージを送信
+	thinkingMsg, err := s.ChannelMessageSendReply(m.ChannelID, "🎨 画像を生成中...", &discordgo.MessageReference{
+		MessageID: m.ID,
+		ChannelID: m.ChannelID,
+		GuildID:   m.GuildID,
+	})
+	if err != nil {
+		log.Printf("処理中メッセージの送信に失敗: %v", err)
+		return
+	}
+
+	// 画像生成を処理
+	ctx := context.Background()
+	imageResult, err := h.generateImage(ctx, m)
+
+	// 処理中メッセージを削除
+	s.ChannelMessageDelete(m.ChannelID, thinkingMsg.ID)
+
+	if err != nil {
+		log.Printf("画像生成に失敗: %v", err)
+		errorMsg := h.formatImageGenerationError(err)
+		s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
+			MessageID: m.ID,
+			ChannelID: m.ChannelID,
+			GuildID:   m.GuildID,
+		})
+		return
+	}
+
+	// 画像生成結果を送信
+	h.sendImageGenerationResultToChannel(s, m, imageResult)
+}
+
+// sendImageGenerationResult は、画像生成結果をスレッド内に送信します
+func (h *DiscordHandler) sendImageGenerationResult(s *discordgo.Session, threadID string, result *domain.ImageGenerationResult) {
+	if !result.Success {
+		errorMsg := h.formatImageGenerationError(fmt.Errorf(result.Error))
+		s.ChannelMessageSend(threadID, errorMsg)
+		return
+	}
+
+	// 画像URLかテキストかを判定
+	if h.isImageURL(result.ImageURL) {
+		// 実際の画像URLの場合
+		message := fmt.Sprintf("🎨 **画像生成完了！**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s",
+			result.Response.Prompt, result.Response.Model, result.Response.GeneratedAt)
+
+		// 画像生成結果メッセージを送信
+		_, err := s.ChannelMessageSend(threadID, message)
+		if err != nil {
+			log.Printf("画像生成結果メッセージの送信に失敗: %v", err)
+		}
+
+		// 画像をダウンロードしてDiscordにアップロード
+		err = h.uploadImageToDiscord(s, threadID, result.ImageURL)
+		if err != nil {
+			log.Printf("画像のアップロードに失敗: %v", err)
+			// フォールバック: 画像情報とURLを送信
+			fallbackMsg := fmt.Sprintf("📷 **画像生成完了（URL表示）**\n\n**画像URL:**\n%s\n\n*注: 画像の直接表示に失敗しました。上記URLをブラウザで開いてご確認ください。*", result.ImageURL)
+			_, err = s.ChannelMessageSend(threadID, fallbackMsg)
+			if err != nil {
+				log.Printf("フォールバックメッセージの送信に失敗: %v", err)
+			}
+		}
+	} else {
+		// テキストレスポンスの場合（nano bananaの説明文など）
+		message := fmt.Sprintf("🎨 **画像生成レスポンス**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s\n\n**レスポンス:**\n%s",
+			result.Response.Prompt, result.Response.Model, result.Response.GeneratedAt, result.ImageURL)
+
+		// テキストレスポンスを送信
+		_, err := s.ChannelMessageSend(threadID, message)
+		if err != nil {
+			log.Printf("画像生成テキストレスポンスの送信に失敗: %v", err)
+		}
+	}
+}
+
+// sendImageGenerationResultToChannel は、画像生成結果をチャンネルに送信します
+func (h *DiscordHandler) sendImageGenerationResultToChannel(s *discordgo.Session, m *discordgo.MessageCreate, result *domain.ImageGenerationResult) {
+	if !result.Success {
+		errorMsg := h.formatImageGenerationError(fmt.Errorf(result.Error))
+		s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
+			MessageID: m.ID,
+			ChannelID: m.ChannelID,
+			GuildID:   m.GuildID,
+		})
+		return
+	}
+
+	// 画像URLかテキストかを判定
+	if h.isImageURL(result.ImageURL) {
+		// 実際の画像URLの場合
+		message := fmt.Sprintf("🎨 **画像生成完了！**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s",
+			result.Response.Prompt, result.Response.Model, result.Response.GeneratedAt)
+
+		// 画像生成結果メッセージを送信
+		_, err := s.ChannelMessageSendReply(m.ChannelID, message, &discordgo.MessageReference{
+			MessageID: m.ID,
+			ChannelID: m.ChannelID,
+			GuildID:   m.GuildID,
+		})
+		if err != nil {
+			log.Printf("画像生成結果メッセージの送信に失敗: %v", err)
+		}
+
+		// 画像をダウンロードしてDiscordにアップロード
+		err = h.uploadImageToDiscordWithReply(s, m, result.ImageURL)
+		if err != nil {
+			log.Printf("画像のアップロードに失敗: %v", err)
+			// フォールバック: 画像情報とURLを送信
+			fallbackMsg := fmt.Sprintf("📷 **画像生成完了（URL表示）**\n\n**画像URL:**\n%s\n\n*注: 画像の直接表示に失敗しました。上記URLをブラウザで開いてご確認ください。*", result.ImageURL)
+			_, err = s.ChannelMessageSendReply(m.ChannelID, fallbackMsg, &discordgo.MessageReference{
+				MessageID: m.ID,
+				ChannelID: m.ChannelID,
+				GuildID:   m.GuildID,
+			})
+			if err != nil {
+				log.Printf("フォールバックメッセージの送信に失敗: %v", err)
+			}
+		}
+	} else {
+		// テキストレスポンスの場合（nano bananaの説明文など）
+		message := fmt.Sprintf("🎨 **画像生成レスポンス**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s\n\n**レスポンス:**\n%s",
+			result.Response.Prompt, result.Response.Model, result.Response.GeneratedAt, result.ImageURL)
+
+		// テキストレスポンスを送信
+		_, err := s.ChannelMessageSendReply(m.ChannelID, message, &discordgo.MessageReference{
+			MessageID: m.ID,
+			ChannelID: m.ChannelID,
+			GuildID:   m.GuildID,
+		})
+		if err != nil {
+			log.Printf("画像生成テキストレスポンスの送信に失敗: %v", err)
+		}
+	}
+}
+
+// formatImageGenerationError は、画像生成エラーを適切なメッセージにフォーマットします
+func (h *DiscordHandler) formatImageGenerationError(err error) string {
+	if err == nil {
+		return "❌ **不明なエラーが発生しました**"
+	}
+
+	errorMsg := err.Error()
+
+	// 安全フィルターエラーの場合
+	if strings.Contains(errorMsg, "安全フィルター") {
+		return "🚫 **安全フィルターにより画像生成がブロックされました**\n\n" +
+			"プロンプトに不適切な内容が含まれている可能性があります。\n" +
+			"より適切な表現で再度お試しください。"
+	}
+
+	// タイムアウトエラーの場合
+	if h.isTimeoutError(err) {
+		return "⏰ **画像生成がタイムアウトしました**\n\n" +
+			"処理に時間がかかりすぎました。以下の対処法をお試しください：\n\n" +
+			"• プロンプトを短くしてみる\n" +
+			"• しばらく待ってから再度お試しください\n\n" +
+			"ご不便をおかけして申し訳ございません。"
+	}
+
+	// その他のエラー
+	return fmt.Sprintf("❌ **画像生成エラー**\n%s", err.Error())
+}
+
+// isImageURL は、文字列が画像URLかどうかを判定します
+func (h *DiscordHandler) isImageURL(text string) bool {
+	// HTTP/HTTPSで始まるかチェック
+	if !strings.HasPrefix(text, "http://") && !strings.HasPrefix(text, "https://") {
+		return false
+	}
+
+	// 画像ファイル拡張子をチェック
+	lowerText := strings.ToLower(text)
+	if strings.Contains(lowerText, ".jpg") || strings.Contains(lowerText, ".png") ||
+		strings.Contains(lowerText, ".jpeg") || strings.Contains(lowerText, ".gif") ||
+		strings.Contains(lowerText, ".webp") || strings.Contains(lowerText, ".bmp") {
+		return true
+	}
+
+	// 画像ホスティングサービスのURLパターンをチェック
+	if strings.Contains(lowerText, "imgur.com") || strings.Contains(lowerText, "i.imgur.com") ||
+		strings.Contains(lowerText, "drive.google.com") || strings.Contains(lowerText, "photos.google.com") ||
+		strings.Contains(lowerText, "cloudinary.com") || strings.Contains(lowerText, "unsplash.com") ||
+		strings.Contains(lowerText, "files.oaiusercontent.com") {
+		return true
+	}
+
+	return false
+}
+
+// uploadImageToDiscord は、画像URLから画像をダウンロードしてDiscordにアップロードします
+func (h *DiscordHandler) uploadImageToDiscord(s *discordgo.Session, channelID, imageURL string) error {
+	log.Printf("画像をダウンロード中: %s", imageURL)
+
+	// HTTPクライアントを作成（タイムアウト設定）
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	// リクエストを作成（User-Agentヘッダーを追加）
+	req, err := http.NewRequest("GET", imageURL, nil)
+	if err != nil {
+		return fmt.Errorf("リクエストの作成に失敗: %w", err)
+	}
+
+	// User-Agentを設定（ブラウザとして認識させる）
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+	req.Header.Set("Accept", "image/*,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.5")
+	req.Header.Set("Accept-Encoding", "gzip, deflate")
+	req.Header.Set("Connection", "keep-alive")
+	req.Header.Set("Upgrade-Insecure-Requests", "1")
+
+	// 画像をダウンロード
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("画像のダウンロードに失敗: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("画像のダウンロードに失敗: HTTP %d", resp.StatusCode)
+	}
+
+	// 画像データを読み込み
+	imageData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("画像データの読み込みに失敗: %w", err)
+	}
+
+	// ファイル名を生成
+	filename := "generated_image.png"
+	if strings.Contains(imageURL, ".jpg") || strings.Contains(imageURL, ".jpeg") {
+		filename = "generated_image.jpg"
+	} else if strings.Contains(imageURL, ".gif") {
+		filename = "generated_image.gif"
+	} else if strings.Contains(imageURL, ".webp") {
+		filename = "generated_image.webp"
+	}
+
+	// Discordにファイルをアップロード
+	_, err = s.ChannelFileSend(channelID, filename, strings.NewReader(string(imageData)))
+	if err != nil {
+		return fmt.Errorf("Discordへの画像アップロードに失敗: %w", err)
+	}
+
+	log.Printf("画像のアップロードが完了しました: %s", filename)
+	return nil
+}
+
+// uploadImageToDiscordWithReply は、画像URLから画像をダウンロードしてDiscordにリプライ付きでアップロードします
+func (h *DiscordHandler) uploadImageToDiscordWithReply(s *discordgo.Session, m *discordgo.MessageCreate, imageURL string) error {
+	log.Printf("画像をダウンロード中: %s", imageURL)
+
+	// HTTPクライアントを作成（タイムアウト設定）
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	// リクエストを作成（User-Agentヘッダーを追加）
+	req, err := http.NewRequest("GET", imageURL, nil)
+	if err != nil {
+		return fmt.Errorf("リクエストの作成に失敗: %w", err)
+	}
+
+	// User-Agentを設定（ブラウザとして認識させる）
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+	req.Header.Set("Accept", "image/*,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.5")
+	req.Header.Set("Accept-Encoding", "gzip, deflate")
+	req.Header.Set("Connection", "keep-alive")
+	req.Header.Set("Upgrade-Insecure-Requests", "1")
+
+	// 画像をダウンロード
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("画像のダウンロードに失敗: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("画像のダウンロードに失敗: HTTP %d", resp.StatusCode)
+	}
+
+	// 画像データを読み込み
+	imageData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("画像データの読み込みに失敗: %w", err)
+	}
+
+	// ファイル名を生成
+	filename := "generated_image.png"
+	if strings.Contains(imageURL, ".jpg") || strings.Contains(imageURL, ".jpeg") {
+		filename = "generated_image.jpg"
+	} else if strings.Contains(imageURL, ".gif") {
+		filename = "generated_image.gif"
+	} else if strings.Contains(imageURL, ".webp") {
+		filename = "generated_image.webp"
+	}
+
+	// Discordにファイルをアップロード（リプライ付き）
+	_, err = s.ChannelFileSendWithMessage(m.ChannelID, "", filename, strings.NewReader(string(imageData)))
+	if err != nil {
+		return fmt.Errorf("Discordへの画像アップロードに失敗: %w", err)
+	}
+
+	log.Printf("画像のアップロードが完了しました: %s", filename)
+	return nil
 }

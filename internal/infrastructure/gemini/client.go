@@ -21,14 +21,18 @@ type GeminiAPIClient struct {
 }
 
 // NewGeminiAPIClient は新しいGeminiAPIClientインスタンスを作成します
-func NewGeminiAPIClient(apiKey string, geminiConfig *config.GeminiConfig) (*GeminiAPIClient, error) {
+func NewGeminiAPIClient(geminiConfig *config.GeminiConfig) (*GeminiAPIClient, error) {
 	if geminiConfig == nil {
 		return nil, fmt.Errorf("GeminiConfigが指定されていません")
 	}
 
+	if geminiConfig.APIKey == "" {
+		return nil, fmt.Errorf("APIKeyが設定されていません")
+	}
+
 	ctx := context.Background()
 	clientConfig := &genai.ClientConfig{
-		APIKey: apiKey,
+		APIKey: geminiConfig.APIKey,
 	}
 
 	client, err := genai.NewClient(ctx, clientConfig)
@@ -399,4 +403,38 @@ func (g *GeminiAPIClient) processResponse(resp *genai.GenerateContentResponse) (
 
 	log.Printf("Gemini APIから応答を取得: %d文字", len(result))
 	return result, nil
+}
+
+// GenerateImage は、プロンプトを受け取ってGemini APIから画像を生成します
+// optionsが空の場合はデフォルト設定を使用します
+func (g *GeminiAPIClient) GenerateImage(ctx context.Context, request domain.ImageGenerationRequest) (*domain.ImageGenerationResponse, error) {
+	log.Printf("Gemini APIに画像生成をリクエスト中: %d文字", len(request.Prompt))
+	log.Printf("プロンプト内容: %s", request.Prompt)
+	log.Printf("オプション: %+v", request.Options)
+
+	// リトライ機能付きで画像生成を実行
+	return g.retryWithBackoffForImage(ctx, func() (*domain.ImageGenerationResponse, error) {
+		// 画像生成用のコンテンツを作成
+		contents := genai.Text(request.Prompt)
+
+		// オプションに基づいて画像生成設定を作成
+		config := g.createImageConfig(request.Options)
+
+		// モデル名を決定
+		modelName := request.Options.Model
+		if g.config.ModelName != "" {
+			modelName = g.config.ModelName
+		}
+
+		resp, err := g.client.Models.GenerateContent(ctx, modelName, contents, config)
+		if err != nil {
+			return nil, g.handleAPIError(err, ctx)
+		}
+
+		// レスポンス詳細をログ出力
+		g.logResponseDetails(resp)
+
+		// 画像生成結果を処理
+		return g.processImageResponse(resp, request.Prompt, modelName)
+	})
 }

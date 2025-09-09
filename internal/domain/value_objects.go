@@ -2,6 +2,8 @@ package domain
 
 import (
 	"fmt"
+	"geminibot/configs"
+	"log"
 	"time"
 )
 
@@ -49,4 +51,72 @@ func (bm BotMention) IsThread() bool {
 func (bm BotMention) String() string {
 	return fmt.Sprintf("BotMention{ChannelID: %s, GuildID: %s, User: %s, Content: %s, MessageID: %s}",
 		bm.ChannelID, bm.GuildID, bm.User.Username, bm.Content, bm.MessageID)
+}
+
+// ImageGenerationRequest は、画像生成リクエストを表現する値オブジェクトです
+type ImageGenerationRequest struct {
+	Prompt  string
+	Options ImageGenerationOptions
+}
+
+// ImageGenerationResponse は、画像生成レスポンスを表現する値オブジェクトです
+type ImageGenerationResponse struct {
+	Images      []GeneratedImage
+	Prompt      string
+	Model       string
+	GeneratedAt time.Time
+}
+
+// GeneratedImage は、生成された画像の情報を表現する値オブジェクトです
+type GeneratedImage struct {
+	Data        []byte
+	MimeType    string
+	Filename    string
+	Size        int64
+	GeneratedAt time.Time
+}
+
+// ImageGenerationOptions は、画像生成時のオプションを定義します
+type ImageGenerationOptions struct {
+	Model       string       `json:"model,omitempty"`
+	Style       ImageStyle   `json:"style,omitempty"`
+	Quality     ImageQuality `json:"quality,omitempty"`
+	Size        ImageSize    `json:"size,omitempty"`
+	Count       int          `json:"count,omitempty"`
+	MaxTokens   int32        `json:"max_tokens,omitempty"`
+	Temperature float32      `json:"temperature,omitempty"`
+	TopP        float32      `json:"top_p,omitempty"`
+	TopK        int32        `json:"top_k,omitempty"`
+}
+
+// ImageGenerationResult は、画像生成の結果を表現する値オブジェクトです
+type ImageGenerationResult struct {
+	Response *ImageGenerationResponse // 画像生成レスポンスを内包
+	Success  bool                     // 成功/失敗の状態
+	Error    string                   // エラーメッセージ
+	ImageURL string                   // 画像URL（必要に応じて設定）
+}
+
+// NewImagePrompt は、画像生成用のプロンプトを作成します
+func NewImagePrompt(content string) string {
+	return content
+}
+
+// DefaultImageGenerationOptions は、デフォルトの画像生成オプションを返します
+func DefaultImageGenerationOptions() ImageGenerationOptions {
+	geminiConfig, err := configs.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+	return ImageGenerationOptions{
+		Model:       geminiConfig.Gemini.ImageModelName,
+		Style:       ImageStyleFromString(geminiConfig.Gemini.ImageStyle),
+		Quality:     ImageQualityFromString(geminiConfig.Gemini.ImageQuality),
+		Size:        ImageSizeFromString(geminiConfig.Gemini.ImageSize),
+		Count:       geminiConfig.Gemini.ImageCount,
+		MaxTokens:   geminiConfig.Gemini.MaxTokens,
+		Temperature: geminiConfig.Gemini.Temperature,
+		TopP:        geminiConfig.Gemini.TopP,
+		TopK:        geminiConfig.Gemini.TopK,
+	}
 }
