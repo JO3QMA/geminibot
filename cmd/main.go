@@ -57,7 +57,7 @@ func main() {
 		return gemini.NewStructuredGeminiClientWithAPIKey(apiKey, &config.Gemini)
 	}
 
-	mentionService := application.NewMentionApplicationService(
+	mentionService, err := application.NewMentionApplicationService(
 		conversationRepo,
 		geminiClient,
 		&config.Bot,
@@ -65,6 +65,9 @@ func main() {
 		&config.Gemini,
 		geminiClientFactory,
 	)
+	if err != nil {
+		log.Fatalf("MentionApplicationServiceの作成に失敗: %v", err)
+	}
 
 	// Discordハンドラを作成
 	handler := discordPres.NewDiscordHandler(session, mentionService, user.ID)

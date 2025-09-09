@@ -10,6 +10,7 @@ type GeminiConfig struct {
 	Temperature float32
 	TopP        float32
 	TopK        int32
+	MaxRetries  int // 最大リトライ回数
 }
 
 // BotConfig は、Bot関連の設定を定義します
@@ -30,25 +31,4 @@ type AppConfig struct {
 	Discord DiscordConfig
 	Gemini  GeminiConfig
 	Bot     BotConfig
-}
-
-// DefaultGeminiConfig は、デフォルトのGemini設定を返します
-func DefaultGeminiConfig() *GeminiConfig {
-	return &GeminiConfig{
-		ModelName:   "gemini-2.5-pro",
-		MaxTokens:   1000,
-		Temperature: 0.7,
-		TopP:        0.9,
-		TopK:        40,
-	}
-}
-
-// DefaultBotConfig は、デフォルトのBot設定を返します
-func DefaultBotConfig() *BotConfig {
-	return &BotConfig{
-		MaxContextLength: 8000,
-		MaxHistoryLength: 4000,
-		RequestTimeout:   30 * time.Second,
-		SystemPrompt:     "あなたは親切で役立つAIアシスタントです。最も重要なのは、ユーザーが今送信した質問やリクエストに直接答えることです。会話履歴は参考情報として使用し、ユーザーの現在の質問を最優先で回答してください。",
-	}
 }

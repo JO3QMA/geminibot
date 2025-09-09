@@ -37,6 +37,7 @@ func LoadConfig() (*Config, error) {
 			Temperature: float32(getEnvAsFloatOrDefault("GEMINI_TEMPERATURE", 0.7)),
 			TopP:        float32(getEnvAsFloatOrDefault("GEMINI_TOP_P", 0.9)),
 			TopK:        int32(getEnvAsIntOrDefault("GEMINI_TOP_K", 40)),
+			MaxRetries:  getEnvAsIntOrDefault("GEMINI_MAX_RETRIES", 3),
 		},
 		Bot: config.BotConfig{
 			MaxContextLength: getEnvAsIntOrDefault("MAX_CONTEXT_LENGTH", 8000),
@@ -64,6 +65,22 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("GEMINI_API_KEY が設定されていません")
 	}
 
+	if c.Gemini.MaxTokens <= 0 {
+		return fmt.Errorf("GEMINI_MAX_TOKENS は正の整数である必要があります")
+	}
+
+	if c.Gemini.Temperature < 0 || c.Gemini.Temperature > 2 {
+		return fmt.Errorf("GEMINI_TEMPERATURE は0以上2以下の値である必要があります")
+	}
+
+	if c.Gemini.TopP < 0 || c.Gemini.TopP > 1 {
+		return fmt.Errorf("GEMINI_TOP_P は0以上1以下の値である必要があります")
+	}
+
+	if c.Gemini.TopK <= 0 {
+		return fmt.Errorf("GEMINI_TOP_K は正の整数である必要があります")
+	}
+
 	if c.Bot.MaxContextLength <= 0 {
 		return fmt.Errorf("MAX_CONTEXT_LENGTH は正の整数である必要があります")
 	}
@@ -78,6 +95,10 @@ func (c *Config) Validate() error {
 
 	if c.Bot.RequestTimeout <= 0 {
 		return fmt.Errorf("REQUEST_TIMEOUT は正の値である必要があります")
+	}
+
+	if c.Gemini.MaxRetries < 0 {
+		return fmt.Errorf("GEMINI_MAX_RETRIES は0以上の整数である必要があります")
 	}
 
 	return nil

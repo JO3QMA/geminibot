@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"geminibot/internal/application"
 	"geminibot/internal/domain"
@@ -22,7 +23,7 @@ type GeminiAPIClient struct {
 // NewGeminiAPIClient は新しいGeminiAPIClientインスタンスを作成します
 func NewGeminiAPIClient(apiKey string, geminiConfig *config.GeminiConfig) (*GeminiAPIClient, error) {
 	if geminiConfig == nil {
-		geminiConfig = config.DefaultGeminiConfig()
+		return nil, fmt.Errorf("GeminiConfigが指定されていません")
 	}
 
 	ctx := context.Background()
@@ -88,9 +89,22 @@ func (g *GeminiAPIClient) createGenerateConfigWithOptions(options application.Te
 // handleAPIError は、APIエラーを統一して処理します
 func (g *GeminiAPIClient) handleAPIError(err error, ctx context.Context) error {
 	if ctx.Err() == context.DeadlineExceeded {
-		return fmt.Errorf("Gemini APIへのリクエストがタイムアウトしました: %w", err)
+		return fmt.Errorf("Gemini APIへのリクエストがタイムアウトしました。時間を置いて再度お試しください: %w", err)
 	}
-	return fmt.Errorf("Gemini APIからの応答取得に失敗: %w", err)
+
+	// エラーメッセージをより詳細に
+	errStr := err.Error()
+	if strings.Contains(errStr, "quota") || strings.Contains(errStr, "limit") {
+		return fmt.Errorf("Gemini APIの利用制限に達しました。しばらく時間を置いてから再度お試しください: %w", err)
+	}
+	if strings.Contains(errStr, "permission") || strings.Contains(errStr, "unauthorized") {
+		return fmt.Errorf("Gemini APIへのアクセス権限がありません。APIキーを確認してください: %w", err)
+	}
+	if strings.Contains(errStr, "network") || strings.Contains(errStr, "connection") {
+		return fmt.Errorf("ネットワークエラーが発生しました。接続を確認して再度お試しください: %w", err)
+	}
+
+	return fmt.Errorf("Gemini APIからの応答取得に失敗しました: %w", err)
 }
 
 // logRequestDetails は、リクエスト詳細をログ出力します
@@ -104,7 +118,11 @@ func (g *GeminiAPIClient) logResponseDetails(resp *genai.GenerateContentResponse
 	log.Printf("Gemini APIレスポンス: Candidates数=%d", len(resp.Candidates))
 	if len(resp.Candidates) > 0 {
 		candidate := resp.Candidates[0]
-		log.Printf("Candidate詳細: FinishReason=%s, Parts数=%d", candidate.FinishReason, len(candidate.Content.Parts))
+		if candidate.Content != nil {
+			log.Printf("Candidate詳細: FinishReason=%s, Parts数=%d", candidate.FinishReason, len(candidate.Content.Parts))
+		} else {
+			log.Printf("Candidate詳細: FinishReason=%s, Content=nil", candidate.FinishReason)
+		}
 
 		if len(candidate.SafetyRatings) > 0 {
 			for i, rating := range candidate.SafetyRatings {
@@ -114,54 +132,113 @@ func (g *GeminiAPIClient) logResponseDetails(resp *genai.GenerateContentResponse
 	}
 }
 
+// shouldRetry は、エラーがリトライ可能かどうかを判定します
+func (g *GeminiAPIClient) shouldRetry(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errStr := err.Error()
+	// Contentがnilの場合やコンテンツが含まれていない場合はリトライ対象
+	return strings.Contains(errStr, "Contentが含まれていません") ||
+		strings.Contains(errStr, "コンテンツが含まれていません")
+}
+
+// retryWithBackoff は、指数バックオフでリトライを実行します
+func (g *GeminiAPIClient) retryWithBackoff(ctx context.Context, operation func() (string, error)) (string, error) {
+	var lastErr error
+
+	for attempt := 0; attempt <= g.config.MaxRetries; attempt++ {
+		if attempt > 0 {
+			// 指数バックオフ: 1秒、2秒、4秒...
+			backoffDuration := time.Duration(1<<uint(attempt-1)) * time.Second
+			log.Printf("リトライ %d/%d 回目: %v 後に再試行します", attempt, g.config.MaxRetries, backoffDuration)
+
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(backoffDuration):
+			}
+		}
+
+		result, err := operation()
+		if err == nil {
+			if attempt > 0 {
+				log.Printf("リトライ成功: %d回目の試行で成功しました", attempt+1)
+			}
+			return result, nil
+		}
+
+		lastErr = err
+
+		// リトライ可能なエラーかチェック
+		if !g.shouldRetry(err) {
+			log.Printf("リトライ不可能なエラー: %v", err)
+			return "", err
+		}
+
+		if attempt < g.config.MaxRetries {
+			log.Printf("リトライ可能なエラーが発生: %v", err)
+		}
+	}
+
+	return "", fmt.Errorf("最大リトライ回数 (%d) に達しました。最後のエラー: %w", g.config.MaxRetries, lastErr)
+}
+
 // GenerateText は、プロンプトを受け取ってGemini APIからテキストを生成します
 func (g *GeminiAPIClient) GenerateText(ctx context.Context, prompt domain.Prompt) (string, error) {
 	g.logRequestDetails(len(prompt.Content), prompt.Content)
 
-	// 新しいGemini APIライブラリの仕様に合わせて実装
-	contents := genai.Text(prompt.Content)
+	// リトライ機能付きでテキスト生成を実行
+	return g.retryWithBackoff(ctx, func() (string, error) {
+		// 新しいGemini APIライブラリの仕様に合わせて実装
+		contents := genai.Text(prompt.Content)
 
-	// 生成設定を作成
-	config := g.createGenerateConfig()
+		// 生成設定を作成
+		config := g.createGenerateConfig()
 
-	resp, err := g.client.Models.GenerateContent(ctx, g.config.ModelName, contents, config)
-	if err != nil {
-		return "", g.handleAPIError(err, ctx)
-	}
+		resp, err := g.client.Models.GenerateContent(ctx, g.config.ModelName, contents, config)
+		if err != nil {
+			return "", g.handleAPIError(err, ctx)
+		}
 
-	// レスポンス詳細をログ出力
-	g.logResponseDetails(resp)
+		// レスポンス詳細をログ出力
+		g.logResponseDetails(resp)
 
-	// 統一されたレスポンス処理を使用
-	return g.processResponse(resp)
+		// 統一されたレスポンス処理を使用
+		return g.processResponse(resp)
+	})
 }
 
 // GenerateTextWithOptions は、オプション付きでテキストを生成します
 func (g *GeminiAPIClient) GenerateTextWithOptions(ctx context.Context, prompt domain.Prompt, options application.TextGenerationOptions) (string, error) {
 	g.logRequestDetails(len(prompt.Content), prompt.Content)
 
-	// 新しいGemini APIライブラリの仕様に合わせて実装
-	contents := genai.Text(prompt.Content)
+	// リトライ機能付きでテキスト生成を実行
+	return g.retryWithBackoff(ctx, func() (string, error) {
+		// 新しいGemini APIライブラリの仕様に合わせて実装
+		contents := genai.Text(prompt.Content)
 
-	// オプションに基づいて生成設定を作成
-	config := g.createGenerateConfigWithOptions(options)
+		// オプションに基づいて生成設定を作成
+		config := g.createGenerateConfigWithOptions(options)
 
-	// モデル名を決定（オプションで指定されていない場合はデフォルトを使用）
-	modelName := g.config.ModelName
-	if options.Model != "" {
-		modelName = options.Model
-	}
+		// モデル名を決定（オプションで指定されていない場合はデフォルトを使用）
+		modelName := g.config.ModelName
+		if options.Model != "" {
+			modelName = options.Model
+		}
 
-	resp, err := g.client.Models.GenerateContent(ctx, modelName, contents, config)
-	if err != nil {
-		return "", g.handleAPIError(err, ctx)
-	}
+		resp, err := g.client.Models.GenerateContent(ctx, modelName, contents, config)
+		if err != nil {
+			return "", g.handleAPIError(err, ctx)
+		}
 
-	// レスポンス詳細をログ出力
-	g.logResponseDetails(resp)
+		// レスポンス詳細をログ出力
+		g.logResponseDetails(resp)
 
-	// レスポンス処理
-	return g.processResponse(resp)
+		// レスポンス処理
+		return g.processResponse(resp)
+	})
 }
 
 // GenerateTextWithStructuredContext は、構造化されたコンテキストを使用してテキストを生成します
@@ -172,35 +249,38 @@ func (g *GeminiAPIClient) GenerateTextWithStructuredContext(ctx context.Context,
 	log.Printf("システムプロンプト: %d文字", len(systemPrompt))
 	log.Printf("会話履歴: %d件", len(conversationHistory))
 
-	// 構造化されたコンテンツを作成
-	var allContents []*genai.Content
+	// リトライ機能付きでテキスト生成を実行
+	return g.retryWithBackoff(ctx, func() (string, error) {
+		// 構造化されたコンテンツを作成
+		var allContents []*genai.Content
 
-	// システムプロンプトを追加
-	allContents = append(allContents, genai.Text(systemPrompt)...)
+		// システムプロンプトを追加
+		allContents = append(allContents, genai.Text(systemPrompt)...)
 
-	// ユーザーの質問を最初に追加（最優先）
-	userQuestionText := fmt.Sprintf("## ユーザーの現在の質問\n%s", userQuestion)
-	allContents = append(allContents, genai.Text(userQuestionText)...)
+		// ユーザーの質問を最初に追加（最優先）
+		userQuestionText := fmt.Sprintf("## ユーザーの現在の質問\n%s", userQuestion)
+		allContents = append(allContents, genai.Text(userQuestionText)...)
 
-	// 会話履歴を最後に追加（参考情報として）
-	if len(conversationHistory) > 0 {
-		historyText := g.formatConversationHistory(conversationHistory)
-		allContents = append(allContents, genai.Text(historyText)...)
-	}
+		// 会話履歴を最後に追加（参考情報として）
+		if len(conversationHistory) > 0 {
+			historyText := g.formatConversationHistory(conversationHistory)
+			allContents = append(allContents, genai.Text(historyText)...)
+		}
 
-	// 生成設定を作成
-	config := g.createGenerateConfig()
+		// 生成設定を作成
+		config := g.createGenerateConfig()
 
-	resp, err := g.client.Models.GenerateContent(ctx, g.config.ModelName, allContents, config)
-	if err != nil {
-		return "", g.handleAPIError(err, ctx)
-	}
+		resp, err := g.client.Models.GenerateContent(ctx, g.config.ModelName, allContents, config)
+		if err != nil {
+			return "", g.handleAPIError(err, ctx)
+		}
 
-	// レスポンス詳細をログ出力
-	g.logResponseDetails(resp)
+		// レスポンス詳細をログ出力
+		g.logResponseDetails(resp)
 
-	// レスポンス処理
-	return g.processResponse(resp)
+		// レスポンス処理
+		return g.processResponse(resp)
+	})
 }
 
 // formatConversationHistory は、会話履歴を構造化された形式にフォーマットします
@@ -217,6 +297,60 @@ func (g *GeminiAPIClient) formatConversationHistory(messages []domain.Message) s
 	return builder.String()
 }
 
+// formatSafetyRatings は、SafetyRatingsの詳細情報をフォーマットします
+func (g *GeminiAPIClient) formatSafetyRatings(ratings []*genai.SafetyRating) string {
+	if len(ratings) == 0 {
+		return "詳細情報なし"
+	}
+
+	var details []string
+	for _, rating := range ratings {
+		if rating != nil {
+			category := g.translateSafetyCategory(rating.Category)
+			probability := g.translateSafetyProbability(rating.Probability)
+			details = append(details, fmt.Sprintf("%s: %s", category, probability))
+		}
+	}
+
+	if len(details) == 0 {
+		return "詳細情報なし"
+	}
+
+	return strings.Join(details, ", ")
+}
+
+// translateSafetyCategory は、SafetyCategoryを日本語に翻訳します
+func (g *GeminiAPIClient) translateSafetyCategory(category genai.HarmCategory) string {
+	switch category {
+	case genai.HarmCategoryHarassment:
+		return "ハラスメント"
+	case genai.HarmCategoryHateSpeech:
+		return "ヘイトスピーチ"
+	case genai.HarmCategorySexuallyExplicit:
+		return "性的表現"
+	case genai.HarmCategoryDangerousContent:
+		return "危険なコンテンツ"
+	default:
+		return string(category)
+	}
+}
+
+// translateSafetyProbability は、SafetyProbabilityを日本語に翻訳します
+func (g *GeminiAPIClient) translateSafetyProbability(probability genai.HarmProbability) string {
+	switch probability {
+	case genai.HarmProbabilityNegligible:
+		return "無視できるレベル"
+	case genai.HarmProbabilityLow:
+		return "低レベル"
+	case genai.HarmProbabilityMedium:
+		return "中レベル"
+	case genai.HarmProbabilityHigh:
+		return "高レベル"
+	default:
+		return string(probability)
+	}
+}
+
 // processResponse は、Gemini APIのレスポンスを処理します
 func (g *GeminiAPIClient) processResponse(resp *genai.GenerateContentResponse) (string, error) {
 	if len(resp.Candidates) == 0 {
@@ -227,20 +361,31 @@ func (g *GeminiAPIClient) processResponse(resp *genai.GenerateContentResponse) (
 
 	// FinishReasonをチェックして安全フィルターによるブロックを検出
 	if candidate.FinishReason == "SAFETY" {
-		return "", fmt.Errorf("Gemini APIの安全フィルターによって応答がブロックされました")
+		safetyDetails := g.formatSafetyRatings(candidate.SafetyRatings)
+		return "", fmt.Errorf("Gemini APIの安全フィルターによって応答がブロックされました。詳細: %s", safetyDetails)
 	}
 
 	if candidate.FinishReason == "RECITATION" {
-		return "", fmt.Errorf("Gemini APIが著作権保護された内容を検出しました")
+		return "", fmt.Errorf("Gemini APIが著作権保護された内容を検出しました。著作権で保護されたコンテンツが含まれている可能性があります")
+	}
+
+	if candidate.FinishReason == "MAX_TOKENS" {
+		return "", fmt.Errorf("Gemini APIの応答が最大トークン数に達しました。より短い質問を試してください")
+	}
+
+	if candidate.FinishReason == "STOP" {
+		// STOPは正常な終了なので、そのまま処理を続行
+	} else if candidate.FinishReason != "" && candidate.FinishReason != "STOP" {
+		return "", fmt.Errorf("Gemini APIで予期しない終了理由が発生しました: %s", candidate.FinishReason)
 	}
 
 	// Contentがnilの場合のチェックを追加
 	if candidate.Content == nil {
-		return "", fmt.Errorf("Gemini APIの応答にContentが含まれていません")
+		return "", fmt.Errorf("Gemini APIの応答にContentが含まれていません。FinishReason: %s", candidate.FinishReason)
 	}
 
 	if len(candidate.Content.Parts) == 0 {
-		return "", fmt.Errorf("Gemini APIの応答にコンテンツが含まれていません")
+		return "", fmt.Errorf("Gemini APIの応答にコンテンツが含まれていません。FinishReason: %s", candidate.FinishReason)
 	}
 
 	// テキスト部分を抽出
@@ -249,6 +394,7 @@ func (g *GeminiAPIClient) processResponse(resp *genai.GenerateContentResponse) (
 		if part != nil && part.Text != "" {
 			result += part.Text
 		}
+
 	}
 
 	log.Printf("Gemini APIから応答を取得: %d文字", len(result))
