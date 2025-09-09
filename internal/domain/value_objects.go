@@ -91,6 +91,22 @@ type ImageGenerationOptions struct {
 	TopK        int32   `json:"top_k,omitempty"`
 }
 
+// ImageGenerationResult は、画像生成の結果を表現する値オブジェクトです
+type ImageGenerationResult struct {
+	Images      []GeneratedImage
+	Prompt      string
+	Model       string
+	GeneratedAt time.Time
+	Success     bool
+	Error       string
+	ImageURL    string
+}
+
+// NewImagePrompt は、画像生成用のプロンプトを作成します
+func NewImagePrompt(content string) string {
+	return content
+}
+
 // DefaultImageGenerationOptions は、デフォルトの画像生成オプションを返します
 func DefaultImageGenerationOptions() ImageGenerationOptions {
 	return ImageGenerationOptions{

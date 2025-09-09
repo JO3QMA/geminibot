@@ -87,9 +87,9 @@ func (s *MentionApplicationService) HandleMention(ctx context.Context, mention d
 }
 
 // GenerateImage は、画像生成を実行します
-func (s *MentionApplicationService) GenerateImage(ctx context.Context, prompt domain.ImagePrompt) (*domain.ImageGenerationResult, error) {
+func (s *MentionApplicationService) GenerateImage(ctx context.Context, prompt string) (*domain.ImageGenerationResponse, error) {
 	log.Printf("MentionApplicationService: 画像生成を開始")
-	log.Printf("プロンプト: %s", prompt.Content)
+	log.Printf("プロンプト: %s", prompt)
 
 	// デフォルトのGeminiクライアントを使用して画像生成
 	result, err := s.geminiClient.GenerateImage(ctx, prompt)
@@ -103,9 +103,9 @@ func (s *MentionApplicationService) GenerateImage(ctx context.Context, prompt do
 }
 
 // GenerateImageWithOptions は、オプション付きで画像生成を実行します
-func (s *MentionApplicationService) GenerateImageWithOptions(ctx context.Context, prompt domain.ImagePrompt, options domain.ImageGenerationOptions) (*domain.ImageGenerationResult, error) {
+func (s *MentionApplicationService) GenerateImageWithOptions(ctx context.Context, prompt string, options domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error) {
 	log.Printf("MentionApplicationService: オプション付き画像生成を開始")
-	log.Printf("プロンプト: %s", prompt.Content)
+	log.Printf("プロンプト: %s", prompt)
 	log.Printf("オプション: %+v", options)
 
 	// デフォルトのGeminiクライアントを使用して画像生成
