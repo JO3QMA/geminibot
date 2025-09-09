@@ -3,8 +3,11 @@ package discord
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"strings"
+	"time"
 
 	"geminibot/internal/application"
 	"geminibot/internal/domain"
@@ -875,10 +878,15 @@ func (h *DiscordHandler) sendImageGenerationResult(s *discordgo.Session, threadI
 			log.Printf("画像生成結果メッセージの送信に失敗: %v", err)
 		}
 
-		// 画像URLを別途送信（Discordが自動的に画像を表示）
-		_, err = s.ChannelMessageSend(threadID, result.ImageURL)
+		// 画像をダウンロードしてDiscordにアップロード
+		err = h.uploadImageToDiscord(s, threadID, result.ImageURL)
 		if err != nil {
-			log.Printf("画像URLの送信に失敗: %v", err)
+			log.Printf("画像のアップロードに失敗: %v", err)
+			// フォールバック: URLを送信
+			_, err = s.ChannelMessageSend(threadID, result.ImageURL)
+			if err != nil {
+				log.Printf("画像URLの送信に失敗: %v", err)
+			}
 		}
 	} else {
 		// テキストレスポンスの場合（nano bananaの説明文など）
@@ -921,14 +929,19 @@ func (h *DiscordHandler) sendImageGenerationResultToChannel(s *discordgo.Session
 			log.Printf("画像生成結果メッセージの送信に失敗: %v", err)
 		}
 
-		// 画像URLを別途送信（Discordが自動的に画像を表示）
-		_, err = s.ChannelMessageSendReply(m.ChannelID, result.ImageURL, &discordgo.MessageReference{
-			MessageID: m.ID,
-			ChannelID: m.ChannelID,
-			GuildID:   m.GuildID,
-		})
+		// 画像をダウンロードしてDiscordにアップロード
+		err = h.uploadImageToDiscordWithReply(s, m, result.ImageURL)
 		if err != nil {
-			log.Printf("画像URLの送信に失敗: %v", err)
+			log.Printf("画像のアップロードに失敗: %v", err)
+			// フォールバック: URLを送信
+			_, err = s.ChannelMessageSendReply(m.ChannelID, result.ImageURL, &discordgo.MessageReference{
+				MessageID: m.ID,
+				ChannelID: m.ChannelID,
+				GuildID:   m.GuildID,
+			})
+			if err != nil {
+				log.Printf("画像URLの送信に失敗: %v", err)
+			}
 		}
 	} else {
 		// テキストレスポンスの場合（nano bananaの説明文など）
@@ -999,4 +1012,96 @@ func (h *DiscordHandler) isImageURL(text string) bool {
 	}
 	
 	return false
+}
+
+// uploadImageToDiscord は、画像URLから画像をダウンロードしてDiscordにアップロードします
+func (h *DiscordHandler) uploadImageToDiscord(s *discordgo.Session, channelID, imageURL string) error {
+	log.Printf("画像をダウンロード中: %s", imageURL)
+	
+	// HTTPクライアントを作成（タイムアウト設定）
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+	
+	// 画像をダウンロード
+	resp, err := client.Get(imageURL)
+	if err != nil {
+		return fmt.Errorf("画像のダウンロードに失敗: %w", err)
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("画像のダウンロードに失敗: HTTP %d", resp.StatusCode)
+	}
+	
+	// 画像データを読み込み
+	imageData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("画像データの読み込みに失敗: %w", err)
+	}
+	
+	// ファイル名を生成
+	filename := "generated_image.png"
+	if strings.Contains(imageURL, ".jpg") || strings.Contains(imageURL, ".jpeg") {
+		filename = "generated_image.jpg"
+	} else if strings.Contains(imageURL, ".gif") {
+		filename = "generated_image.gif"
+	} else if strings.Contains(imageURL, ".webp") {
+		filename = "generated_image.webp"
+	}
+	
+	// Discordにファイルをアップロード
+	_, err = s.ChannelFileSend(channelID, filename, strings.NewReader(string(imageData)))
+	if err != nil {
+		return fmt.Errorf("Discordへの画像アップロードに失敗: %w", err)
+	}
+	
+	log.Printf("画像のアップロードが完了しました: %s", filename)
+	return nil
+}
+
+// uploadImageToDiscordWithReply は、画像URLから画像をダウンロードしてDiscordにリプライ付きでアップロードします
+func (h *DiscordHandler) uploadImageToDiscordWithReply(s *discordgo.Session, m *discordgo.MessageCreate, imageURL string) error {
+	log.Printf("画像をダウンロード中: %s", imageURL)
+	
+	// HTTPクライアントを作成（タイムアウト設定）
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+	
+	// 画像をダウンロード
+	resp, err := client.Get(imageURL)
+	if err != nil {
+		return fmt.Errorf("画像のダウンロードに失敗: %w", err)
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("画像のダウンロードに失敗: HTTP %d", resp.StatusCode)
+	}
+	
+	// 画像データを読み込み
+	imageData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("画像データの読み込みに失敗: %w", err)
+	}
+	
+	// ファイル名を生成
+	filename := "generated_image.png"
+	if strings.Contains(imageURL, ".jpg") || strings.Contains(imageURL, ".jpeg") {
+		filename = "generated_image.jpg"
+	} else if strings.Contains(imageURL, ".gif") {
+		filename = "generated_image.gif"
+	} else if strings.Contains(imageURL, ".webp") {
+		filename = "generated_image.webp"
+	}
+	
+	// Discordにファイルをアップロード（リプライ付き）
+	_, err = s.ChannelFileSendWithMessage(m.ChannelID, "", filename, strings.NewReader(string(imageData)))
+	if err != nil {
+		return fmt.Errorf("Discordへの画像アップロードに失敗: %w", err)
+	}
+	
+	log.Printf("画像のアップロードが完了しました: %s", filename)
+	return nil
 }

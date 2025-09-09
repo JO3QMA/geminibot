@@ -76,7 +76,7 @@ func (g *StructuredGeminiClient) createImageGenerateConfig() *genai.GenerateCont
 	if maxTokens < 2000 {
 		maxTokens = 2000
 	}
-	
+
 	return &genai.GenerateContentConfig{
 		MaxOutputTokens: maxTokens,
 		Temperature:     &g.config.Temperature,
@@ -170,7 +170,7 @@ func (g *StructuredGeminiClient) processImageResponse(resp *genai.GenerateConten
 	log.Printf("構造化画像生成レスポンス詳細:")
 	log.Printf("  FinishReason: %v", candidate.FinishReason)
 	log.Printf("  Parts数: %d", len(candidate.Content.Parts))
-	
+
 	for i, part := range candidate.Content.Parts {
 		log.Printf("  Part[%d]: Text長=%d", i, len(part.Text))
 		if len(part.Text) > 0 {
@@ -230,7 +230,7 @@ func (g *StructuredGeminiClient) processImageResponse(resp *genai.GenerateConten
 				Success:     true,
 			}, nil
 		}
-		
+
 		return &domain.ImageGenerationResult{
 			Success: false,
 			Error:   "画像URLが見つかりませんでした",
@@ -297,12 +297,12 @@ func (g *StructuredGeminiClient) translateSafetyProbability(probability genai.Ha
 // extractImageURLFromText は、テキストから画像URLを抽出します
 func (g *StructuredGeminiClient) extractImageURLFromText(text string) string {
 	log.Printf("テキストから画像URLを抽出中: %s", text)
-	
+
 	// Markdown形式の画像URLを抽出: ![alt](url)
 	markdownPattern := `!\[.*?\]\((https?://[^)]+)\)`
 	re := regexp.MustCompile(markdownPattern)
 	matches := re.FindAllStringSubmatch(text, -1)
-	
+
 	for _, match := range matches {
 		if len(match) > 1 {
 			url := match[1]
@@ -310,34 +310,34 @@ func (g *StructuredGeminiClient) extractImageURLFromText(text string) string {
 			return url
 		}
 	}
-	
+
 	// 通常のURL抽出ロジック
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		
+
 		// HTTP/HTTPSで始まるURLを探す
 		if strings.HasPrefix(line, "http://") || strings.HasPrefix(line, "https://") {
 			// 画像ファイル拡張子をチェック
 			lowerLine := strings.ToLower(line)
-			if strings.Contains(lowerLine, ".jpg") || strings.Contains(lowerLine, ".png") || 
-			   strings.Contains(lowerLine, ".jpeg") || strings.Contains(lowerLine, ".gif") ||
-			   strings.Contains(lowerLine, ".webp") || strings.Contains(lowerLine, ".bmp") {
+			if strings.Contains(lowerLine, ".jpg") || strings.Contains(lowerLine, ".png") ||
+				strings.Contains(lowerLine, ".jpeg") || strings.Contains(lowerLine, ".gif") ||
+				strings.Contains(lowerLine, ".webp") || strings.Contains(lowerLine, ".bmp") {
 				log.Printf("画像URLを発見: %s", line)
 				return line
 			}
-			
+
 			// 画像ホスティングサービスのURLパターンをチェック
 			if strings.Contains(lowerLine, "imgur.com") || strings.Contains(lowerLine, "i.imgur.com") ||
-			   strings.Contains(lowerLine, "drive.google.com") || strings.Contains(lowerLine, "photos.google.com") ||
-			   strings.Contains(lowerLine, "cloudinary.com") || strings.Contains(lowerLine, "unsplash.com") ||
-			   strings.Contains(lowerLine, "files.oaiusercontent.com") {
+				strings.Contains(lowerLine, "drive.google.com") || strings.Contains(lowerLine, "photos.google.com") ||
+				strings.Contains(lowerLine, "cloudinary.com") || strings.Contains(lowerLine, "unsplash.com") ||
+				strings.Contains(lowerLine, "files.oaiusercontent.com") {
 				log.Printf("画像ホスティングサービスURLを発見: %s", line)
 				return line
 			}
 		}
 	}
-	
+
 	log.Printf("画像URLが見つかりませんでした")
 	return ""
 }
