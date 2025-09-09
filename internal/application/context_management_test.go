@@ -24,6 +24,34 @@ func (m *ContextManagementMockGeminiClient) GenerateTextWithStructuredContext(ct
 	return "構造化コンテキストでの応答", nil
 }
 
+func (m *ContextManagementMockGeminiClient) GenerateImage(ctx context.Context, prompt string) (*domain.ImageGenerationResponse, error) {
+	return &domain.ImageGenerationResponse{
+		Images: []domain.GeneratedImage{
+			{
+				Data:        []byte("mock-image-data"),
+				MimeType:    "image/jpeg",
+				Filename:    "mock-image.jpg",
+				Size:        1024,
+				GeneratedAt: time.Now(),
+			},
+		},
+	}, nil
+}
+
+func (m *ContextManagementMockGeminiClient) GenerateImageWithOptions(ctx context.Context, prompt string, options domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error) {
+	return &domain.ImageGenerationResponse{
+		Images: []domain.GeneratedImage{
+			{
+				Data:        []byte("mock-image-with-options-data"),
+				MimeType:    "image/jpeg",
+				Filename:    "mock-image-with-options.jpg",
+				Size:        2048,
+				GeneratedAt: time.Now(),
+			},
+		},
+	}, nil
+}
+
 // ContextManagementMockConversationRepository は、テスト用のConversationRepositoryモックです
 type ContextManagementMockConversationRepository struct{}
 
