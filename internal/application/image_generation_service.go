@@ -56,61 +56,6 @@ func (s *ImageGenerationService) validatePrompt(prompt string) error {
 	return nil
 }
 
-// normalizeOptions は、オプションを正規化します
-func (s *ImageGenerationService) normalizeOptions(options domain.ImageGenerationOptions) domain.ImageGenerationOptions {
-	normalized := options
-
-	// モデル名の正規化
-	if normalized.Model == "" {
-		normalized.Model = "gemini-2.5-flash-image-preview"
-	}
-
-	// スタイルの正規化
-	if normalized.Style == "" {
-		normalized.Style = "photographic"
-	}
-
-	// 品質の正規化
-	if normalized.Quality == "" {
-		normalized.Quality = "standard"
-	}
-
-	// サイズの正規化
-	if normalized.Size == "" {
-		normalized.Size = "1024x1024"
-	}
-
-	// カウントの正規化
-	if normalized.Count <= 0 {
-		normalized.Count = 1
-	}
-	if normalized.Count > 4 {
-		normalized.Count = 4 // 最大4枚まで
-	}
-
-	// MaxTokensの正規化
-	if normalized.MaxTokens <= 0 {
-		normalized.MaxTokens = 1000
-	}
-
-	// Temperatureの正規化
-	if normalized.Temperature <= 0 {
-		normalized.Temperature = 0.7
-	}
-
-	// TopPの正規化
-	if normalized.TopP <= 0 {
-		normalized.TopP = 0.9
-	}
-
-	// TopKの正規化
-	if normalized.TopK <= 0 {
-		normalized.TopK = 40
-	}
-
-	return normalized
-}
-
 // GetSupportedStyles は、サポートされているスタイルのリストを返します
 func (s *ImageGenerationService) GetSupportedStyles() []string {
 	return []string{
