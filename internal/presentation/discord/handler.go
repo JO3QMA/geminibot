@@ -882,10 +882,11 @@ func (h *DiscordHandler) sendImageGenerationResult(s *discordgo.Session, threadI
 		err = h.uploadImageToDiscord(s, threadID, result.ImageURL)
 		if err != nil {
 			log.Printf("画像のアップロードに失敗: %v", err)
-			// フォールバック: URLを送信
-			_, err = s.ChannelMessageSend(threadID, result.ImageURL)
+			// フォールバック: 画像情報とURLを送信
+			fallbackMsg := fmt.Sprintf("📷 **画像生成完了（URL表示）**\n\n**画像URL:**\n%s\n\n*注: 画像の直接表示に失敗しました。上記URLをブラウザで開いてご確認ください。*", result.ImageURL)
+			_, err = s.ChannelMessageSend(threadID, fallbackMsg)
 			if err != nil {
-				log.Printf("画像URLの送信に失敗: %v", err)
+				log.Printf("フォールバックメッセージの送信に失敗: %v", err)
 			}
 		}
 	} else {
@@ -933,14 +934,15 @@ func (h *DiscordHandler) sendImageGenerationResultToChannel(s *discordgo.Session
 		err = h.uploadImageToDiscordWithReply(s, m, result.ImageURL)
 		if err != nil {
 			log.Printf("画像のアップロードに失敗: %v", err)
-			// フォールバック: URLを送信
-			_, err = s.ChannelMessageSendReply(m.ChannelID, result.ImageURL, &discordgo.MessageReference{
+			// フォールバック: 画像情報とURLを送信
+			fallbackMsg := fmt.Sprintf("📷 **画像生成完了（URL表示）**\n\n**画像URL:**\n%s\n\n*注: 画像の直接表示に失敗しました。上記URLをブラウザで開いてご確認ください。*", result.ImageURL)
+			_, err = s.ChannelMessageSendReply(m.ChannelID, fallbackMsg, &discordgo.MessageReference{
 				MessageID: m.ID,
 				ChannelID: m.ChannelID,
 				GuildID:   m.GuildID,
 			})
 			if err != nil {
-				log.Printf("画像URLの送信に失敗: %v", err)
+				log.Printf("フォールバックメッセージの送信に失敗: %v", err)
 			}
 		}
 	} else {
@@ -1023,8 +1025,22 @@ func (h *DiscordHandler) uploadImageToDiscord(s *discordgo.Session, channelID, i
 		Timeout: 30 * time.Second,
 	}
 	
+	// リクエストを作成（User-Agentヘッダーを追加）
+	req, err := http.NewRequest("GET", imageURL, nil)
+	if err != nil {
+		return fmt.Errorf("リクエストの作成に失敗: %w", err)
+	}
+	
+	// User-Agentを設定（ブラウザとして認識させる）
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+	req.Header.Set("Accept", "image/*,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.5")
+	req.Header.Set("Accept-Encoding", "gzip, deflate")
+	req.Header.Set("Connection", "keep-alive")
+	req.Header.Set("Upgrade-Insecure-Requests", "1")
+	
 	// 画像をダウンロード
-	resp, err := client.Get(imageURL)
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("画像のダウンロードに失敗: %w", err)
 	}
@@ -1069,8 +1085,22 @@ func (h *DiscordHandler) uploadImageToDiscordWithReply(s *discordgo.Session, m *
 		Timeout: 30 * time.Second,
 	}
 	
+	// リクエストを作成（User-Agentヘッダーを追加）
+	req, err := http.NewRequest("GET", imageURL, nil)
+	if err != nil {
+		return fmt.Errorf("リクエストの作成に失敗: %w", err)
+	}
+	
+	// User-Agentを設定（ブラウザとして認識させる）
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+	req.Header.Set("Accept", "image/*,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.5")
+	req.Header.Set("Accept-Encoding", "gzip, deflate")
+	req.Header.Set("Connection", "keep-alive")
+	req.Header.Set("Upgrade-Insecure-Requests", "1")
+	
 	// 画像をダウンロード
-	resp, err := client.Get(imageURL)
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("画像のダウンロードに失敗: %w", err)
 	}

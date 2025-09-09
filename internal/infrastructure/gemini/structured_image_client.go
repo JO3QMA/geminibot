@@ -35,8 +35,8 @@ func (g *StructuredGeminiClient) GenerateImage(ctx context.Context, prompt domai
 		return nil, fmt.Errorf("Gemini APIからの画像生成応答取得に失敗: %w", err)
 	}
 
-	// 画像生成結果を処理
-	return g.processImageResponse(resp, prompt.Content, modelName)
+	// 画像生成結果を処理（複数画像対応）
+	return g.processImageResponseWithMultipleImages(resp, prompt.Content, modelName)
 }
 
 // GenerateImageWithOptions は、オプション付きで画像を生成します
@@ -65,8 +65,8 @@ func (g *StructuredGeminiClient) GenerateImageWithOptions(ctx context.Context, p
 		return nil, fmt.Errorf("Gemini APIからの画像生成応答取得に失敗: %w", err)
 	}
 
-	// 画像生成結果を処理
-	return g.processImageResponse(resp, prompt.Content, modelName)
+	// 画像生成結果を処理（複数画像対応）
+	return g.processImageResponseWithMultipleImages(resp, prompt.Content, modelName)
 }
 
 // createImageGenerateConfig は、画像生成用の設定を作成します
@@ -246,6 +246,71 @@ func (g *StructuredGeminiClient) processImageResponse(resp *genai.GenerateConten
 	}, nil
 }
 
+// processImageResponseWithMultipleImages は、複数画像生成レスポンスを処理します
+func (g *StructuredGeminiClient) processImageResponseWithMultipleImages(resp *genai.GenerateContentResponse, prompt, modelName string) (*domain.ImageGenerationResult, error) {
+	if resp == nil {
+		return &domain.ImageGenerationResult{
+			Success: false,
+			Error:   "レスポンスが空です",
+		}, nil
+	}
+
+	if len(resp.Candidates) == 0 {
+		return &domain.ImageGenerationResult{
+			Success: false,
+			Error:   "候補がありません",
+		}, nil
+	}
+
+	candidate := resp.Candidates[0]
+	log.Printf("画像生成レスポンス詳細:")
+	log.Printf("  FinishReason: %s", candidate.FinishReason)
+	log.Printf("  Parts数: %d", len(candidate.Content.Parts))
+
+	// すべての画像URLを抽出
+	var allImageURLs []string
+	var fullText strings.Builder
+
+	for i, part := range candidate.Content.Parts {
+		if part.Text != "" {
+			log.Printf("  Part[%d]: Text長=%d", i, len(part.Text))
+			log.Printf("  Part[%d]内容: %s", i, part.Text)
+			
+			fullText.WriteString(part.Text)
+			fullText.WriteString("\n")
+			
+			// このPartから画像URLを抽出
+			imageURLs := g.extractAllImageURLsFromText(part.Text)
+			allImageURLs = append(allImageURLs, imageURLs...)
+		}
+	}
+
+	// 画像URLが見つからない場合
+	if len(allImageURLs) == 0 {
+		log.Printf("画像URLが見つかりませんでした。テキストレスポンスを返します。")
+		return &domain.ImageGenerationResult{
+			ImageURL:    fullText.String(),
+			Prompt:      prompt,
+			Model:       modelName,
+			GeneratedAt: time.Now().Format(time.RFC3339),
+			Success:     true,
+		}, nil
+	}
+
+	// 最初の画像URLを返す（後で複数対応を拡張可能）
+	firstImageURL := allImageURLs[0]
+	log.Printf("複数画像から最初の画像URLを選択: %s", firstImageURL)
+	log.Printf("合計 %d 個の画像URLを発見", len(allImageURLs))
+
+	return &domain.ImageGenerationResult{
+		ImageURL:    firstImageURL,
+		Prompt:      prompt,
+		Model:       modelName,
+		GeneratedAt: time.Now().Format(time.RFC3339),
+		Success:     true,
+	}, nil
+}
+
 // formatSafetyRatings は、安全フィルターの評価をフォーマットします
 func (g *StructuredGeminiClient) formatSafetyRatings(ratings []*genai.SafetyRating) string {
 	if len(ratings) == 0 {
@@ -340,4 +405,53 @@ func (g *StructuredGeminiClient) extractImageURLFromText(text string) string {
 
 	log.Printf("画像URLが見つかりませんでした")
 	return ""
+}
+
+// extractAllImageURLsFromText は、テキストからすべての画像URLを抽出します
+func (g *StructuredGeminiClient) extractAllImageURLsFromText(text string) []string {
+	var urls []string
+	log.Printf("テキストからすべての画像URLを抽出中: %s", text)
+	
+	// Markdown形式の画像URLを抽出: ![alt](url)
+	markdownPattern := `!\[.*?\]\((https?://[^)]+)\)`
+	re := regexp.MustCompile(markdownPattern)
+	matches := re.FindAllStringSubmatch(text, -1)
+	
+	for _, match := range matches {
+		if len(match) > 1 {
+			url := match[1]
+			urls = append(urls, url)
+			log.Printf("Markdown形式の画像URLを発見: %s", url)
+		}
+	}
+	
+	// 通常のURL抽出ロジック
+	lines := strings.Split(text, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		
+		// HTTP/HTTPSで始まるURLを探す
+		if strings.HasPrefix(line, "http://") || strings.HasPrefix(line, "https://") {
+			// 画像ファイル拡張子をチェック
+			lowerLine := strings.ToLower(line)
+			if strings.Contains(lowerLine, ".jpg") || strings.Contains(lowerLine, ".png") || 
+			   strings.Contains(lowerLine, ".jpeg") || strings.Contains(lowerLine, ".gif") ||
+			   strings.Contains(lowerLine, ".webp") || strings.Contains(lowerLine, ".bmp") {
+				urls = append(urls, line)
+				log.Printf("画像URLを発見: %s", line)
+			}
+			
+			// 画像ホスティングサービスのURLパターンをチェック
+			if strings.Contains(lowerLine, "imgur.com") || strings.Contains(lowerLine, "i.imgur.com") ||
+			   strings.Contains(lowerLine, "drive.google.com") || strings.Contains(lowerLine, "photos.google.com") ||
+			   strings.Contains(lowerLine, "cloudinary.com") || strings.Contains(lowerLine, "unsplash.com") ||
+			   strings.Contains(lowerLine, "files.oaiusercontent.com") {
+				urls = append(urls, line)
+				log.Printf("画像ホスティングサービスURLを発見: %s", line)
+			}
+		}
+	}
+	
+	log.Printf("合計 %d 個の画像URLを発見", len(urls))
+	return urls
 }

@@ -190,6 +190,71 @@ func (g *GeminiAPIClient) processImageResponse(resp *genai.GenerateContentRespon
 	}, nil
 }
 
+// processImageResponseWithMultipleImages は、複数画像生成レスポンスを処理します
+func (g *GeminiAPIClient) processImageResponseWithMultipleImages(resp *genai.GenerateContentResponse, prompt, modelName string) (*domain.ImageGenerationResult, error) {
+	if resp == nil {
+		return &domain.ImageGenerationResult{
+			Success: false,
+			Error:   "レスポンスが空です",
+		}, nil
+	}
+
+	if len(resp.Candidates) == 0 {
+		return &domain.ImageGenerationResult{
+			Success: false,
+			Error:   "候補がありません",
+		}, nil
+	}
+
+	candidate := resp.Candidates[0]
+	log.Printf("画像生成レスポンス詳細:")
+	log.Printf("  FinishReason: %s", candidate.FinishReason)
+	log.Printf("  Parts数: %d", len(candidate.Content.Parts))
+
+	// すべての画像URLを抽出
+	var allImageURLs []string
+	var fullText strings.Builder
+
+	for i, part := range candidate.Content.Parts {
+		if part.Text != "" {
+			log.Printf("  Part[%d]: Text長=%d", i, len(part.Text))
+			log.Printf("  Part[%d]内容: %s", i, part.Text)
+			
+			fullText.WriteString(part.Text)
+			fullText.WriteString("\n")
+			
+			// このPartから画像URLを抽出
+			imageURLs := g.extractAllImageURLsFromText(part.Text)
+			allImageURLs = append(allImageURLs, imageURLs...)
+		}
+	}
+
+	// 画像URLが見つからない場合
+	if len(allImageURLs) == 0 {
+		log.Printf("画像URLが見つかりませんでした。テキストレスポンスを返します。")
+		return &domain.ImageGenerationResult{
+			ImageURL:    fullText.String(),
+			Prompt:      prompt,
+			Model:       modelName,
+			GeneratedAt: time.Now().Format(time.RFC3339),
+			Success:     true,
+		}, nil
+	}
+
+	// 最初の画像URLを返す（後で複数対応を拡張可能）
+	firstImageURL := allImageURLs[0]
+	log.Printf("複数画像から最初の画像URLを選択: %s", firstImageURL)
+	log.Printf("合計 %d 個の画像URLを発見", len(allImageURLs))
+
+	return &domain.ImageGenerationResult{
+		ImageURL:    firstImageURL,
+		Prompt:      prompt,
+		Model:       modelName,
+		GeneratedAt: time.Now().Format(time.RFC3339),
+		Success:     true,
+	}, nil
+}
+
 // extractImageURLFromText は、テキストから画像URLを抽出します
 func (g *GeminiAPIClient) extractImageURLFromText(text string) string {
 	log.Printf("テキストから画像URLを抽出中: %s", text)
