@@ -2,6 +2,8 @@ package domain
 
 import (
 	"fmt"
+	"geminibot/configs"
+	"log"
 	"time"
 )
 
@@ -54,11 +56,7 @@ func (bm BotMention) String() string {
 // ImageGenerationRequest は、画像生成リクエストを表現する値オブジェクトです
 type ImageGenerationRequest struct {
 	Prompt  string
-	Model   string
-	Style   string
-	Quality string
-	Size    string
-	Count   int
+	Options ImageGenerationOptions
 }
 
 // ImageGenerationResponse は、画像生成レスポンスを表現する値オブジェクトです
@@ -93,13 +91,10 @@ type ImageGenerationOptions struct {
 
 // ImageGenerationResult は、画像生成の結果を表現する値オブジェクトです
 type ImageGenerationResult struct {
-	Images      []GeneratedImage
-	Prompt      string
-	Model       string
-	GeneratedAt time.Time
-	Success     bool
-	Error       string
-	ImageURL    string
+	Response *ImageGenerationResponse // 画像生成レスポンスを内包
+	Success  bool                     // 成功/失敗の状態
+	Error    string                   // エラーメッセージ
+	ImageURL string                   // 画像URL（必要に応じて設定）
 }
 
 // NewImagePrompt は、画像生成用のプロンプトを作成します
@@ -109,15 +104,19 @@ func NewImagePrompt(content string) string {
 
 // DefaultImageGenerationOptions は、デフォルトの画像生成オプションを返します
 func DefaultImageGenerationOptions() ImageGenerationOptions {
+	geminiConfig, err := configs.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
 	return ImageGenerationOptions{
-		Model:       "gemini-2.5-flash-image",
-		Style:       "photographic",
-		Quality:     "standard",
-		Size:        "1024x1024",
-		Count:       1,
-		MaxTokens:   1000,
-		Temperature: 0.7,
-		TopP:        0.9,
-		TopK:        40,
+		Model:       geminiConfig.Gemini.ImageModelName,
+		Style:       geminiConfig.Gemini.ImageStyle,
+		Quality:     geminiConfig.Gemini.ImageQuality,
+		Size:        geminiConfig.Gemini.ImageSize,
+		Count:       geminiConfig.Gemini.ImageCount,
+		MaxTokens:   geminiConfig.Gemini.MaxTokens,
+		Temperature: geminiConfig.Gemini.Temperature,
+		TopP:        geminiConfig.Gemini.TopP,
+		TopK:        geminiConfig.Gemini.TopK,
 	}
 }

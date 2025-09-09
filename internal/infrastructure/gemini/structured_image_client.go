@@ -13,14 +13,13 @@ import (
 
 // GenerateImage は、プロンプトを受け取ってGemini APIから画像を生成します
 // optionsが空の場合はデフォルト設定を使用します
-func (g *StructuredGeminiClient) GenerateImage(ctx context.Context, prompt string, options ...domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error) {
-	var opts domain.ImageGenerationOptions
-	if len(options) > 0 {
-		opts = options[0]
+func (g *StructuredGeminiClient) GenerateImage(ctx context.Context, request domain.ImageGenerationRequest) (*domain.ImageGenerationResponse, error) {
+	if request.Options != (domain.ImageGenerationOptions{}) {
+		request.Options = request.Options
 	} else {
-		opts = domain.DefaultImageGenerationOptions()
+		request.Options = domain.DefaultImageGenerationOptions()
 	}
-	return g.generateImageWithOptions(ctx, prompt, opts)
+	return g.generateImageWithOptions(ctx, request.Prompt, request.Options)
 }
 
 // generateImageWithOptions は、オプション付きで画像を生成する内部実装です
@@ -37,9 +36,6 @@ func (g *StructuredGeminiClient) generateImageWithOptions(ctx context.Context, p
 
 	// モデル名を決定
 	modelName := options.Model
-	if modelName == "" {
-		modelName = "gemini-2.5-flash-image"
-	}
 
 	resp, err := g.client.Models.GenerateContent(ctx, modelName, contents, config)
 	if err != nil {

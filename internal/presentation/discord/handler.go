@@ -820,7 +820,10 @@ func (h *DiscordHandler) generateImage(ctx context.Context, m *discordgo.Message
 	prompt := domain.NewImagePrompt(content)
 
 	// Geminiクライアントを使用して画像生成
-	response, err := h.mentionService.GenerateImage(ctx, prompt)
+	response, err := h.mentionService.GenerateImage(ctx, domain.ImageGenerationRequest{
+		Prompt:  prompt,
+		Options: domain.DefaultImageGenerationOptions(),
+	})
 	if err != nil {
 		return &domain.ImageGenerationResult{
 			Success: false,
@@ -830,13 +833,10 @@ func (h *DiscordHandler) generateImage(ctx context.Context, m *discordgo.Message
 
 	// ImageGenerationResponseをImageGenerationResultに変換
 	result := &domain.ImageGenerationResult{
-		Images:      response.Images,
-		Prompt:      response.Prompt,
-		Model:       response.Model,
-		GeneratedAt: response.GeneratedAt,
-		Success:     true,
-		Error:       "",
-		ImageURL:    "", // 必要に応じて設定
+		Response: response,
+		Success:  true,
+		Error:    "",
+		ImageURL: "", // 必要に応じて設定
 	}
 
 	return result, nil
@@ -889,7 +889,7 @@ func (h *DiscordHandler) sendImageGenerationResult(s *discordgo.Session, threadI
 	if h.isImageURL(result.ImageURL) {
 		// 実際の画像URLの場合
 		message := fmt.Sprintf("🎨 **画像生成完了！**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s",
-			result.Prompt, result.Model, result.GeneratedAt)
+			result.Response.Prompt, result.Response.Model, result.Response.GeneratedAt)
 
 		// 画像生成結果メッセージを送信
 		_, err := s.ChannelMessageSend(threadID, message)
@@ -911,7 +911,7 @@ func (h *DiscordHandler) sendImageGenerationResult(s *discordgo.Session, threadI
 	} else {
 		// テキストレスポンスの場合（nano bananaの説明文など）
 		message := fmt.Sprintf("🎨 **画像生成レスポンス**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s\n\n**レスポンス:**\n%s",
-			result.Prompt, result.Model, result.GeneratedAt, result.ImageURL)
+			result.Response.Prompt, result.Response.Model, result.Response.GeneratedAt, result.ImageURL)
 
 		// テキストレスポンスを送信
 		_, err := s.ChannelMessageSend(threadID, message)
@@ -937,7 +937,7 @@ func (h *DiscordHandler) sendImageGenerationResultToChannel(s *discordgo.Session
 	if h.isImageURL(result.ImageURL) {
 		// 実際の画像URLの場合
 		message := fmt.Sprintf("🎨 **画像生成完了！**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s",
-			result.Prompt, result.Model, result.GeneratedAt)
+			result.Response.Prompt, result.Response.Model, result.Response.GeneratedAt)
 
 		// 画像生成結果メッセージを送信
 		_, err := s.ChannelMessageSendReply(m.ChannelID, message, &discordgo.MessageReference{
@@ -967,7 +967,7 @@ func (h *DiscordHandler) sendImageGenerationResultToChannel(s *discordgo.Session
 	} else {
 		// テキストレスポンスの場合（nano bananaの説明文など）
 		message := fmt.Sprintf("🎨 **画像生成レスポンス**\n\n**プロンプト:** %s\n**モデル:** %s\n**生成時刻:** %s\n\n**レスポンス:**\n%s",
-			result.Prompt, result.Model, result.GeneratedAt, result.ImageURL)
+			result.Response.Prompt, result.Response.Model, result.Response.GeneratedAt, result.ImageURL)
 
 		// テキストレスポンスを送信
 		_, err := s.ChannelMessageSendReply(m.ChannelID, message, &discordgo.MessageReference{

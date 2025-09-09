@@ -403,33 +403,21 @@ func (g *GeminiAPIClient) processResponse(resp *genai.GenerateContentResponse) (
 
 // GenerateImage は、プロンプトを受け取ってGemini APIから画像を生成します
 // optionsが空の場合はデフォルト設定を使用します
-func (g *GeminiAPIClient) GenerateImage(ctx context.Context, prompt string, options ...domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error) {
-	var opts domain.ImageGenerationOptions
-	if len(options) > 0 {
-		opts = options[0]
-	}
-	return g.generateImageWithOptions(ctx, prompt, opts)
-}
-
-// generateImageWithOptions は、オプション付きで画像を生成する内部実装です
-func (g *GeminiAPIClient) generateImageWithOptions(ctx context.Context, prompt string, options domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error) {
-	log.Printf("Gemini APIに画像生成をリクエスト中: %d文字", len(prompt))
-	log.Printf("プロンプト内容: %s", prompt)
-	log.Printf("オプション: %+v", options)
+func (g *GeminiAPIClient) GenerateImage(ctx context.Context, request domain.ImageGenerationRequest) (*domain.ImageGenerationResponse, error) {
+	log.Printf("Gemini APIに画像生成をリクエスト中: %d文字", len(request.Prompt))
+	log.Printf("プロンプト内容: %s", request.Prompt)
+	log.Printf("オプション: %+v", request.Options)
 
 	// リトライ機能付きで画像生成を実行
 	return g.retryWithBackoffForImage(ctx, func() (*domain.ImageGenerationResponse, error) {
 		// 画像生成用のコンテンツを作成
-		contents := genai.Text(prompt)
+		contents := genai.Text(request.Prompt)
 
 		// オプションに基づいて画像生成設定を作成
-		config := g.createImageConfig(options)
+		config := g.createImageConfig(request.Options)
 
 		// モデル名を決定
-		modelName := options.Model
-		if modelName == "" {
-			modelName = "gemini-2.5-flash-image"
-		}
+		modelName := request.Options.Model
 		if g.config.ModelName != "" {
 			modelName = g.config.ModelName
 		}
@@ -443,6 +431,6 @@ func (g *GeminiAPIClient) generateImageWithOptions(ctx context.Context, prompt s
 		g.logResponseDetails(resp)
 
 		// 画像生成結果を処理
-		return g.processImageResponse(resp, prompt, modelName)
+		return g.processImageResponse(resp, request.Prompt, modelName)
 	})
 }

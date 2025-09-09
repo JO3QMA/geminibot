@@ -13,6 +13,12 @@ type GeminiConfig struct {
 	TopK           int32
 	MaxRetries     int  // 最大リトライ回数
 	EnableImageGen bool // 画像生成機能の有効/無効
+
+	// 画像生成関連の設定
+	ImageStyle   string // デフォルト画像スタイル
+	ImageQuality string // デフォルト画像品質
+	ImageSize    string // デフォルト画像サイズ
+	ImageCount   int    // デフォルト画像生成数
 }
 
 // BotConfig は、Bot関連の設定を定義します

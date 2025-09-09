@@ -18,7 +18,7 @@ type GeminiClient interface {
 
 	// GenerateImage は、プロンプトを受け取ってGemini APIから画像を生成します
 	// optionsが空の場合はデフォルト設定を使用します
-	GenerateImage(ctx context.Context, prompt string, options ...domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error)
+	GenerateImage(ctx context.Context, request domain.ImageGenerationRequest) (*domain.ImageGenerationResponse, error)
 }
 
 // TextGenerationOptions は、テキスト生成時のオプションを定義します

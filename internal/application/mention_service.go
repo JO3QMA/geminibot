@@ -87,12 +87,12 @@ func (s *MentionApplicationService) HandleMention(ctx context.Context, mention d
 }
 
 // GenerateImage は、画像生成を実行します
-func (s *MentionApplicationService) GenerateImage(ctx context.Context, prompt string, options ...domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error) {
+func (s *MentionApplicationService) GenerateImage(ctx context.Context, request domain.ImageGenerationRequest) (*domain.ImageGenerationResponse, error) {
 	log.Printf("MentionApplicationService: 画像生成を開始")
-	log.Printf("プロンプト: %s", prompt)
+	log.Printf("プロンプト: %s", request.Prompt)
 
 	// デフォルトのGeminiクライアントを使用して画像生成
-	result, err := s.geminiClient.GenerateImage(ctx, prompt, options...)
+	result, err := s.geminiClient.GenerateImage(ctx, request)
 	if err != nil {
 		log.Printf("画像生成に失敗: %v", err)
 		return nil, fmt.Errorf("画像生成に失敗: %w", err)

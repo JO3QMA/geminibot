@@ -26,7 +26,7 @@ func (m *MockGeminiClient) GenerateTextWithStructuredContext(ctx context.Context
 	return "構造化コンテキストでの応答", nil
 }
 
-func (m *MockGeminiClient) GenerateImage(ctx context.Context, prompt string, options ...domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error) {
+func (m *MockGeminiClient) GenerateImage(ctx context.Context, request domain.ImageGenerationRequest) (*domain.ImageGenerationResponse, error) {
 	return &domain.ImageGenerationResponse{
 		Images: []domain.GeneratedImage{
 			{

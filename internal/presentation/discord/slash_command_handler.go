@@ -100,23 +100,34 @@ func (h *SlashCommandHandler) SetupSlashCommands() error {
 					Name:        "style",
 					Description: "画像のスタイル",
 					Required:    false,
-					Choices: []*discordgo.ApplicationCommandOptionChoice{
-						{Name: "写真風", Value: "photographic"},
-						{Name: "アニメ風", Value: "anime"},
-						{Name: "イラスト風", Value: "illustration"},
-						{Name: "油絵風", Value: "oil_painting"},
-						{Name: "水彩画風", Value: "watercolor"},
-					},
+					Choices: func() []*discordgo.ApplicationCommandOptionChoice {
+						styles := domain.AllImageStyles()
+						choices := make([]*discordgo.ApplicationCommandOptionChoice, len(styles))
+						for i, style := range styles {
+							choices[i] = &discordgo.ApplicationCommandOptionChoice{
+								Name:  style.DisplayName(),
+								Value: style.String(),
+							}
+						}
+						return choices
+					}(),
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "quality",
 					Description: "画像の品質",
 					Required:    false,
-					Choices: []*discordgo.ApplicationCommandOptionChoice{
-						{Name: "標準", Value: "standard"},
-						{Name: "高品質", Value: "high"},
-					},
+					Choices: func() []*discordgo.ApplicationCommandOptionChoice {
+						qualities := domain.AllImageQualities()
+						choices := make([]*discordgo.ApplicationCommandOptionChoice, len(qualities))
+						for i, quality := range qualities {
+							choices[i] = &discordgo.ApplicationCommandOptionChoice{
+								Name:  quality.DisplayName(),
+								Value: quality.String(),
+							}
+						}
+						return choices
+					}(),
 				},
 			},
 		},
@@ -352,29 +363,24 @@ func (h *SlashCommandHandler) handleGenerateImageCommand(s *discordgo.Session, i
 		return
 	}
 
-	var prompt, style, quality string
+	request := domain.ImageGenerationRequest{}
+	// 画像生成オプションを作成（設定ファイルの値をベースに、ユーザー指定の値を上書き）
+	request.Options = domain.DefaultImageGenerationOptions()
+
 	for _, option := range options {
 		switch option.Name {
 		case "prompt":
-			prompt = option.StringValue()
+			request.Prompt = option.StringValue()
 		case "style":
-			style = option.StringValue()
+			request.Options.Style = option.StringValue()
 		case "quality":
-			quality = option.StringValue()
+			request.Options.Quality = option.StringValue()
 		}
 	}
 
-	if prompt == "" {
+	if request.Prompt == "" {
 		h.followUpInteraction(s, i, "❌ プロンプトが指定されていません。", true)
 		return
-	}
-
-	// デフォルト値を設定
-	if style == "" {
-		style = "photographic"
-	}
-	if quality == "" {
-		quality = "standard"
 	}
 
 	// APIキーを取得（ギルド固有のAPIキーがない場合はデフォルトを使用）
@@ -410,21 +416,8 @@ func (h *SlashCommandHandler) handleGenerateImageCommand(s *discordgo.Session, i
 		return
 	}
 
-	// 画像生成オプションを作成
-	imageOptions := domain.ImageGenerationOptions{
-		Model:       "gemini-2.5-flash-image",
-		Style:       style,
-		Quality:     quality,
-		Size:        "1024x1024",
-		Count:       1,
-		MaxTokens:   1000,
-		Temperature: 0.7,
-		TopP:        0.9,
-		TopK:        40,
-	}
-
 	// 画像を生成
-	response, err := geminiClient.GenerateImage(ctx, prompt, imageOptions)
+	response, err := geminiClient.GenerateImage(ctx, request)
 	if err != nil {
 		log.Printf("画像生成に失敗: %v", err)
 		h.followUpInteraction(s, i, fmt.Sprintf("❌ 画像生成に失敗しました: %v", err), true)
@@ -446,7 +439,7 @@ func (h *SlashCommandHandler) handleGenerateImageCommand(s *discordgo.Session, i
 
 	embed := &discordgo.MessageEmbed{
 		Title:       "🎨 画像生成完了",
-		Description: fmt.Sprintf("**プロンプト:** %s\n**スタイル:** %s\n**品質:** %s", prompt, style, quality),
+		Description: fmt.Sprintf("**プロンプト:** %s\n**スタイル:** %s\n**品質:** %s", request.Prompt, request.Options.Style, request.Options.Quality),
 		Color:       0x00ff00,
 		Timestamp:   response.GeneratedAt.Format(time.RFC3339),
 		Footer: &discordgo.MessageEmbedFooter{

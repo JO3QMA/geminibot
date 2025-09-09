@@ -21,16 +21,16 @@ func NewImageGenerationService(geminiClient GeminiClient) *ImageGenerationServic
 }
 
 // GenerateImage は、プロンプトから画像を生成します
-func (s *ImageGenerationService) GenerateImage(ctx context.Context, prompt string, options ...domain.ImageGenerationOptions) (*domain.ImageGenerationResponse, error) {
-	log.Printf("画像生成サービス: プロンプト=%s", prompt)
+func (s *ImageGenerationService) GenerateImage(ctx context.Context, request domain.ImageGenerationRequest) (*domain.ImageGenerationResponse, error) {
+	log.Printf("画像生成サービス: プロンプト=%s", request.Prompt)
 
 	// プロンプトの検証
-	if err := s.validatePrompt(prompt); err != nil {
+	if err := s.validatePrompt(request); err != nil {
 		return nil, fmt.Errorf("プロンプトの検証に失敗: %w", err)
 	}
 
 	// 画像生成
-	response, err := s.geminiClient.GenerateImage(ctx, prompt, options...)
+	response, err := s.geminiClient.GenerateImage(ctx, request)
 	if err != nil {
 		return nil, fmt.Errorf("画像生成に失敗: %w", err)
 	}
@@ -40,16 +40,16 @@ func (s *ImageGenerationService) GenerateImage(ctx context.Context, prompt strin
 }
 
 // validatePrompt は、プロンプトの妥当性を検証します
-func (s *ImageGenerationService) validatePrompt(prompt string) error {
-	if prompt == "" {
+func (s *ImageGenerationService) validatePrompt(request domain.ImageGenerationRequest) error {
+	if request.Prompt == "" {
 		return fmt.Errorf("プロンプトが空です")
 	}
 
-	if len(prompt) > 1000 {
+	if len(request.Prompt) > 1000 {
 		return fmt.Errorf("プロンプトが長すぎます (最大1000文字)")
 	}
 
-	if len(prompt) < 3 {
+	if len(request.Prompt) < 3 {
 		return fmt.Errorf("プロンプトが短すぎます (最小3文字)")
 	}
 
@@ -58,32 +58,30 @@ func (s *ImageGenerationService) validatePrompt(prompt string) error {
 
 // GetSupportedStyles は、サポートされているスタイルのリストを返します
 func (s *ImageGenerationService) GetSupportedStyles() []string {
-	return []string{
-		"photographic",
-		"anime",
-		"illustration",
-		"oil_painting",
-		"watercolor",
-		"digital_art",
-		"sketch",
-		"cartoon",
+	styles := domain.AllImageStyles()
+	result := make([]string, len(styles))
+	for i, style := range styles {
+		result[i] = style.String()
 	}
+	return result
 }
 
 // GetSupportedQualities は、サポートされている品質のリストを返します
 func (s *ImageGenerationService) GetSupportedQualities() []string {
-	return []string{
-		"standard",
-		"high",
+	qualities := domain.AllImageQualities()
+	result := make([]string, len(qualities))
+	for i, quality := range qualities {
+		result[i] = quality.String()
 	}
+	return result
 }
 
 // GetSupportedSizes は、サポートされているサイズのリストを返します
 func (s *ImageGenerationService) GetSupportedSizes() []string {
-	return []string{
-		"512x512",
-		"1024x1024",
-		"1024x768",
-		"768x1024",
+	sizes := domain.AllImageSizes()
+	result := make([]string, len(sizes))
+	for i, size := range sizes {
+		result[i] = size.String()
 	}
+	return result
 }
