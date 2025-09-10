@@ -91,7 +91,7 @@ func (h *ResponseHandler) isInThread(s *discordgo.Session, channelID string) boo
 }
 
 // generateThreadName は、スレッド名を生成します
-func (h *ResponseHandler) generateThreadName(m *discordgo.MessageCreate, response *domain.UnifiedResponse) string {
+func (h *ResponseHandler) generateThreadName(_ *discordgo.MessageCreate, response *domain.UnifiedResponse) string {
 	// レスポンスタイプに基づいてスレッド名を生成
 	switch response.Metadata.Type {
 	case "image":
@@ -132,16 +132,6 @@ func (h *ResponseHandler) sendUnifiedResponseAsReply(s *discordgo.Session, m *di
 	if response.HasAttachments() {
 		h.sendAttachmentsToChannel(s, m, response.Attachments, response.Metadata)
 	}
-}
-
-// SendUnifiedResponseToThread は、統一レスポンスをスレッド内に送信します（後方互換性のため残す）
-func (h *ResponseHandler) SendUnifiedResponseToThread(s *discordgo.Session, threadID string, response *domain.UnifiedResponse) {
-	h.sendUnifiedResponseToThread(s, threadID, response)
-}
-
-// SendUnifiedResponseToChannel は、統一レスポンスをチャンネルにリプライ付きで送信します（後方互換性のため残す）
-func (h *ResponseHandler) SendUnifiedResponseToChannel(s *discordgo.Session, m *discordgo.MessageCreate, response *domain.UnifiedResponse) {
-	h.sendUnifiedResponseAsReply(s, m, response)
 }
 
 // sendTextContentToThread は、テキストコンテンツをスレッド内に送信します
@@ -552,7 +542,7 @@ func (h *ResponseHandler) extractUserContent(m *discordgo.MessageCreate) string 
 func (h *ResponseHandler) sendThreadResponse(s *discordgo.Session, threadID string, response string) {
 	// テキストレスポンスを作成
 	textResponse := domain.NewTextResponse(response, "", "gemini-pro")
-	h.SendUnifiedResponseToThread(s, threadID, textResponse)
+	h.sendUnifiedResponseToThread(s, threadID, textResponse)
 }
 
 // sendAsFileToThread は、長い応答をファイルとしてスレッド内に送信します
@@ -579,7 +569,7 @@ func (h *ResponseHandler) sendAsFileToThread(s *discordgo.Session, threadID stri
 func (h *ResponseHandler) sendSplitResponse(s *discordgo.Session, m *discordgo.MessageCreate, response string) {
 	// テキストレスポンスを作成
 	textResponse := domain.NewTextResponse(response, "", "gemini-pro")
-	h.SendUnifiedResponseToChannel(s, m, textResponse)
+	h.SendUnifiedResponse(s, m, textResponse)
 }
 
 // sendAsFile は、長い応答をファイルとして送信します
@@ -1024,14 +1014,14 @@ func (h *ResponseHandler) formatError(err error) string {
 func (h *ResponseHandler) sendImageGenerationResult(s *discordgo.Session, threadID string, result *domain.ImageGenerationResult) {
 	// 画像生成結果を統一レスポンスに変換
 	unifiedResponse := h.convertImageResultToUnifiedResponseForThread(result)
-	h.SendUnifiedResponseToThread(s, threadID, unifiedResponse)
+	h.sendUnifiedResponseToThread(s, threadID, unifiedResponse)
 }
 
 // sendImageGenerationResultToChannel は、画像生成結果をチャンネルに送信します（後方互換性のため残す）
 func (h *ResponseHandler) sendImageGenerationResultToChannel(s *discordgo.Session, m *discordgo.MessageCreate, result *domain.ImageGenerationResult) {
 	// 画像生成結果を統一レスポンスに変換
 	unifiedResponse := h.convertImageResultToUnifiedResponse(result, m)
-	h.SendUnifiedResponseToChannel(s, m, unifiedResponse)
+	h.SendUnifiedResponse(s, m, unifiedResponse)
 }
 
 // formatImageGenerationError は、画像生成エラーを適切なメッセージにフォーマットします
