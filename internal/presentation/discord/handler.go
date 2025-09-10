@@ -15,9 +15,6 @@ type DiscordHandler struct {
 	slashCommandHandler *SlashCommandHandler
 }
 
-// DiscordMessageLimit は、Discordのメッセージ長制限です
-const DiscordMessageLimit = 2000
-
 // NewDiscordHandler は新しいDiscordHandlerインスタンスを作成します
 func NewDiscordHandler(
 	session *discordgo.Session,

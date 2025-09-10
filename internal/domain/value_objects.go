@@ -120,3 +120,105 @@ func DefaultImageGenerationOptions() ImageGenerationOptions {
 		TopK:        geminiConfig.Gemini.TopK,
 	}
 }
+
+// Attachment は、添付ファイルの情報を表現する値オブジェクトです
+type Attachment struct {
+	Data        []byte    // ファイルデータ
+	MimeType    string    // MIMEタイプ
+	Filename    string    // ファイル名
+	Size        int64     // ファイルサイズ
+	IsImage     bool      // 画像かどうか
+	GeneratedAt time.Time // 生成時刻
+}
+
+// ResponseMetadata は、レスポンスのメタデータを表現する値オブジェクトです
+type ResponseMetadata struct {
+	Prompt      string    // プロンプト
+	Model       string    // 使用モデル
+	GeneratedAt time.Time // 生成時刻
+	Type        string    // レスポンスタイプ（text, image, mixed）
+}
+
+// UnifiedResponse は、テキスト生成と画像生成を統合したレスポンスを表現する値オブジェクトです
+type UnifiedResponse struct {
+	Content     string           // テキストコンテンツ
+	Attachments []Attachment     // 添付ファイル（画像など）
+	Metadata    ResponseMetadata // メタデータ（プロンプト、モデルなど）
+	Success     bool             // 成功/失敗
+	Error       string           // エラーメッセージ
+}
+
+// NewTextResponse は、テキストレスポンスを作成します
+func NewTextResponse(content, prompt, model string) *UnifiedResponse {
+	return &UnifiedResponse{
+		Content:     content,
+		Attachments: []Attachment{},
+		Metadata: ResponseMetadata{
+			Prompt:      prompt,
+			Model:       model,
+			GeneratedAt: time.Now(),
+			Type:        "text",
+		},
+		Success: true,
+		Error:   "",
+	}
+}
+
+// NewImageResponse は、画像レスポンスを作成します
+func NewImageResponse(content string, images []GeneratedImage, prompt, model string) *UnifiedResponse {
+	attachments := make([]Attachment, len(images))
+	for i, img := range images {
+		attachments[i] = Attachment{
+			Data:        img.Data,
+			MimeType:    img.MimeType,
+			Filename:    img.Filename,
+			Size:        img.Size,
+			IsImage:     true,
+			GeneratedAt: img.GeneratedAt,
+		}
+	}
+
+	return &UnifiedResponse{
+		Content:     content,
+		Attachments: attachments,
+		Metadata: ResponseMetadata{
+			Prompt:      prompt,
+			Model:       model,
+			GeneratedAt: time.Now(),
+			Type:        "image",
+		},
+		Success: true,
+		Error:   "",
+	}
+}
+
+// NewErrorResponse は、エラーレスポンスを作成します
+func NewErrorResponse(err error, responseType string) *UnifiedResponse {
+	return &UnifiedResponse{
+		Content:     "",
+		Attachments: []Attachment{},
+		Metadata: ResponseMetadata{
+			Prompt:      "",
+			Model:       "",
+			GeneratedAt: time.Now(),
+			Type:        responseType,
+		},
+		Success: false,
+		Error:   err.Error(),
+	}
+}
+
+// HasAttachments は、添付ファイルがあるかどうかを判定します
+func (ur *UnifiedResponse) HasAttachments() bool {
+	return len(ur.Attachments) > 0
+}
+
+// HasImages は、画像添付があるかどうかを判定します
+func (ur *UnifiedResponse) HasImages() bool {
+	for _, attachment := range ur.Attachments {
+		if attachment.IsImage {
+			return true
+		}
+	}
+	return false
+}
