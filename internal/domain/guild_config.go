@@ -14,21 +14,6 @@ type GuildConfig struct {
 	Model   string
 }
 
-// NewGuildConfig は新しいGuildConfigインスタンスを作成します
-func NewGuildConfig(guildID, apiKey, setBy, model string) GuildConfig {
-	if model == "" {
-		model = "gemini-2.5-pro" // デフォルトモデル
-	}
-
-	return GuildConfig{
-		GuildID: guildID,
-		APIKey:  apiKey,
-		SetBy:   setBy,
-		SetAt:   time.Now(),
-		Model:   model,
-	}
-}
-
 // GuildConfigManager は、ギルド固有のAPIキーの永続化を行うインターフェースです
 type GuildConfigManager interface {
 	// SetAPIKey は、指定されたギルドのAPIキーを設定します

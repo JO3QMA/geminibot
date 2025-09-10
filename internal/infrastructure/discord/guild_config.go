@@ -4,9 +4,28 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"geminibot/internal/domain"
 )
+
+func newGuildConfig(guildID, apiKey, setBy, model string) domain.GuildConfig {
+	return domain.GuildConfig{
+		GuildID: guildID,
+		APIKey:  apiKey,
+		SetBy:   setBy,
+		SetAt:   time.Now(),
+		Model:   getDefaultModel(model),
+	}
+}
+
+// getDefaultModel は、モデルが空の場合にデフォルトモデルを返します
+func getDefaultModel(model string) string {
+	if model == "" {
+		return "gemini-2.5-pro"
+	}
+	return model
+}
 
 // DiscordGuildAPIKeyRepository は、Discord用のAPIキー管理リポジトリの実装です
 // 現在はメモリベースですが、将来的にはデータベースやKVストアに変更可能です
@@ -37,7 +56,7 @@ func (r *DiscordGuildConfigManager) SetAPIKey(ctx context.Context, guildID, apiK
 		model = existing.Model
 	}
 
-	guildAPIKey := domain.NewGuildConfig(guildID, apiKey, setBy, model)
+	guildAPIKey := newGuildConfig(guildID, apiKey, setBy, model)
 	r.apiKeys[guildID] = guildAPIKey
 
 	return nil
@@ -126,7 +145,7 @@ func (r *DiscordGuildConfigManager) SetGuildModel(ctx context.Context, guildID s
 		r.apiKeys[guildID] = existing
 	} else {
 		// 新規作成（APIキーは空文字）
-		guildAPIKey := domain.NewGuildConfig(guildID, "", "", model)
+		guildAPIKey := newGuildConfig(guildID, "", "", model)
 		guildAPIKey.APIKey = "" // APIキーは空文字
 		r.apiKeys[guildID] = guildAPIKey
 	}
