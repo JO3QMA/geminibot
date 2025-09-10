@@ -6,7 +6,7 @@ import (
 )
 
 // GuildAPIKey は、Discordサーバー（ギルド）固有のAPIキーを表します
-type GuildAPIKey struct {
+type GuildConfig struct {
 	GuildID string
 	APIKey  string
 	SetBy   string
@@ -14,23 +14,8 @@ type GuildAPIKey struct {
 	Model   string
 }
 
-// NewGuildAPIKey は新しいGuildAPIKeyインスタンスを作成します
-func NewGuildAPIKey(guildID, apiKey, setBy, model string) GuildAPIKey {
-	if model == "" {
-		model = "gemini-2.5-pro" // デフォルトモデル
-	}
-
-	return GuildAPIKey{
-		GuildID: guildID,
-		APIKey:  apiKey,
-		SetBy:   setBy,
-		SetAt:   time.Now(),
-		Model:   model,
-	}
-}
-
-// GuildAPIKeyRepository は、ギルド固有のAPIキーの永続化を行うインターフェースです
-type GuildAPIKeyRepository interface {
+// GuildConfigManager は、ギルド固有のAPIキーの永続化を行うインターフェースです
+type GuildConfigManager interface {
 	// SetAPIKey は、指定されたギルドのAPIキーを設定します
 	SetAPIKey(ctx context.Context, guildID string, apiKey string, setBy string) error
 
@@ -44,7 +29,7 @@ type GuildAPIKeyRepository interface {
 	HasAPIKey(ctx context.Context, guildID string) (bool, error)
 
 	// GetGuildAPIKeyInfo は、指定されたギルドのAPIキー情報を取得します（APIキーは含まれません）
-	GetGuildAPIKeyInfo(ctx context.Context, guildID string) (GuildAPIKey, error)
+	GetGuildAPIKeyInfo(ctx context.Context, guildID string) (GuildConfig, error)
 
 	// SetGuildModel は、指定されたギルドのAIモデルを設定します
 	SetGuildModel(ctx context.Context, guildID string, model string) error
