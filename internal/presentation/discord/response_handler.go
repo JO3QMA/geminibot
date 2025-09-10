@@ -136,17 +136,14 @@ func (h *ResponseHandler) sendUnifiedResponseAsReply(s *discordgo.Session, m *di
 
 // sendTextContentToThread は、テキストコンテンツをスレッド内に送信します
 func (h *ResponseHandler) sendTextContentToThread(s *discordgo.Session, threadID string, content string) {
-	// 応答をDiscord用にフォーマット
-	formattedContent := h.formatForDiscord(content)
-
 	// 応答が非常に長い場合はファイルとして送信
-	if len(formattedContent) > DiscordMessageLimit*5 {
-		h.sendAsFileToThread(s, threadID, formattedContent, "response.txt")
+	if len(content) > DiscordMessageLimit*5 {
+		h.sendAsFileToThread(s, threadID, content, "response.txt")
 		return
 	}
 
 	// 応答をDiscordの制限に合わせて分割
-	chunks := h.splitMessage(formattedContent)
+	chunks := h.splitMessage(content)
 
 	// すべてのチャンクをスレッド内に送信
 	for i, chunk := range chunks {
@@ -160,17 +157,14 @@ func (h *ResponseHandler) sendTextContentToThread(s *discordgo.Session, threadID
 
 // sendTextContentToChannel は、テキストコンテンツをチャンネルにリプライ付きで送信します
 func (h *ResponseHandler) sendTextContentToChannel(s *discordgo.Session, m *discordgo.MessageCreate, content string) {
-	// 応答をDiscord用にフォーマット
-	formattedContent := h.formatForDiscord(content)
-
 	// 応答が非常に長い場合はファイルとして送信
-	if len(formattedContent) > DiscordMessageLimit*5 {
-		h.sendAsFile(s, m, formattedContent, "response.txt")
+	if len(content) > DiscordMessageLimit*5 {
+		h.sendAsFile(s, m, content, "response.txt")
 		return
 	}
 
 	// 応答をDiscordの制限に合わせて分割
-	chunks := h.splitMessage(formattedContent)
+	chunks := h.splitMessage(content)
 
 	if len(chunks) == 1 {
 		// 単一メッセージの場合
@@ -372,73 +366,6 @@ func (h *ResponseHandler) formatUnifiedError(response *domain.UnifiedResponse) s
 	}
 }
 
-// sendNormalReply は、スレッド作成に失敗した場合の通常のリプライ送信を行います
-func (h *ResponseHandler) sendNormalReply(s *discordgo.Session, m *discordgo.MessageCreate, mention domain.BotMention, mentionService interface{}) {
-	// 処理中メッセージを送信
-	thinkingMsg, err := s.ChannelMessageSendReply(m.ChannelID, "🤔 考え中...", &discordgo.MessageReference{
-		MessageID: m.ID,
-		ChannelID: m.ChannelID,
-		GuildID:   m.GuildID,
-	})
-	if err != nil {
-		log.Printf("処理中メッセージの送信に失敗: %v", err)
-		return
-	}
-
-	// メンションを処理
-	ctx := context.Background()
-	response, err := h.handleMentionWithService(ctx, mention, mentionService)
-
-	// 処理中メッセージを削除
-	s.ChannelMessageDelete(m.ChannelID, thinkingMsg.ID)
-
-	if err != nil {
-		log.Printf("メンション処理に失敗: %v", err)
-
-		// エラーレスポンスを作成
-		errorResponse := domain.NewErrorResponse(err, "text")
-		h.SendUnifiedResponse(s, m, errorResponse)
-		return
-	}
-
-	// テキストレスポンスを作成
-	textResponse := domain.NewTextResponse(response, mention.Content, "gemini-pro")
-	h.SendUnifiedResponse(s, m, textResponse)
-}
-
-// ProcessImageGenerationWithoutThread は、スレッド作成に失敗した場合の画像生成処理を行います
-func (h *ResponseHandler) sendImageGenerationNormalReply(s *discordgo.Session, m *discordgo.MessageCreate, mentionService interface{}) {
-	// 処理中メッセージを送信
-	thinkingMsg, err := s.ChannelMessageSendReply(m.ChannelID, "🎨 画像を生成中...", &discordgo.MessageReference{
-		MessageID: m.ID,
-		ChannelID: m.ChannelID,
-		GuildID:   m.GuildID,
-	})
-	if err != nil {
-		log.Printf("処理中メッセージの送信に失敗: %v", err)
-		return
-	}
-
-	// 画像生成を処理
-	ctx := context.Background()
-	imageResult, err := h.generateImageWithService(ctx, m, mentionService)
-
-	// 処理中メッセージを削除
-	s.ChannelMessageDelete(m.ChannelID, thinkingMsg.ID)
-
-	if err != nil {
-		log.Printf("画像生成に失敗: %v", err)
-		// エラーレスポンスを作成
-		errorResponse := domain.NewErrorResponse(err, "image")
-		h.SendUnifiedResponse(s, m, errorResponse)
-		return
-	}
-
-	// 画像生成結果を統一レスポンスに変換
-	unifiedResponse := h.convertImageResultToUnifiedResponse(imageResult, m)
-	h.SendUnifiedResponse(s, m, unifiedResponse)
-}
-
 // handleMentionWithService は、mentionServiceを使用してメンションを処理します
 func (h *ResponseHandler) handleMentionWithService(ctx context.Context, mention domain.BotMention, mentionService interface{}) (string, error) {
 	// mentionServiceの型を確認して適切なメソッドを呼び出す
@@ -598,307 +525,6 @@ func (h *ResponseHandler) sendAsFile(s *discordgo.Session, m *discordgo.MessageC
 		ChannelID: m.ChannelID,
 		GuildID:   m.GuildID,
 	})
-}
-
-// formatForDiscord は、Geminiからの応答をDiscord用にフォーマットします
-func (h *ResponseHandler) formatForDiscord(response string) string {
-	// markdownのコードブロックをDiscord用に変換
-	formatted := h.convertCodeBlocks(response)
-
-	// markdownのインラインコードをDiscord用に変換
-	formatted = h.convertInlineCode(formatted)
-
-	// markdownの太字をDiscord用に変換
-	formatted = h.convertBold(formatted)
-
-	// markdownの斜体をDiscord用に変換
-	formatted = h.convertItalic(formatted)
-
-	// markdownのリストをDiscord用に変換
-	formatted = h.convertLists(formatted)
-
-	return formatted
-}
-
-// convertCodeBlocks は、markdownのコードブロックをDiscord用に変換します
-func (h *ResponseHandler) convertCodeBlocks(text string) string {
-	// ```で囲まれたコードブロックを```に変換
-	// 言語指定がある場合は除去
-	lines := strings.Split(text, "\n")
-	var result []string
-	inCodeBlock := false
-	codeBlockContent := []string{}
-
-	for _, line := range lines {
-		if strings.HasPrefix(line, "```") && !inCodeBlock {
-			// コードブロック開始
-			inCodeBlock = true
-			codeBlockContent = []string{}
-		} else if strings.HasPrefix(line, "```") && inCodeBlock {
-			// コードブロック終了
-			inCodeBlock = false
-			if len(codeBlockContent) > 0 {
-				result = append(result, "```")
-				result = append(result, codeBlockContent...)
-				result = append(result, "```")
-			}
-		} else if inCodeBlock {
-			// コードブロック内の内容
-			codeBlockContent = append(codeBlockContent, line)
-		} else {
-			// 通常の行
-			result = append(result, line)
-		}
-	}
-
-	return strings.Join(result, "\n")
-}
-
-// convertInlineCode は、markdownのインラインコードをDiscord用に変換します
-func (h *ResponseHandler) convertInlineCode(text string) string {
-	// `で囲まれたインラインコードを`に変換
-	// ただし、コードブロック内は除外
-	lines := strings.Split(text, "\n")
-	var result []string
-
-	for _, line := range lines {
-		if strings.HasPrefix(line, "```") {
-			// コードブロックの境界はそのまま
-			result = append(result, line)
-		} else {
-			// インラインコードを変換
-			converted := h.convertInlineCodeInLine(line)
-			result = append(result, converted)
-		}
-	}
-
-	return strings.Join(result, "\n")
-}
-
-// convertInlineCodeInLine は、1行内のインラインコードを変換します
-func (h *ResponseHandler) convertInlineCodeInLine(line string) string {
-	// バッククォートのペアを`に変換
-	// ただし、コードブロック内は除外
-	var result strings.Builder
-	inInlineCode := false
-	codeContent := strings.Builder{}
-
-	for i := 0; i < len(line); i++ {
-		if line[i] == '`' && !inInlineCode {
-			// インラインコード開始
-			inInlineCode = true
-			codeContent.Reset()
-		} else if line[i] == '`' && inInlineCode {
-			// インラインコード終了
-			inInlineCode = false
-			result.WriteString("`")
-			result.WriteString(codeContent.String())
-			result.WriteString("`")
-		} else if inInlineCode {
-			// インラインコード内の内容
-			codeContent.WriteByte(line[i])
-		} else {
-			// 通常の文字
-			result.WriteByte(line[i])
-		}
-	}
-
-	return result.String()
-}
-
-// convertBold は、markdownの太字をDiscord用に変換します
-func (h *ResponseHandler) convertBold(text string) string {
-	// **で囲まれた太字を**に変換
-	// ただし、コードブロック内は除外
-	lines := strings.Split(text, "\n")
-	var result []string
-
-	for _, line := range lines {
-		if strings.HasPrefix(line, "```") {
-			// コードブロックの境界はそのまま
-			result = append(result, line)
-		} else {
-			// 太字を変換
-			converted := h.convertBoldInLine(line)
-			result = append(result, converted)
-		}
-	}
-
-	return strings.Join(result, "\n")
-}
-
-// convertBoldInLine は、1行内の太字を変換します
-func (h *ResponseHandler) convertBoldInLine(line string) string {
-	// **で囲まれた太字を**に変換
-	// ただし、インラインコード内は除外
-	var result strings.Builder
-	inInlineCode := false
-	inBold := false
-	boldContent := strings.Builder{}
-
-	for i := 0; i < len(line); i++ {
-		if line[i] == '`' {
-			// インラインコードの境界
-			if inBold {
-				// 太字を終了してからインラインコードを処理
-				inBold = false
-				result.WriteString("**")
-				result.WriteString(boldContent.String())
-				result.WriteString("**")
-				boldContent.Reset()
-			}
-			inInlineCode = !inInlineCode
-			result.WriteByte(line[i])
-		} else if !inInlineCode && i+1 < len(line) && line[i] == '*' && line[i+1] == '*' {
-			// **の検出
-			if !inBold {
-				// 太字開始
-				inBold = true
-				boldContent.Reset()
-			} else {
-				// 太字終了
-				inBold = false
-				result.WriteString("**")
-				result.WriteString(boldContent.String())
-				result.WriteString("**")
-				boldContent.Reset()
-			}
-			i++ // 次の*をスキップ
-		} else if inBold {
-			// 太字内の内容
-			boldContent.WriteByte(line[i])
-		} else {
-			// 通常の文字
-			result.WriteByte(line[i])
-		}
-	}
-
-	// 未終了の太字があれば終了
-	if inBold {
-		result.WriteString("**")
-		result.WriteString(boldContent.String())
-		result.WriteString("**")
-	}
-
-	return result.String()
-}
-
-// convertItalic は、markdownの斜体をDiscord用に変換します
-func (h *ResponseHandler) convertItalic(text string) string {
-	// *で囲まれた斜体を*に変換（ただし、太字の**は除外）
-	// ただし、コードブロック内は除外
-	lines := strings.Split(text, "\n")
-	var result []string
-
-	for _, line := range lines {
-		if strings.HasPrefix(line, "```") {
-			// コードブロックの境界はそのまま
-			result = append(result, line)
-		} else {
-			// 斜体を変換
-			converted := h.convertItalicInLine(line)
-			result = append(result, converted)
-		}
-	}
-
-	return strings.Join(result, "\n")
-}
-
-// convertItalicInLine は、1行内の斜体を変換します
-func (h *ResponseHandler) convertItalicInLine(line string) string {
-	// *で囲まれた斜体を*に変換（ただし、太字の**は除外）
-	// ただし、インラインコード内は除外
-	var result strings.Builder
-	inInlineCode := false
-	inItalic := false
-	italicContent := strings.Builder{}
-
-	for i := 0; i < len(line); i++ {
-		if line[i] == '`' {
-			// インラインコードの境界
-			if inItalic {
-				// 斜体を終了してからインラインコードを処理
-				inItalic = false
-				result.WriteString("*")
-				result.WriteString(italicContent.String())
-				result.WriteString("*")
-				italicContent.Reset()
-			}
-			inInlineCode = !inInlineCode
-			result.WriteByte(line[i])
-		} else if !inInlineCode && line[i] == '*' {
-			// *の検出
-			if i+1 < len(line) && line[i+1] == '*' {
-				// **の場合は太字なのでスキップ
-				result.WriteString("**")
-				i++
-			} else if !inItalic {
-				// 斜体開始
-				inItalic = true
-				italicContent.Reset()
-			} else {
-				// 斜体終了
-				inItalic = false
-				result.WriteString("*")
-				result.WriteString(italicContent.String())
-				result.WriteString("*")
-				italicContent.Reset()
-			}
-		} else if inItalic {
-			// 斜体内の内容
-			italicContent.WriteByte(line[i])
-		} else {
-			// 通常の文字
-			result.WriteByte(line[i])
-		}
-	}
-
-	// 未終了の斜体があれば終了
-	if inItalic {
-		result.WriteString("*")
-		result.WriteString(italicContent.String())
-		result.WriteString("*")
-	}
-
-	return result.String()
-}
-
-// convertLists は、markdownのリストをDiscord用に変換します
-func (h *ResponseHandler) convertLists(text string) string {
-	// リストの変換（基本的にはそのまま、必要に応じて調整）
-	// Discordは基本的なリスト表示をサポートしているので、
-	// 主に番号付きリストの形式を調整
-	lines := strings.Split(text, "\n")
-	var result []string
-
-	for _, line := range lines {
-		if strings.HasPrefix(line, "```") {
-			// コードブロックの境界はそのまま
-			result = append(result, line)
-		} else {
-			// リストを変換
-			converted := h.convertListInLine(line)
-			result = append(result, converted)
-		}
-	}
-
-	return strings.Join(result, "\n")
-}
-
-// convertListInLine は、1行内のリストを変換します
-func (h *ResponseHandler) convertListInLine(line string) string {
-	// 番号付きリストの形式を調整
-	// 1. の形式を1) に変換（Discordの表示を改善）
-	trimmed := strings.TrimSpace(line)
-	if len(trimmed) >= 2 && trimmed[1] == '.' {
-		// 番号付きリストの可能性
-		if trimmed[0] >= '0' && trimmed[0] <= '9' {
-			// 数字. の形式を数字) に変換
-			return strings.Replace(line, ". ", ") ", 1)
-		}
-	}
-
-	return line
 }
 
 // splitMessage は、長いメッセージをDiscordの制限に合わせて分割します
