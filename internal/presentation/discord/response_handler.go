@@ -101,17 +101,19 @@ func (h *ResponseHandler) createThreadForResponse(s *discordgo.Session, m *disco
 
 // isInThread は、指定されたチャンネルがスレッドかどうかを判定します
 func (h *ResponseHandler) isInThread(s *discordgo.Session, channelID string) bool {
-	// DiscordのスレッドチャンネルIDは通常のチャンネルIDと異なる形式を持つ場合があります
-	// 実際の実装では、Discord APIの仕様に基づいて判定ロジックを調整する必要があります
-	// ここでは簡易的な実装として、チャンネル情報を取得して判定
+	// チャンネル情報を取得
 	channel, err := s.Channel(channelID)
 	if err != nil {
 		log.Printf("チャンネル情報の取得に失敗: %v", err)
 		return false
 	}
 
-	// スレッドの場合はParentIDが設定されている
-	return channel.ParentID != ""
+	// discordgoライブラリのIsThread()メソッドを使用してスレッドかどうかを判定
+	// このメソッドは以下のChannelTypeをスレッドとして判定します：
+	// - ChannelTypeGuildNewsThread (10)
+	// - ChannelTypeGuildPublicThread (11)
+	// - ChannelTypeGuildPrivateThread (12)
+	return channel.IsThread()
 }
 
 // generateThreadName は、スレッド名を生成します
