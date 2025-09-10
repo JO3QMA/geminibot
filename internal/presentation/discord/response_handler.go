@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -22,7 +23,7 @@ func NewResponseHandler() *ResponseHandler {
 }
 
 // sendNormalReply は、スレッド作成に失敗した場合の通常のリプライ送信を行います
-func (h *ResponseHandler) sendNormalReply(s *discordgo.Session, m *discordgo.MessageCreate, mention domain.BotMention) {
+func (h *ResponseHandler) sendNormalReply(s *discordgo.Session, m *discordgo.MessageCreate, mention domain.BotMention, mentionService interface{}) {
 	// 処理中メッセージを送信
 	thinkingMsg, err := s.ChannelMessageSendReply(m.ChannelID, "🤔 考え中...", &discordgo.MessageReference{
 		MessageID: m.ID,
@@ -34,14 +35,129 @@ func (h *ResponseHandler) sendNormalReply(s *discordgo.Session, m *discordgo.Mes
 		return
 	}
 
-	// メンションを処理（この部分は呼び出し元で処理済みのため、ここでは応答のみ）
-	// 実際の処理は mention_handler.go で行われるため、ここでは応答送信のみ
+	// メンションを処理
+	ctx := context.Background()
+	response, err := h.handleMentionWithService(ctx, mention, mentionService)
 
 	// 処理中メッセージを削除
 	s.ChannelMessageDelete(m.ChannelID, thinkingMsg.ID)
 
-	// 応答を分割して送信
-	h.sendSplitResponse(s, m, "応答処理中...")
+	if err != nil {
+		log.Printf("メンション処理に失敗: %v", err)
+
+		// エラーを適切なメッセージにフォーマット
+		errorMsg := h.formatError(err)
+		s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
+			MessageID: m.ID,
+			ChannelID: m.ChannelID,
+			GuildID:   m.GuildID,
+		})
+		return
+	}
+
+	// 応答を通常のリプライとして送信
+	h.sendSplitResponse(s, m, response)
+}
+
+// ProcessImageGenerationWithoutThread は、スレッド作成に失敗した場合の画像生成処理を行います
+func (h *ResponseHandler) sendImageGenerationNormalReply(s *discordgo.Session, m *discordgo.MessageCreate, mentionService interface{}) {
+	// 処理中メッセージを送信
+	thinkingMsg, err := s.ChannelMessageSendReply(m.ChannelID, "🎨 画像を生成中...", &discordgo.MessageReference{
+		MessageID: m.ID,
+		ChannelID: m.ChannelID,
+		GuildID:   m.GuildID,
+	})
+	if err != nil {
+		log.Printf("処理中メッセージの送信に失敗: %v", err)
+		return
+	}
+
+	// 画像生成を処理
+	ctx := context.Background()
+	imageResult, err := h.generateImageWithService(ctx, m, mentionService)
+
+	// 処理中メッセージを削除
+	s.ChannelMessageDelete(m.ChannelID, thinkingMsg.ID)
+
+	if err != nil {
+		log.Printf("画像生成に失敗: %v", err)
+		errorMsg := h.formatImageGenerationError(err)
+		s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
+			MessageID: m.ID,
+			ChannelID: m.ChannelID,
+			GuildID:   m.GuildID,
+		})
+		return
+	}
+
+	// 画像生成結果を通常のリプライとして送信
+	h.sendImageGenerationResultToChannel(s, m, imageResult)
+}
+
+// handleMentionWithService は、mentionServiceを使用してメンションを処理します
+func (h *ResponseHandler) handleMentionWithService(ctx context.Context, mention domain.BotMention, mentionService interface{}) (string, error) {
+	// mentionServiceの型を確認して適切なメソッドを呼び出す
+	if service, ok := mentionService.(interface {
+		HandleMention(ctx context.Context, mention domain.BotMention) (string, error)
+	}); ok {
+		return service.HandleMention(ctx, mention)
+	}
+	return "", fmt.Errorf("mentionServiceがHandleMentionメソッドを実装していません")
+}
+
+// generateImageWithService は、mentionServiceを使用して画像生成を実行します
+func (h *ResponseHandler) generateImageWithService(ctx context.Context, m *discordgo.MessageCreate, mentionService interface{}) (*domain.ImageGenerationResult, error) {
+	// メンション部分を除去したコンテンツを取得
+	content := h.extractUserContent(m)
+
+	// 画像生成用のプロンプトを作成
+	prompt := domain.NewImagePrompt(content)
+
+	// mentionServiceの型を確認して適切なメソッドを呼び出す
+	if service, ok := mentionService.(interface {
+		GenerateImage(ctx context.Context, request domain.ImageGenerationRequest) (*domain.ImageGenerationResponse, error)
+	}); ok {
+		response, err := service.GenerateImage(ctx, domain.ImageGenerationRequest{
+			Prompt:  prompt,
+			Options: domain.DefaultImageGenerationOptions(),
+		})
+		if err != nil {
+			return &domain.ImageGenerationResult{
+				Success: false,
+				Error:   err.Error(),
+			}, nil
+		}
+
+		// ImageGenerationResponseをImageGenerationResultに変換
+		result := &domain.ImageGenerationResult{
+			Response: response,
+			Success:  true,
+			Error:    "",
+			ImageURL: "", // 必要に応じて設定
+		}
+
+		return result, nil
+	}
+	return &domain.ImageGenerationResult{
+		Success: false,
+		Error:   "mentionServiceがGenerateImageメソッドを実装していません",
+	}, nil
+}
+
+// extractUserContent は、メンション部分を除去したユーザーのコンテンツを抽出します
+func (h *ResponseHandler) extractUserContent(m *discordgo.MessageCreate) string {
+	content := m.Content
+
+	// メンション配列がある場合、それらを除去
+	for _, mention := range m.Mentions {
+		mentionText := fmt.Sprintf("<@%s>", mention.ID)
+		content = strings.ReplaceAll(content, mentionText, "")
+	}
+
+	// 先頭と末尾の空白を除去
+	content = strings.TrimSpace(content)
+
+	return content
 }
 
 // sendThreadResponse は、スレッド内に応答を送信します
@@ -566,29 +682,6 @@ func (h *ResponseHandler) formatError(err error) string {
 	default:
 		return fmt.Sprintf("❌ **エラーが発生しました**\n%s", err.Error())
 	}
-}
-
-// sendImageGenerationNormalReply は、スレッド作成に失敗した場合の通常のリプライ送信を行います
-func (h *ResponseHandler) sendImageGenerationNormalReply(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// 処理中メッセージを送信
-	thinkingMsg, err := s.ChannelMessageSendReply(m.ChannelID, "🎨 画像を生成中...", &discordgo.MessageReference{
-		MessageID: m.ID,
-		ChannelID: m.ChannelID,
-		GuildID:   m.GuildID,
-	})
-	if err != nil {
-		log.Printf("処理中メッセージの送信に失敗: %v", err)
-		return
-	}
-
-	// 処理中メッセージを削除
-	s.ChannelMessageDelete(m.ChannelID, thinkingMsg.ID)
-
-	// 画像生成結果を送信（実際の処理は呼び出し元で行われる）
-	h.sendImageGenerationResultToChannel(s, m, &domain.ImageGenerationResult{
-		Success: false,
-		Error:   "画像生成処理中...",
-	})
 }
 
 // sendImageGenerationResult は、画像生成結果をスレッド内に送信します

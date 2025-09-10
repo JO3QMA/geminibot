@@ -167,7 +167,7 @@ func (h *MentionHandler) processMentionAsync(s *discordgo.Session, m *discordgo.
 	if err != nil {
 		log.Printf("スレッド作成に失敗: %v", err)
 		// スレッド作成に失敗した場合は通常のリプライとして送信
-		h.responseHandler.sendNormalReply(s, m, mention)
+		h.responseHandler.sendNormalReply(s, m, mention, h.mentionService)
 		return
 	}
 
@@ -223,7 +223,7 @@ func (h *MentionHandler) processImageGenerationAsync(s *discordgo.Session, m *di
 	if err != nil {
 		log.Printf("スレッド作成に失敗: %v", err)
 		// スレッド作成に失敗した場合は通常のリプライとして送信
-		h.responseHandler.sendImageGenerationNormalReply(s, m)
+		h.responseHandler.sendImageGenerationNormalReply(s, m, h.mentionService)
 		return
 	}
 
