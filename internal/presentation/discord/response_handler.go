@@ -104,7 +104,6 @@ func (h *ResponseHandler) createThreadForResponse(s *discordgo.Session, m *disco
 	return thread.ID, nil
 }
 
-
 // generateThreadName は、スレッド名を生成します
 func (h *ResponseHandler) generateThreadName(_ *discordgo.MessageCreate, response *domain.UnifiedResponse) string {
 	// レスポンスタイプに基づいてスレッド名を生成
