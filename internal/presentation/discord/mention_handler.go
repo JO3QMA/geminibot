@@ -162,17 +162,12 @@ func (h *MentionHandler) getDisplayName(m *discordgo.MessageCreate) string {
 
 // processMentionAsync は、メンションを非同期で処理します
 func (h *MentionHandler) processMentionAsync(s *discordgo.Session, m *discordgo.MessageCreate, mention domain.BotMention) {
-	// メッセージからスレッドを作成
-	thread, err := s.MessageThreadStart(m.ChannelID, m.ID, "Bot応答", 60) // 60分後にアーカイブ
-	if err != nil {
-		log.Printf("スレッド作成に失敗: %v", err)
-		// スレッド作成に失敗した場合は通常のリプライとして送信
-		h.responseHandler.sendNormalReply(s, m, mention, h.mentionService)
-		return
-	}
-
-	// 処理中メッセージをスレッド内に送信
-	thinkingMsg, err := s.ChannelMessageSend(thread.ID, "🤔 考え中...")
+	// 処理中メッセージを送信
+	thinkingMsg, err := s.ChannelMessageSendReply(m.ChannelID, "🤔 考え中...", &discordgo.MessageReference{
+		MessageID: m.ID,
+		ChannelID: m.ChannelID,
+		GuildID:   m.GuildID,
+	})
 	if err != nil {
 		log.Printf("処理中メッセージの送信に失敗: %v", err)
 		return
@@ -183,19 +178,20 @@ func (h *MentionHandler) processMentionAsync(s *discordgo.Session, m *discordgo.
 	response, err := h.mentionService.HandleMention(ctx, mention)
 
 	// 処理中メッセージを削除
-	s.ChannelMessageDelete(thread.ID, thinkingMsg.ID)
+	s.ChannelMessageDelete(m.ChannelID, thinkingMsg.ID)
 
 	if err != nil {
 		log.Printf("メンション処理に失敗: %v", err)
 
-		// エラーを適切なメッセージにフォーマット
-		errorMsg := h.responseHandler.formatError(err)
-		s.ChannelMessageSend(thread.ID, errorMsg)
+		// エラーレスポンスを作成
+		errorResponse := domain.NewErrorResponse(err, "text")
+		h.responseHandler.SendUnifiedResponse(s, m, errorResponse)
 		return
 	}
 
-	// 応答をスレッド内に送信
-	h.responseHandler.sendThreadResponse(s, thread.ID, response)
+	// テキストレスポンスを作成
+	textResponse := domain.NewTextResponse(response, mention.Content, "gemini-pro")
+	h.responseHandler.SendUnifiedResponse(s, m, textResponse)
 }
 
 // isImageGenerationRequest は、メッセージが画像生成リクエストかどうかを判定します
@@ -218,17 +214,12 @@ func (h *MentionHandler) isImageGenerationRequest(content string) bool {
 
 // processImageGenerationAsync は、画像生成を非同期で処理します
 func (h *MentionHandler) processImageGenerationAsync(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// メッセージからスレッドを作成
-	thread, err := s.MessageThreadStart(m.ChannelID, m.ID, "画像生成中...", 60) // 60分後にアーカイブ
-	if err != nil {
-		log.Printf("スレッド作成に失敗: %v", err)
-		// スレッド作成に失敗した場合は通常のリプライとして送信
-		h.responseHandler.sendImageGenerationNormalReply(s, m, h.mentionService)
-		return
-	}
-
-	// 処理中メッセージをスレッド内に送信
-	thinkingMsg, err := s.ChannelMessageSend(thread.ID, "🎨 画像を生成中...")
+	// 処理中メッセージを送信
+	thinkingMsg, err := s.ChannelMessageSendReply(m.ChannelID, "🎨 画像を生成中...", &discordgo.MessageReference{
+		MessageID: m.ID,
+		ChannelID: m.ChannelID,
+		GuildID:   m.GuildID,
+	})
 	if err != nil {
 		log.Printf("処理中メッセージの送信に失敗: %v", err)
 		return
@@ -239,17 +230,19 @@ func (h *MentionHandler) processImageGenerationAsync(s *discordgo.Session, m *di
 	imageResult, err := h.generateImage(ctx, m)
 
 	// 処理中メッセージを削除
-	s.ChannelMessageDelete(thread.ID, thinkingMsg.ID)
+	s.ChannelMessageDelete(m.ChannelID, thinkingMsg.ID)
 
 	if err != nil {
 		log.Printf("画像生成に失敗: %v", err)
-		errorMsg := h.responseHandler.formatImageGenerationError(err)
-		s.ChannelMessageSend(thread.ID, errorMsg)
+		// エラーレスポンスを作成
+		errorResponse := domain.NewErrorResponse(err, "image")
+		h.responseHandler.SendUnifiedResponse(s, m, errorResponse)
 		return
 	}
 
-	// 画像生成結果をスレッド内に送信
-	h.responseHandler.sendImageGenerationResult(s, thread.ID, imageResult)
+	// 画像生成結果を統一レスポンスに変換
+	unifiedResponse := h.responseHandler.convertImageResultToUnifiedResponse(imageResult, m)
+	h.responseHandler.SendUnifiedResponse(s, m, unifiedResponse)
 }
 
 // generateImage は、画像生成を実行します

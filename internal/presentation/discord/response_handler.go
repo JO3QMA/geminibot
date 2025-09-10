@@ -25,14 +25,91 @@ func NewResponseHandler() *ResponseHandler {
 	return &ResponseHandler{}
 }
 
-// SendUnifiedResponseToThread は、統一レスポンスをスレッド内に送信します
-func (h *ResponseHandler) SendUnifiedResponseToThread(s *discordgo.Session, threadID string, response *domain.UnifiedResponse) {
+// SendUnifiedResponse は、統一レスポンスを送信します（スレッド優先、フォールバック付き）
+func (h *ResponseHandler) SendUnifiedResponse(s *discordgo.Session, m *discordgo.MessageCreate, response *domain.UnifiedResponse) {
+	// エラーレスポンスの場合は直接リプライで送信
 	if !response.Success {
 		errorMsg := h.formatUnifiedError(response)
-		s.ChannelMessageSend(threadID, errorMsg)
+		s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
+			MessageID: m.ID,
+			ChannelID: m.ChannelID,
+			GuildID:   m.GuildID,
+		})
 		return
 	}
 
+	// スレッド作成を試行
+	threadID, err := h.createThreadForResponse(s, m, response)
+	if err != nil {
+		log.Printf("スレッド作成に失敗、リプライで送信します: %v", err)
+		// スレッド作成に失敗した場合はリプライで送信
+		h.sendUnifiedResponseAsReply(s, m, response)
+		return
+	}
+
+	// スレッド内に送信
+	h.sendUnifiedResponseToThread(s, threadID, response)
+}
+
+// createThreadForResponse は、レスポンス用のスレッドを作成します
+func (h *ResponseHandler) createThreadForResponse(s *discordgo.Session, m *discordgo.MessageCreate, response *domain.UnifiedResponse) (string, error) {
+	// 既にスレッド内の場合はスレッド作成をスキップ
+	if h.isInThread(s, m.ChannelID) {
+		return "", fmt.Errorf("既にスレッド内です")
+	}
+
+	// スレッド名を生成
+	threadName := h.generateThreadName(m, response)
+
+	// スレッドを作成
+	thread, err := s.MessageThreadStartComplex(m.ChannelID, m.ID, &discordgo.ThreadStart{
+		Name:                threadName,
+		AutoArchiveDuration: 60, // 1時間後に自動アーカイブ
+		Invitable:           false,
+	})
+	if err != nil {
+		return "", fmt.Errorf("スレッド作成に失敗: %w", err)
+	}
+
+	log.Printf("スレッドを作成しました: %s (ID: %s)", threadName, thread.ID)
+	return thread.ID, nil
+}
+
+// isInThread は、指定されたチャンネルがスレッドかどうかを判定します
+func (h *ResponseHandler) isInThread(s *discordgo.Session, channelID string) bool {
+	// DiscordのスレッドチャンネルIDは通常のチャンネルIDと異なる形式を持つ場合があります
+	// 実際の実装では、Discord APIの仕様に基づいて判定ロジックを調整する必要があります
+	// ここでは簡易的な実装として、チャンネル情報を取得して判定
+	channel, err := s.Channel(channelID)
+	if err != nil {
+		log.Printf("チャンネル情報の取得に失敗: %v", err)
+		return false
+	}
+	
+	// スレッドの場合はParentIDが設定されている
+	return channel.ParentID != ""
+}
+
+// generateThreadName は、スレッド名を生成します
+func (h *ResponseHandler) generateThreadName(m *discordgo.MessageCreate, response *domain.UnifiedResponse) string {
+	// レスポンスタイプに基づいてスレッド名を生成
+	switch response.Metadata.Type {
+	case "image":
+		return "🎨 画像生成"
+	case "text":
+		// テキストの場合は最初の数文字を使用
+		content := response.Content
+		if len(content) > 20 {
+			content = content[:20] + "..."
+		}
+		return "💬 " + content
+	default:
+		return "🤖 Bot応答"
+	}
+}
+
+// sendUnifiedResponseToThread は、統一レスポンスをスレッド内に送信します
+func (h *ResponseHandler) sendUnifiedResponseToThread(s *discordgo.Session, threadID string, response *domain.UnifiedResponse) {
 	// テキストコンテンツがある場合は送信
 	if response.Content != "" {
 		h.sendTextContentToThread(s, threadID, response.Content)
@@ -44,18 +121,8 @@ func (h *ResponseHandler) SendUnifiedResponseToThread(s *discordgo.Session, thre
 	}
 }
 
-// SendUnifiedResponseToChannel は、統一レスポンスをチャンネルにリプライ付きで送信します
-func (h *ResponseHandler) SendUnifiedResponseToChannel(s *discordgo.Session, m *discordgo.MessageCreate, response *domain.UnifiedResponse) {
-	if !response.Success {
-		errorMsg := h.formatUnifiedError(response)
-		s.ChannelMessageSendReply(m.ChannelID, errorMsg, &discordgo.MessageReference{
-			MessageID: m.ID,
-			ChannelID: m.ChannelID,
-			GuildID:   m.GuildID,
-		})
-		return
-	}
-
+// sendUnifiedResponseAsReply は、統一レスポンスをリプライとして送信します
+func (h *ResponseHandler) sendUnifiedResponseAsReply(s *discordgo.Session, m *discordgo.MessageCreate, response *domain.UnifiedResponse) {
 	// テキストコンテンツがある場合は送信
 	if response.Content != "" {
 		h.sendTextContentToChannel(s, m, response.Content)
@@ -65,6 +132,16 @@ func (h *ResponseHandler) SendUnifiedResponseToChannel(s *discordgo.Session, m *
 	if response.HasAttachments() {
 		h.sendAttachmentsToChannel(s, m, response.Attachments, response.Metadata)
 	}
+}
+
+// SendUnifiedResponseToThread は、統一レスポンスをスレッド内に送信します（後方互換性のため残す）
+func (h *ResponseHandler) SendUnifiedResponseToThread(s *discordgo.Session, threadID string, response *domain.UnifiedResponse) {
+	h.sendUnifiedResponseToThread(s, threadID, response)
+}
+
+// SendUnifiedResponseToChannel は、統一レスポンスをチャンネルにリプライ付きで送信します（後方互換性のため残す）
+func (h *ResponseHandler) SendUnifiedResponseToChannel(s *discordgo.Session, m *discordgo.MessageCreate, response *domain.UnifiedResponse) {
+	h.sendUnifiedResponseAsReply(s, m, response)
 }
 
 // sendTextContentToThread は、テキストコンテンツをスレッド内に送信します
@@ -330,13 +407,13 @@ func (h *ResponseHandler) sendNormalReply(s *discordgo.Session, m *discordgo.Mes
 
 		// エラーレスポンスを作成
 		errorResponse := domain.NewErrorResponse(err, "text")
-		h.SendUnifiedResponseToChannel(s, m, errorResponse)
+		h.SendUnifiedResponse(s, m, errorResponse)
 		return
 	}
 
 	// テキストレスポンスを作成
 	textResponse := domain.NewTextResponse(response, mention.Content, "gemini-pro")
-	h.SendUnifiedResponseToChannel(s, m, textResponse)
+	h.SendUnifiedResponse(s, m, textResponse)
 }
 
 // ProcessImageGenerationWithoutThread は、スレッド作成に失敗した場合の画像生成処理を行います
@@ -363,13 +440,13 @@ func (h *ResponseHandler) sendImageGenerationNormalReply(s *discordgo.Session, m
 		log.Printf("画像生成に失敗: %v", err)
 		// エラーレスポンスを作成
 		errorResponse := domain.NewErrorResponse(err, "image")
-		h.SendUnifiedResponseToChannel(s, m, errorResponse)
+		h.SendUnifiedResponse(s, m, errorResponse)
 		return
 	}
 
 	// 画像生成結果を統一レスポンスに変換
 	unifiedResponse := h.convertImageResultToUnifiedResponse(imageResult, m)
-	h.SendUnifiedResponseToChannel(s, m, unifiedResponse)
+	h.SendUnifiedResponse(s, m, unifiedResponse)
 }
 
 // handleMentionWithService は、mentionServiceを使用してメンションを処理します
