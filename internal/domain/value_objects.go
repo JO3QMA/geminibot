@@ -146,6 +146,7 @@ type UnifiedResponse struct {
 	Metadata    ResponseMetadata // メタデータ（プロンプト、モデルなど）
 	Success     bool             // 成功/失敗
 	Error       string           // エラーメッセージ
+	ThreadID    string           // スレッドID（空の場合はリプライで送信）
 }
 
 // NewTextResponse は、テキストレスポンスを作成します
@@ -159,8 +160,9 @@ func NewTextResponse(content, prompt, model string) *UnifiedResponse {
 			GeneratedAt: time.Now(),
 			Type:        "text",
 		},
-		Success: true,
-		Error:   "",
+		Success:  true,
+		Error:    "",
+		ThreadID: "",
 	}
 }
 
@@ -187,8 +189,9 @@ func NewImageResponse(content string, images []GeneratedImage, prompt, model str
 			GeneratedAt: time.Now(),
 			Type:        "image",
 		},
-		Success: true,
-		Error:   "",
+		Success:  true,
+		Error:    "",
+		ThreadID: "",
 	}
 }
 
@@ -203,8 +206,9 @@ func NewErrorResponse(err error, responseType string) *UnifiedResponse {
 			GeneratedAt: time.Now(),
 			Type:        responseType,
 		},
-		Success: false,
-		Error:   err.Error(),
+		Success:  false,
+		Error:    err.Error(),
+		ThreadID: "",
 	}
 }
 
@@ -221,4 +225,25 @@ func (ur *UnifiedResponse) HasImages() bool {
 		}
 	}
 	return false
+}
+
+// NewTextResponseForThread は、スレッド用のテキストレスポンスを作成します
+func NewTextResponseForThread(content, prompt, model, threadID string) *UnifiedResponse {
+	response := NewTextResponse(content, prompt, model)
+	response.ThreadID = threadID
+	return response
+}
+
+// NewImageResponseForThread は、スレッド用の画像レスポンスを作成します
+func NewImageResponseForThread(content string, images []GeneratedImage, prompt, model, threadID string) *UnifiedResponse {
+	response := NewImageResponse(content, images, prompt, model)
+	response.ThreadID = threadID
+	return response
+}
+
+// NewErrorResponseForThread は、スレッド用のエラーレスポンスを作成します
+func NewErrorResponseForThread(err error, responseType, threadID string) *UnifiedResponse {
+	response := NewErrorResponse(err, responseType)
+	response.ThreadID = threadID
+	return response
 }

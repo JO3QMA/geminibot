@@ -21,7 +21,7 @@ func NewResponseHandler() *ResponseHandler {
 	return &ResponseHandler{}
 }
 
-// SendUnifiedResponse は、統一レスポンスを送信します（スレッド優先、フォールバック付き）
+// SendUnifiedResponse は、統一レスポンスを送信します（ThreadIDに基づいてスレッドまたはリプライで送信）
 func (h *ResponseHandler) SendUnifiedResponse(s *discordgo.Session, m *discordgo.MessageCreate, response *domain.UnifiedResponse) {
 	// エラーレスポンスの場合は直接リプライで送信
 	if !response.Success {
@@ -34,17 +34,45 @@ func (h *ResponseHandler) SendUnifiedResponse(s *discordgo.Session, m *discordgo
 		return
 	}
 
-	// スレッド作成を試行
-	threadID, err := h.createThreadForResponse(s, m, response)
-	if err != nil {
-		log.Printf("スレッド作成に失敗、リプライで送信します: %v", err)
-		// スレッド作成に失敗した場合はリプライで送信
-		h.sendUnifiedResponseAsReply(s, m, response)
-		return
+	var targetChannelID string
+	var isReply bool
+
+	// ThreadIDが設定されている場合はスレッド内に送信
+	if response.ThreadID != "" {
+		targetChannelID = response.ThreadID
+		isReply = false
+	} else {
+		// ThreadIDが空の場合はスレッド作成を試行
+		threadID, err := h.createThreadForResponse(s, m, response)
+		if err != nil {
+			log.Printf("スレッド作成に失敗、リプライで送信します: %v", err)
+			// スレッド作成に失敗した場合はリプライで送信
+			targetChannelID = m.ChannelID
+			isReply = true
+		} else {
+			// スレッド内に送信
+			targetChannelID = threadID
+			isReply = false
+		}
 	}
 
-	// スレッド内に送信
-	h.sendUnifiedResponseToThread(s, threadID, response)
+	// テキストコンテンツがある場合は送信
+	if response.Content != "" {
+		if isReply {
+			h.sendTextContentToChannel(s, m, response.Content)
+		} else {
+			h.sendTextContentToThread(s, targetChannelID, response.Content)
+		}
+	}
+
+	// 添付ファイルがある場合は送信
+	if response.HasAttachments() {
+		if isReply {
+			h.sendAttachmentsToChannel(s, m, response.Attachments, response.Metadata)
+		} else {
+			h.sendAttachmentsToThread(s, targetChannelID, response.Attachments, response.Metadata)
+		}
+	}
 }
 
 // createThreadForResponse は、レスポンス用のスレッドを作成します
@@ -89,44 +117,17 @@ func (h *ResponseHandler) isInThread(s *discordgo.Session, channelID string) boo
 // generateThreadName は、スレッド名を生成します
 func (h *ResponseHandler) generateThreadName(_ *discordgo.MessageCreate, response *domain.UnifiedResponse) string {
 	// レスポンスタイプに基づいてスレッド名を生成
+	content := response.Content
+	if len(content) > 20 {
+		content = content[:20] + "..."
+	}
 	switch response.Metadata.Type {
 	case "image":
-		return "🎨 画像生成"
+		return "🎨 " + content
 	case "text":
-		// テキストの場合は最初の数文字を使用
-		content := response.Content
-		if len(content) > 20 {
-			content = content[:20] + "..."
-		}
 		return "💬 " + content
 	default:
 		return "🤖 Bot応答"
-	}
-}
-
-// sendUnifiedResponseToThread は、統一レスポンスをスレッド内に送信します
-func (h *ResponseHandler) sendUnifiedResponseToThread(s *discordgo.Session, threadID string, response *domain.UnifiedResponse) {
-	// テキストコンテンツがある場合は送信
-	if response.Content != "" {
-		h.sendTextContentToThread(s, threadID, response.Content)
-	}
-
-	// 添付ファイルがある場合は送信
-	if response.HasAttachments() {
-		h.sendAttachmentsToThread(s, threadID, response.Attachments, response.Metadata)
-	}
-}
-
-// sendUnifiedResponseAsReply は、統一レスポンスをリプライとして送信します
-func (h *ResponseHandler) sendUnifiedResponseAsReply(s *discordgo.Session, m *discordgo.MessageCreate, response *domain.UnifiedResponse) {
-	// テキストコンテンツがある場合は送信
-	if response.Content != "" {
-		h.sendTextContentToChannel(s, m, response.Content)
-	}
-
-	// 添付ファイルがある場合は送信
-	if response.HasAttachments() {
-		h.sendAttachmentsToChannel(s, m, response.Attachments, response.Metadata)
 	}
 }
 
@@ -396,13 +397,6 @@ func (h *ResponseHandler) extractUserContent(m *discordgo.MessageCreate) string 
 	return content
 }
 
-// sendThreadResponse は、スレッド内に応答を送信します（後方互換性のため残す）
-func (h *ResponseHandler) sendThreadResponse(s *discordgo.Session, threadID string, response string) {
-	// テキストレスポンスを作成
-	textResponse := domain.NewTextResponse(response, "", "gemini-pro")
-	h.sendUnifiedResponseToThread(s, threadID, textResponse)
-}
-
 // sendAsFileToThread は、長い応答をファイルとしてスレッド内に送信します
 func (h *ResponseHandler) sendAsFileToThread(s *discordgo.Session, threadID string, content, filename string) {
 	// ファイルデータを作成
@@ -414,7 +408,7 @@ func (h *ResponseHandler) sendAsFileToThread(s *discordgo.Session, threadID stri
 	if err != nil {
 		log.Printf("ファイル送信に失敗: %v", err)
 		// ファイル送信に失敗した場合は通常の分割送信にフォールバック
-		h.sendThreadResponse(s, threadID, content)
+		h.sendTextContentToThread(s, threadID, content)
 		return
 	}
 
