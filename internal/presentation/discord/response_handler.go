@@ -85,7 +85,7 @@ func (h *ResponseHandler) isInThread(s *discordgo.Session, channelID string) boo
 		log.Printf("チャンネル情報の取得に失敗: %v", err)
 		return false
 	}
-	
+
 	// スレッドの場合はParentIDが設定されている
 	return channel.ParentID != ""
 }
