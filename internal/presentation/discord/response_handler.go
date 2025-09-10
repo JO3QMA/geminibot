@@ -78,7 +78,12 @@ func (h *ResponseHandler) SendUnifiedResponse(s *discordgo.Session, m *discordgo
 // createThreadForResponse は、レスポンス用のスレッドを作成します
 func (h *ResponseHandler) createThreadForResponse(s *discordgo.Session, m *discordgo.MessageCreate, response *domain.UnifiedResponse) (string, error) {
 	// 既にスレッド内の場合はスレッド作成をスキップ
-	if h.isInThread(s, m.ChannelID) {
+	channel, err := s.Channel(m.ChannelID)
+	if err != nil {
+		log.Printf("チャンネル情報の取得に失敗: %v", err)
+		return "", fmt.Errorf("チャンネル情報の取得に失敗: %w", err)
+	}
+	if channel.IsThread() {
 		return "", fmt.Errorf("既にスレッド内です")
 	}
 
@@ -99,22 +104,6 @@ func (h *ResponseHandler) createThreadForResponse(s *discordgo.Session, m *disco
 	return thread.ID, nil
 }
 
-// isInThread は、指定されたチャンネルがスレッドかどうかを判定します
-func (h *ResponseHandler) isInThread(s *discordgo.Session, channelID string) bool {
-	// チャンネル情報を取得
-	channel, err := s.Channel(channelID)
-	if err != nil {
-		log.Printf("チャンネル情報の取得に失敗: %v", err)
-		return false
-	}
-
-	// discordgoライブラリのIsThread()メソッドを使用してスレッドかどうかを判定
-	// このメソッドは以下のChannelTypeをスレッドとして判定します：
-	// - ChannelTypeGuildNewsThread (10)
-	// - ChannelTypeGuildPublicThread (11)
-	// - ChannelTypeGuildPrivateThread (12)
-	return channel.IsThread()
-}
 
 // generateThreadName は、スレッド名を生成します
 func (h *ResponseHandler) generateThreadName(_ *discordgo.MessageCreate, response *domain.UnifiedResponse) string {
