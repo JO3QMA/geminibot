@@ -6,25 +6,29 @@ import (
 	"sync"
 	"time"
 
+	"geminibot/configs"
 	"geminibot/internal/domain"
 )
 
 func newGuildConfig(guildID, apiKey, setBy, model string) domain.GuildConfig {
+	// モデルが空の場合はデフォルトモデルを設定
+	if model == "" {
+		config, err := configs.LoadConfig()
+		if err != nil {
+			// 設定の読み込みに失敗した場合はデフォルト値を返す
+			model = "gemini-2.5-pro"
+		} else {
+			model = config.Gemini.ModelName
+		}
+	}
+
 	return domain.GuildConfig{
 		GuildID: guildID,
 		APIKey:  apiKey,
 		SetBy:   setBy,
 		SetAt:   time.Now(),
-		Model:   getDefaultModel(model),
+		Model:   model,
 	}
-}
-
-// getDefaultModel は、モデルが空の場合にデフォルトモデルを返します
-func getDefaultModel(model string) string {
-	if model == "" {
-		return "gemini-2.5-pro"
-	}
-	return model
 }
 
 // DiscordGuildAPIKeyRepository は、Discord用のAPIキー管理リポジトリの実装です
@@ -51,7 +55,7 @@ func (r *DiscordGuildConfigManager) SetAPIKey(ctx context.Context, guildID, apiK
 	defer r.mutex.Unlock()
 
 	// 既存の設定がある場合は、モデル設定を保持
-	model := "gemini-2.5-pro" // デフォルトモデル
+	model := "" // デフォルトモデル（newGuildConfigで設定される）
 	if existing, exists := r.apiKeys[guildID]; exists {
 		model = existing.Model
 	}
@@ -164,7 +168,10 @@ func (r *DiscordGuildConfigManager) GetGuildModel(ctx context.Context, guildID s
 
 	guildAPIKey, exists := r.apiKeys[guildID]
 	if !exists {
-		return "gemini-2.5-pro", nil // デフォルトモデルを返す
+		// デフォルトモデルを返す
+		config, _ := configs.LoadConfig()
+
+		return config.Gemini.ModelName, nil
 	}
 
 	return guildAPIKey.Model, nil
