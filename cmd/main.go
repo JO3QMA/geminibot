@@ -47,7 +47,7 @@ func main() {
 
 	// リポジトリを作成
 	conversationRepo := discordInfra.NewDiscordConversationRepository(session)
-	apiKeyRepo := discordInfra.NewDiscordGuildAPIKeyRepository()
+	apiKeyRepo := discordInfra.NewDiscordGuildConfigManager()
 
 	// アプリケーションサービスを作成
 	apiKeyService := application.NewAPIKeyApplicationService(apiKeyRepo)

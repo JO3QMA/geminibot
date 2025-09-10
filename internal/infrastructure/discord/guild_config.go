@@ -10,20 +10,20 @@ import (
 
 // DiscordGuildAPIKeyRepository は、Discord用のAPIキー管理リポジトリの実装です
 // 現在はメモリベースですが、将来的にはデータベースやKVストアに変更可能です
-type DiscordGuildAPIKeyRepository struct {
-	apiKeys map[string]domain.GuildAPIKey
+type DiscordGuildConfigManager struct {
+	apiKeys map[string]domain.GuildConfig
 	mutex   sync.RWMutex
 }
 
 // NewDiscordGuildAPIKeyRepository は新しいDiscordGuildAPIKeyRepositoryインスタンスを作成します
-func NewDiscordGuildAPIKeyRepository() *DiscordGuildAPIKeyRepository {
-	return &DiscordGuildAPIKeyRepository{
-		apiKeys: make(map[string]domain.GuildAPIKey),
+func NewDiscordGuildConfigManager() *DiscordGuildConfigManager {
+	return &DiscordGuildConfigManager{
+		apiKeys: make(map[string]domain.GuildConfig),
 	}
 }
 
 // SetAPIKey は、指定されたギルドのAPIキーを設定します
-func (r *DiscordGuildAPIKeyRepository) SetAPIKey(ctx context.Context, guildID, apiKey, setBy string) error {
+func (r *DiscordGuildConfigManager) SetAPIKey(ctx context.Context, guildID, apiKey, setBy string) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -37,14 +37,14 @@ func (r *DiscordGuildAPIKeyRepository) SetAPIKey(ctx context.Context, guildID, a
 		model = existing.Model
 	}
 
-	guildAPIKey := domain.NewGuildAPIKey(guildID, apiKey, setBy, model)
+	guildAPIKey := domain.NewGuildConfig(guildID, apiKey, setBy, model)
 	r.apiKeys[guildID] = guildAPIKey
 
 	return nil
 }
 
 // GetAPIKey は、指定されたギルドのAPIキーを取得します
-func (r *DiscordGuildAPIKeyRepository) GetAPIKey(ctx context.Context, guildID string) (string, error) {
+func (r *DiscordGuildConfigManager) GetAPIKey(ctx context.Context, guildID string) (string, error) {
 	if ctx.Err() != nil {
 		return "", ctx.Err()
 	}
@@ -61,7 +61,7 @@ func (r *DiscordGuildAPIKeyRepository) GetAPIKey(ctx context.Context, guildID st
 }
 
 // DeleteAPIKey は、指定されたギルドのAPIキーを削除します
-func (r *DiscordGuildAPIKeyRepository) DeleteAPIKey(ctx context.Context, guildID string) error {
+func (r *DiscordGuildConfigManager) DeleteAPIKey(ctx context.Context, guildID string) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -78,7 +78,7 @@ func (r *DiscordGuildAPIKeyRepository) DeleteAPIKey(ctx context.Context, guildID
 }
 
 // HasAPIKey は、指定されたギルドにAPIキーが設定されているかを確認します
-func (r *DiscordGuildAPIKeyRepository) HasAPIKey(ctx context.Context, guildID string) (bool, error) {
+func (r *DiscordGuildConfigManager) HasAPIKey(ctx context.Context, guildID string) (bool, error) {
 	if ctx.Err() != nil {
 		return false, ctx.Err()
 	}
@@ -91,9 +91,9 @@ func (r *DiscordGuildAPIKeyRepository) HasAPIKey(ctx context.Context, guildID st
 }
 
 // GetGuildAPIKeyInfo は、指定されたギルドのAPIキー情報を取得します（APIキーは含まれません）
-func (r *DiscordGuildAPIKeyRepository) GetGuildAPIKeyInfo(ctx context.Context, guildID string) (domain.GuildAPIKey, error) {
+func (r *DiscordGuildConfigManager) GetGuildAPIKeyInfo(ctx context.Context, guildID string) (domain.GuildConfig, error) {
 	if ctx.Err() != nil {
-		return domain.GuildAPIKey{}, ctx.Err()
+		return domain.GuildConfig{}, ctx.Err()
 	}
 
 	r.mutex.RLock()
@@ -101,7 +101,7 @@ func (r *DiscordGuildAPIKeyRepository) GetGuildAPIKeyInfo(ctx context.Context, g
 
 	guildAPIKey, exists := r.apiKeys[guildID]
 	if !exists {
-		return domain.GuildAPIKey{}, fmt.Errorf("ギルド %s のAPIキーが設定されていません", guildID)
+		return domain.GuildConfig{}, fmt.Errorf("ギルド %s のAPIキーが設定されていません", guildID)
 	}
 
 	// APIキーを空文字にして返す（セキュリティのため）
@@ -111,7 +111,7 @@ func (r *DiscordGuildAPIKeyRepository) GetGuildAPIKeyInfo(ctx context.Context, g
 }
 
 // SetGuildModel は、指定されたギルドのAIモデルを設定します
-func (r *DiscordGuildAPIKeyRepository) SetGuildModel(ctx context.Context, guildID string, model string) error {
+func (r *DiscordGuildConfigManager) SetGuildModel(ctx context.Context, guildID string, model string) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -126,7 +126,7 @@ func (r *DiscordGuildAPIKeyRepository) SetGuildModel(ctx context.Context, guildI
 		r.apiKeys[guildID] = existing
 	} else {
 		// 新規作成（APIキーは空文字）
-		guildAPIKey := domain.NewGuildAPIKey(guildID, "", "", model)
+		guildAPIKey := domain.NewGuildConfig(guildID, "", "", model)
 		guildAPIKey.APIKey = "" // APIキーは空文字
 		r.apiKeys[guildID] = guildAPIKey
 	}
@@ -135,7 +135,7 @@ func (r *DiscordGuildAPIKeyRepository) SetGuildModel(ctx context.Context, guildI
 }
 
 // GetGuildModel は、指定されたギルドのAIモデルを取得します
-func (r *DiscordGuildAPIKeyRepository) GetGuildModel(ctx context.Context, guildID string) (string, error) {
+func (r *DiscordGuildConfigManager) GetGuildModel(ctx context.Context, guildID string) (string, error) {
 	if ctx.Err() != nil {
 		return "", ctx.Err()
 	}

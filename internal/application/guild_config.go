@@ -8,11 +8,11 @@ import (
 
 // APIKeyApplicationService は、APIキーの管理を行うアプリケーションサービスです
 type APIKeyApplicationService struct {
-	apiKeyRepo domain.GuildAPIKeyRepository
+	apiKeyRepo domain.GuildConfigManager
 }
 
 // NewAPIKeyApplicationService は新しいAPIKeyApplicationServiceインスタンスを作成します
-func NewAPIKeyApplicationService(apiKeyRepo domain.GuildAPIKeyRepository) *APIKeyApplicationService {
+func NewAPIKeyApplicationService(apiKeyRepo domain.GuildConfigManager) *APIKeyApplicationService {
 	return &APIKeyApplicationService{
 		apiKeyRepo: apiKeyRepo,
 	}
@@ -49,7 +49,7 @@ func (s *APIKeyApplicationService) HasGuildAPIKey(ctx context.Context, guildID s
 }
 
 // GetGuildAPIKeyInfo は、指定されたギルドのAPIキー情報を取得します（APIキーは含まれません）
-func (s *APIKeyApplicationService) GetGuildAPIKeyInfo(ctx context.Context, guildID string) (domain.GuildAPIKey, error) {
+func (s *APIKeyApplicationService) GetGuildAPIKeyInfo(ctx context.Context, guildID string) (domain.GuildConfig, error) {
 	return s.apiKeyRepo.GetGuildAPIKeyInfo(ctx, guildID)
 }
 
