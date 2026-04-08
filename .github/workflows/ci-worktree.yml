@@ -1,0 +1,107 @@
+# git worktree で作業ディレクトリを分け、fmt / lint / test / 依存検証を並行実行します。
+name: CI (git worktree)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Install tools (golangci-lint, goimports)
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          go install golang.org/x/tools/cmd/goimports@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Create worktrees and run checks
+        env:
+          WT_ROOT: ${{ runner.temp }}/geminibot-worktrees
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$WT_ROOT"
+          cd "$GITHUB_WORKSPACE"
+
+          # golangci-lint は差分ベース（既存の指摘は無視）— リポジトリ全体を厳格にしたい場合は --new-from-rev を外してください
+          if [ "$EVENT_NAME" = "pull_request" ] && [ -n "${PR_BASE_SHA:-}" ]; then
+            NEW_FROM_REV="$PR_BASE_SHA"
+          elif [ -n "${PUSH_BEFORE:-}" ] && [ "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            NEW_FROM_REV="$PUSH_BEFORE"
+          else
+            NEW_FROM_REV=$(git rev-parse HEAD~1 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          fi
+
+          git worktree add --detach "$WT_ROOT/fmt" HEAD
+          git worktree add --detach "$WT_ROOT/lint" HEAD
+          git worktree add --detach "$WT_ROOT/test" HEAD
+          git worktree add --detach "$WT_ROOT/deps" HEAD
+
+          pids=()
+
+          # fmt: gofmt / goimports の未整形ファイル検出
+          (
+            cd "$WT_ROOT/fmt"
+            bad=$(gofmt -l . 2>/dev/null || true)
+            if [ -n "$bad" ]; then
+              echo "::error::gofmt: 次のファイルを整形してください"
+              echo "$bad"
+              exit 1
+            fi
+            bad_imports=$(goimports -l . 2>/dev/null || true)
+            if [ -n "$bad_imports" ]; then
+              echo "::error::goimports: 次のファイルを整形してください"
+              echo "$bad_imports"
+              exit 1
+            fi
+            echo "fmt: OK"
+          ) & pids+=($!)
+
+          # golangci-lint（ベースコミット以降に導入された指摘のみ）
+          (
+            cd "$WT_ROOT/lint"
+            golangci-lint run --new-from-rev="$NEW_FROM_REV"
+            echo "golangci-lint: OK"
+          ) & pids+=($!)
+
+          # test
+          (
+            cd "$WT_ROOT/test"
+            go test -count=1 ./...
+            echo "test: OK"
+          ) & pids+=($!)
+
+          # dependabot 相当: モジュール検証 + tidy 後に差分なし
+          (
+            cd "$WT_ROOT/deps"
+            go mod verify
+            go mod tidy
+            git diff --exit-code go.mod go.sum
+            echo "deps (mod verify / tidy): OK"
+          ) & pids+=($!)
+
+          ec=0
+          for pid in "${pids[@]}"; do
+            if ! wait "$pid"; then
+              ec=1
+            fi
+          done
+          exit "$ec"

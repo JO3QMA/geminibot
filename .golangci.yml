@@ -1,6 +1,7 @@
 run:
   timeout: 5m
   modules-download-mode: readonly
+  go: "1.23"
 
 linters:
   enable:
@@ -18,8 +19,6 @@ linters:
     - revive
 
 linters-settings:
-  staticcheck:
-    go: "1.21"
   gocritic:
     enabled-tags:
       - diagnostic
@@ -27,9 +26,6 @@ linters-settings:
       - opinionated
       - performance
       - style
-    disabled-checks:
-      - ST1005  # エラーメッセージの大文字化チェックを無効化（日本語対応）
-
 issues:
   exclude-rules:
     - path: _test\.go
