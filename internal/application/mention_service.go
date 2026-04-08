@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"geminibot/internal/domain"
-	"geminibot/internal/infrastructure/config"
+	appconfig "geminibot/internal/infrastructure/config"
 )
 
 // MentionApplicationService は、メンションイベントをトリガーに、一連の処理を制御するアプリケーションサービスです
@@ -16,9 +16,9 @@ type MentionApplicationService struct {
 	promptGenerator     *domain.PromptGenerator
 	geminiClient        GeminiClient
 	contextManager      *domain.ContextManager
-	config              *config.BotConfig
+	config              *appconfig.BotConfig
 	apiKeyService       *APIKeyApplicationService
-	defaultGeminiConfig *config.GeminiConfig
+	defaultGeminiConfig *appconfig.GeminiConfig
 	geminiClientFactory func(apiKey string) (GeminiClient, error)
 }
 
@@ -26,9 +26,9 @@ type MentionApplicationService struct {
 func NewMentionApplicationService(
 	conversationRepo domain.ConversationRepository,
 	geminiClient GeminiClient,
-	botConfig *config.BotConfig,
+	botConfig *appconfig.BotConfig,
 	apiKeyService *APIKeyApplicationService,
-	defaultGeminiConfig *config.GeminiConfig,
+	defaultGeminiConfig *appconfig.GeminiConfig,
 	geminiClientFactory func(apiKey string) (GeminiClient, error),
 ) (*MentionApplicationService, error) {
 	if botConfig == nil {
@@ -91,6 +91,10 @@ func (s *MentionApplicationService) GenerateImage(ctx context.Context, request d
 	log.Printf("MentionApplicationService: 画像生成を開始")
 	log.Printf("プロンプト: %s", request.Prompt)
 
+	if request.Options == (domain.ImageGenerationOptions{}) && s.defaultGeminiConfig != nil {
+		request.Options = s.defaultGeminiConfig.ImageGenerationDefaults()
+	}
+
 	// デフォルトのGeminiクライアントを使用して画像生成
 	result, err := s.geminiClient.GenerateImage(ctx, request)
 	if err != nil {
@@ -122,7 +126,7 @@ func (s *MentionApplicationService) generateResponseWithGuildAPIKey(
 	guildModel, err := s.apiKeyService.GetGuildModel(ctx, guildID)
 	if err != nil {
 		log.Printf("ギルド %s のモデル設定取得に失敗: %v, デフォルト設定を使用", guildID, err)
-		guildModel = "gemini-2.5-pro" // デフォルト
+		guildModel = appconfig.DefaultGeminiTextModel
 	}
 
 	// ギルド固有のAPIキーがあるかチェック
@@ -153,7 +157,7 @@ func (s *MentionApplicationService) generateResponseWithGuildAPIKey(
 	}
 
 	// デフォルトのAPIキーを使用、ただしモデル設定がある場合はそれを使用
-	if guildModel != "gemini-2.5-pro" && guildModel != "" {
+	if guildModel != appconfig.DefaultGeminiTextModel && guildModel != "" {
 		log.Printf("デフォルトAPIキーとカスタムモデル %s を使用", guildModel)
 		// TODO: 将来的にモデル設定を反映したい場合は、ここでGeminiクライアントの設定を変更
 	} else {

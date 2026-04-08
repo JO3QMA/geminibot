@@ -14,8 +14,8 @@ import (
 // GenerateImage は、プロンプトを受け取ってGemini APIから画像を生成します
 // optionsが空の場合はデフォルト設定を使用します
 func (g *StructuredGeminiClient) GenerateImage(ctx context.Context, request domain.ImageGenerationRequest) (*domain.ImageGenerationResponse, error) {
-	if request.Options == (domain.ImageGenerationOptions{}) {
-		request.Options = domain.DefaultImageGenerationOptions()
+	if request.Options == (domain.ImageGenerationOptions{}) && g.config != nil {
+		request.Options = g.config.ImageGenerationDefaults()
 	}
 	return g.generateImageWithOptions(ctx, request.Prompt, request.Options)
 }
