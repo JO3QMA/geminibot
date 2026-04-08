@@ -61,7 +61,7 @@ geminibot/
 ├── scripts/               # スクリプト
 ├── .devcontainer/         # Devcontainer設定
 ├── Dockerfile             # 本番用Dockerfile
-├── compose.yml            # Docker Compose設定
+├── compose.yaml           # Docker Compose設定
 ├── Makefile               # ビルドスクリプト
 ├── go.mod                 # Go依存関係
 ├── go.sum                 # Go依存関係チェックサム

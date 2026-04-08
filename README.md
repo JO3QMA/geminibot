@@ -122,7 +122,7 @@ go run cmd/main.go
 
 ### Docker環境
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 ## 📁 プロジェクト構造
@@ -139,7 +139,7 @@ geminibot/
 ├── configs/               # 設定ファイル
 ├── .devcontainer/         # Devcontainer設定
 ├── Dockerfile             # 本番用Dockerfile
-├── docker-compose.yml     # 開発用Docker Compose
+├── compose.yaml           # Docker Compose
 └── README.md
 ```
 
