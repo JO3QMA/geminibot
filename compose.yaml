@@ -1,0 +1,33 @@
+services:
+  geminibot:
+    build: .
+    container_name: geminibot
+    environment:
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+
+      - GEMINI_MODEL_NAME=${GEMINI_MODEL_NAME:-gemini-2.5-pro}
+      - GEMINI_MAX_TOKENS=${GEMINI_MAX_TOKENS:-1000}
+      - GEMINI_TEMPERATURE=${GEMINI_TEMPERATURE:-0.7}
+      - GEMINI_TOP_P=${GEMINI_TOP_P:-0.9}
+      - GEMINI_TOP_K=${GEMINI_TOP_K:-40}
+      - GEMINI_MAX_RETRIES=${GEMINI_MAX_RETRIES:-3}
+      - GEMINI_ENABLE_IMAGE_GEN=${GEMINI_ENABLE_IMAGE_GEN:-true}
+      - GEMINI_IMAGE_MODEL_NAME=${GEMINI_IMAGE_MODEL_NAME:-gemini-2.5-flash-image-preview}
+      - GEMINI_IMAGE_STYLE=${GEMINI_IMAGE_STYLE:-photographic}
+      - GEMINI_IMAGE_QUALITY=${GEMINI_IMAGE_QUALITY:-standard}
+      - GEMINI_IMAGE_SIZE=${GEMINI_IMAGE_SIZE:-1024x1024}
+      - GEMINI_IMAGE_COUNT=${GEMINI_IMAGE_COUNT:-1}
+      - MAX_CONTEXT_LENGTH=${MAX_CONTEXT_LENGTH:-8000}
+      - MAX_HISTORY_LENGTH=${MAX_HISTORY_LENGTH:-4000}
+      - REQUEST_TIMEOUT=${REQUEST_TIMEOUT:-30s}
+      - SYSTEM_PROMPT=${SYSTEM_PROMPT:-あなたは親切で役立つAIアシスタントです。最も重要なのは、ユーザーが今送信した質問やリクエストに直接答えることです。会話履歴は参考情報として使用し、ユーザーの現在の質問を最優先で回答してください。有害な内容や不適切な内容については、適切に断るか、代替案を提案してください。}
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - geminibot-network
+
+networks:
+  geminibot-network:
+    driver: bridge
