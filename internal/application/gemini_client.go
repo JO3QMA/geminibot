@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"geminibot/internal/domain"
+	"geminibot/internal/infrastructure/config"
 )
 
 // GeminiClient は、Gemini APIとの通信を行うクライアントのインターフェースです
@@ -37,6 +38,6 @@ func DefaultTextGenerationOptions() TextGenerationOptions {
 		Temperature: 0.7,
 		TopP:        0.9,
 		TopK:        40,
-		Model:       "gemini-2.5-pro",
+		Model:       config.DefaultGeminiTextModel,
 	}
 }

@@ -11,28 +11,24 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Config は、アプリケーション全体の設定を定義します
-type Config struct {
-	Discord config.DiscordConfig
-	Gemini  config.GeminiConfig
-	Bot     config.BotConfig
-}
+// Config は config.AppConfig のエイリアスです（設定構造体の二重定義を避けます）。
+type Config = config.AppConfig
 
 // LoadConfig は、環境変数から設定を読み込みます
-func LoadConfig() (*Config, error) {
+func LoadConfig() (*config.AppConfig, error) {
 	// .envファイルを読み込み（ファイルが存在しない場合は無視）
 	if err := godotenv.Load(); err != nil {
 		// .envファイルが存在しない場合は警告のみ出力（エラーにはしない）
 		fmt.Printf("警告: .envファイルの読み込みに失敗しました: %v\n", err)
 	}
 
-	config := &Config{
+	cfg := &config.AppConfig{
 		Discord: config.DiscordConfig{
 			BotToken: getEnvOrDefault("DISCORD_BOT_TOKEN", ""),
 		},
 		Gemini: config.GeminiConfig{
 			APIKey:         getEnvOrDefault("GEMINI_API_KEY", ""),
-			ModelName:      getEnvOrDefault("GEMINI_MODEL_NAME", "gemini-2.5-pro"),
+			ModelName:      getEnvOrDefault("GEMINI_MODEL_NAME", config.DefaultGeminiTextModel),
 			MaxTokens:      int32(getEnvAsIntOrDefault("GEMINI_MAX_TOKENS", 1000)),
 			Temperature:    float32(getEnvAsFloatOrDefault("GEMINI_TEMPERATURE", 0.7)),
 			TopP:           float32(getEnvAsFloatOrDefault("GEMINI_TOP_P", 0.9)),
@@ -55,61 +51,11 @@ func LoadConfig() (*Config, error) {
 		},
 	}
 
-	// 必須設定の検証
-	if err := config.Validate(); err != nil {
+	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
 
-	return config, nil
-}
-
-// Validate は、設定の妥当性を検証します
-func (c *Config) Validate() error {
-	if c.Discord.BotToken == "" {
-		return fmt.Errorf("DISCORD_BOT_TOKEN が設定されていません")
-	}
-
-	if c.Gemini.APIKey == "" {
-		return fmt.Errorf("GEMINI_API_KEY が設定されていません")
-	}
-
-	if c.Gemini.MaxTokens <= 0 {
-		return fmt.Errorf("GEMINI_MAX_TOKENS は正の整数である必要があります")
-	}
-
-	if c.Gemini.Temperature < 0 || c.Gemini.Temperature > 2 {
-		return fmt.Errorf("GEMINI_TEMPERATURE は0以上2以下の値である必要があります")
-	}
-
-	if c.Gemini.TopP < 0 || c.Gemini.TopP > 1 {
-		return fmt.Errorf("GEMINI_TOP_P は0以上1以下の値である必要があります")
-	}
-
-	if c.Gemini.TopK <= 0 {
-		return fmt.Errorf("GEMINI_TOP_K は正の整数である必要があります")
-	}
-
-	if c.Bot.MaxContextLength <= 0 {
-		return fmt.Errorf("MAX_CONTEXT_LENGTH は正の整数である必要があります")
-	}
-
-	if c.Bot.MaxHistoryLength <= 0 {
-		return fmt.Errorf("MAX_HISTORY_LENGTH は正の整数である必要があります")
-	}
-
-	if c.Bot.MaxHistoryLength > c.Bot.MaxContextLength {
-		return fmt.Errorf("MAX_HISTORY_LENGTH は MAX_CONTEXT_LENGTH 以下である必要があります")
-	}
-
-	if c.Bot.RequestTimeout <= 0 {
-		return fmt.Errorf("REQUEST_TIMEOUT は正の値である必要があります")
-	}
-
-	if c.Gemini.MaxRetries < 0 {
-		return fmt.Errorf("GEMINI_MAX_RETRIES は0以上の整数である必要があります")
-	}
-
-	return nil
+	return cfg, nil
 }
 
 // getEnvOrDefault は、環境変数を取得し、存在しない場合はデフォルト値を返します

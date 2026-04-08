@@ -70,11 +70,14 @@ func (h *SlashCommandHandler) SetupSlashCommands() error {
 					Name:        "model",
 					Description: "使用するAIモデル",
 					Required:    true,
-					Choices: []*discordgo.ApplicationCommandOptionChoice{
-						{Name: "Gemini 2.5 Pro", Value: "gemini-2.5-pro"},
-						{Name: "Gemini 2.0 Flash", Value: "gemini-2.0-flash"},
-						{Name: "Gemini 2.5 Flash Lite", Value: "gemini-2.5-flash-lite"},
-					},
+					Choices: func() []*discordgo.ApplicationCommandOptionChoice {
+						models := config.GeminiTextModelChoices()
+						out := make([]*discordgo.ApplicationCommandOptionChoice, len(models))
+						for i, m := range models {
+							out[i] = &discordgo.ApplicationCommandOptionChoice{Name: m.DisplayName, Value: m.ModelID}
+						}
+						return out
+					}(),
 				},
 			},
 		},
@@ -300,7 +303,7 @@ func (h *SlashCommandHandler) handleStatusCommand(s *discordgo.Session, i *disco
 		// APIキーが未設定の場合
 		model, err := h.apiKeyService.GetGuildModel(ctx, guildID)
 		if err != nil {
-			model = "gemini-2.5-pro" // デフォルト
+			model = config.DefaultGeminiTextModel
 		}
 
 		statusMessage = fmt.Sprintf(`📊 **サーバー設定状況**
@@ -362,7 +365,7 @@ func (h *SlashCommandHandler) handleGenerateImageCommand(s *discordgo.Session, i
 
 	request := domain.ImageGenerationRequest{}
 	// 画像生成オプションを作成（設定ファイルの値をベースに、ユーザー指定の値を上書き）
-	request.Options = domain.DefaultImageGenerationOptions()
+	request.Options = h.defaultGeminiConfig.ImageGenerationDefaults()
 
 	for _, option := range options {
 		switch option.Name {

@@ -3,7 +3,9 @@ package application
 import (
 	"context"
 	"fmt"
+
 	"geminibot/internal/domain"
+	"geminibot/internal/infrastructure/config"
 )
 
 // APIKeyApplicationService は、APIキーの管理を行うアプリケーションサービスです
@@ -71,16 +73,5 @@ func (s *APIKeyApplicationService) GetGuildModel(ctx context.Context, guildID st
 
 // isValidModel は、指定されたモデルが有効かどうかを検証します
 func (s *APIKeyApplicationService) isValidModel(model string) bool {
-	validModels := []string{
-		"gemini-2.5-pro",
-		"gemini-2.0-flash",
-		"gemini-2.5-flash-lite",
-	}
-
-	for _, validModel := range validModels {
-		if model == validModel {
-			return true
-		}
-	}
-	return false
+	return config.IsSupportedGeminiTextModel(model)
 }

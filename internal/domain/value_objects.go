@@ -2,8 +2,6 @@ package domain
 
 import (
 	"fmt"
-	"geminibot/configs"
-	"log"
 	"time"
 )
 
@@ -100,25 +98,6 @@ type ImageGenerationResult struct {
 // NewImagePrompt は、画像生成用のプロンプトを作成します
 func NewImagePrompt(content string) string {
 	return content
-}
-
-// DefaultImageGenerationOptions は、デフォルトの画像生成オプションを返します
-func DefaultImageGenerationOptions() ImageGenerationOptions {
-	geminiConfig, err := configs.LoadConfig()
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
-	return ImageGenerationOptions{
-		Model:       geminiConfig.Gemini.ImageModelName,
-		Style:       ImageStyleFromString(geminiConfig.Gemini.ImageStyle),
-		Quality:     ImageQualityFromString(geminiConfig.Gemini.ImageQuality),
-		Size:        ImageSizeFromString(geminiConfig.Gemini.ImageSize),
-		Count:       geminiConfig.Gemini.ImageCount,
-		MaxTokens:   geminiConfig.Gemini.MaxTokens,
-		Temperature: geminiConfig.Gemini.Temperature,
-		TopP:        geminiConfig.Gemini.TopP,
-		TopK:        geminiConfig.Gemini.TopK,
-	}
 }
 
 // Attachment は、添付ファイルの情報を表現する値オブジェクトです

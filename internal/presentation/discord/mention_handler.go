@@ -255,8 +255,7 @@ func (h *MentionHandler) generateImage(ctx context.Context, m *discordgo.Message
 
 	// Geminiクライアントを使用して画像生成
 	response, err := h.mentionService.GenerateImage(ctx, domain.ImageGenerationRequest{
-		Prompt:  prompt,
-		Options: domain.DefaultImageGenerationOptions(),
+		Prompt: prompt,
 	})
 	if err != nil {
 		return &domain.ImageGenerationResult{
