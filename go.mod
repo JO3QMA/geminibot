@@ -5,7 +5,7 @@ go 1.23
 toolchain go1.24.6
 
 require (
-	github.com/bwmarrin/discordgo v0.27.1
+	github.com/bwmarrin/discordgo v0.29.0
 	github.com/joho/godotenv v1.5.1
 	google.golang.org/genai v1.21.0
 )
